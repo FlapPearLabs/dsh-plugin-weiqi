@@ -15,14 +15,12 @@
 
 **Method:** Verified Spec (R2.4.2) − Current Implementation Baseline = Remaining Gap Graph, per `docs/planning/TICKET_DECOMPOSITION_CONTRACT.md`. V1.2.1 is a narrow fix of V1.2, not a re-decomposition and not an architecture redesign.
 
-**Delta vs V1.1:**
-- Resign contract formalized in Spec R2.4.2 (§25/§26/§28/§31/§32/§36) and threaded through Baseline + Tickets (B-T01/B-T06/B-T05 11-case/E-T01/F-T01/F-T02).
-- §38 benchmark exact coverage (8 fixture classes, full metric list) in BL-BUD-06 / WAVE-C-T10.
-- Spec Phase A/B execution gate: every Ticket declares `Spec Phase`; Phase B Tickets planned now but `blocked_by` WAVE-F-T04 (Phase A Exit Gate).
-- WAVE-D-T04 split into Phase A CompanionState core (BL-CMP-01) + new Phase B WAVE-D-T08 Mood reducer (BL-CMP-03).
-- WAVE-C-T03 → Phase B (companion.* tools); WAVE-C-T01 re-scoped to Phase A core `go.*` surface (R2.4.2: 8 go.* + 2 companion.* = 10).
-- WAVE-E-T01 → Phase A Core Go UI (BL-UI-02 + BL-RT-10); new Phase B WAVE-E-T02 (BL-UI-05 companion mini-surface UX).
-- WAVE-F-T03 renamed/rescoped to Phase A Core E2E Continuity; new WAVE-F-T04 (BL-HARD-05 Phase A Exit Gate, INTEGRATION); new WAVE-F-T05 (BL-HARD-06 Full V0.1 Acceptance, Phase B, INTEGRATION).
+**Delta vs V1.2 (narrow consistency fix, no re-decomposition):**
+- R2.4.2: `go.resign` model tool added — DeepSeek resign path `go.resign → GoRulesPort.resign → authoritative terminal state → GameNotice/UI`; model-facing surface becomes 8 `go.*` + 2 `companion.*` = 10 (§20/§32); §24 Go Turn Lifecycle now includes resign as an authoritative action with immediate terminal and no further step (this fix round).
+- Spec Phase distribution corrected (V1.2 wrongly stated A=30/B=8): Pre-A = 6, A = 31, B = 7, Total = 44; §6 gate graph expresses execution work vs gates (30 + F-T04 gate / 6 + F-T05 acceptance).
+- C-T01 re-scoped to structural registry policy (acceptance no longer depends on C-T02 output); C-T02 owns tool registration and the post-registration enumeration assertion — acceptance semantic cycle removed.
+- AGENTS.md residual Phase/Wave definition corrected (Wave = organizational construction stream; Spec Phase = execution gate; a Wave is not contained inside a Spec Phase).
+- V1.2.1 audit metadata corrected: this round changed 7 files (see §13); BUILD_PHASES.md was not touched this round.
 
 ---
 
@@ -371,12 +369,12 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 #### WAVE-C-T07 — Budget enforcement + post-move no-analysis-loop
 - **Type:** IMPLEMENTATION_TICKET | **Wave:** C | **Spec Phase:** A | **Baseline IDs:** BL-BUD-02, BL-BUD-04
 - **Current Baseline State:** BL-BUD-02/04: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
-- **Spec Authority:** §22.1-22.4, §24
-- **Scope:** Enforcement engine: per-request hard cap **using the C-S01-verified seam** (never guessed), turn-level cap, per-tool accounting, exhaustion, no-analysis-loop.
+- **Spec Authority:** §22.1-22.4, §24 (R2.4.2: after committed play / pass / resign the same turn must not restart an analysis loop; after resign the game is terminal with no further inspect / try_move / deep-think / model step)
+- **Scope:** Enforcement engine: per-request hard cap **using the C-S01-verified seam** (never guessed), turn-level cap, per-tool accounting, exhaustion, no-analysis-loop (incl. resign-terminal end-of-turn).
 - **Explicit Non-Goals:** No boost (C-T08); no bypass tests (C-T09); no benchmark (C-T10); no DSH core patch.
 - **Dependencies / blocked_by:** WAVE-C-T06, WAVE-C-S01
 - **Expected Surfaces:** `src/budget/`
-- **Acceptance Criteria:** per-request cap at exact boundary via verified seam; turn-level cap; aggregated double-invoke counted once; after committed play/pass no further model step of the turn.
+- **Acceptance Criteria:** per-request cap at exact boundary via verified seam; turn-level cap; aggregated double-invoke counted once; after committed play/pass/**resign** no further model step of the turn; after `go.resign` the game turn ends with no further inspect / try_move / deep-think / model step permitted (deterministic sequence test incl. the resign case).
 - **Required Review Evidence:** enforcement tests; seam trace; no-wrapper-hole assertion.
 - **Stop / Escalation Condition:** seam unusable / DSH core patch / new mechanism → `ESCALATION_REQUIRED`.
 
@@ -748,17 +746,28 @@ Cycle check: B-T02→{T03,T04,T06}→T05 one-direction; C-T06→C-T07→C-T02→
 ## 6. Spec Phase Gate Graph
 
 ```text
-Pre-A tickets (6): INFRA-T01, INFRA-S01, B-S01, C-S01, D-S01, E-S01
-        ↓ (resolve real unknowns, provide seam evidence)
-Phase A tickets (30): A-T01..A-T07, B-T01..B-T06, C-T01, C-T02, C-T04..C-T10,
-                      D-T01..D-T04, E-T01, F-T01..F-T04
-        ↓
-WAVE-F-T04 Phase A Exit Gate (BL-HARD-05)
-        ↓ PASS only
-Phase B tickets (8): C-T03, D-T05, D-T06, D-T07, D-T08, E-T02, F-T05
-        ↓
-WAVE-F-T05 Full V0.1 Acceptance (BL-HARD-06)
+Pre-A = 6
+    ↓
+Phase A execution work = 30
+    ↓
+F-T04 Phase A Exit Gate = 1
+    ↓ PASS only
+Phase B execution work = 6
+    ↓
+F-T05 Full V0.1 Acceptance = 1
+
+Metadata:
+Pre-A = 6
+A = 31
+B = 7
+Total = 44
 ```
+
+Pre-A (6): INFRA-T01, INFRA-S01, B-S01, C-S01, D-S01, E-S01.
+Phase A execution work (30): A-T01..A-T07, B-T01..B-T06, C-T01, C-T02, C-T04..C-T10, D-T01..D-T04, E-T01, F-T01..F-T03 (31 tickets minus the F-T04 gate).
+F-T04 Phase A Exit Gate (1): BL-HARD-05.
+Phase B execution work (6): C-T03, D-T05, D-T06, D-T07, D-T08, E-T02 (7 tickets minus the F-T05 acceptance).
+F-T05 Full V0.1 Acceptance (1): BL-HARD-06.
 
 - Phase B Tickets exist in the graph now, but every one declares `blocked_by: WAVE-F-T04`.
 - No Phase B execution before F-T04 PASS (AGENTS.md rule + BUILD_PHASES.md semantics + per-Ticket gate).
@@ -890,22 +899,21 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 
 ---
 
-## 13. Files Changed (this round)
+## 13. Files Changed (this round, commit `81951ce → a35088e` — 7 files)
 
-- `docs/spec/SPEC_LEAN_V0.1_R2.4.2_VERIFIED.md` (new — R2.4.2 from R2.4, resign clarification; R2.4 preserved)
-- `docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md` (modified — resign targets, §38 exact coverage, BL-UI-05/BL-HARD-05/BL-HARD-06)
-- `docs/planning/TICKET_GRAPH_V1.2.md` (new — this graph; V1/V1.1 preserved)
-- `docs/roadmap/BUILD_PHASES.md` (phase/wave execution-gate semantics)
-- `AGENTS.md` (verified-Spec path → R2.4.2; Phase B execution rule)
+- `docs/spec/SPEC_LEAN_V0.1_R2.4.2_VERIFIED.md` (new — R2.4.2 from R2.4.1, `go.resign` DeepSeek action path + §24 resign lifecycle; R2.4.1 preserved)
+- `docs/planning/TICKET_GRAPH_V1.2.1.md` (new — this graph; V1/V1.1/V1.2 preserved)
+- `docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md` (modified — BL-GT-01/02 → 8 go.* / 10 tools; R2.4.1 refs → R2.4.2; BL-BUD-04 resign lifecycle)
+- `AGENTS.md` (verified-Spec path → R2.4.2; Phase/Wave definition corrected; Phase B execution rule)
 - `PROJECT_STATUS.md` (Architecture: FROZEN — R2.4.2 VERIFIED; stage markers unchanged)
 - `README.md` (Architecture marker → R2.4.2 VERIFIED)
-- `docs/context/DECISION_LOG.md` (one concise approved-Resign record row)
+- `docs/context/DECISION_LOG.md` (approved-Resign record + `go.resign` tool record)
 
-No JSON/YAML graph; no GitHub Issues; no source/tests/workflows/V4/contract changes.
+`BUILD_PHASES.md` was NOT changed this round (phase/wave semantics were fixed in the V1.2 round). No JSON/YAML graph; no GitHub Issues; no source/tests/workflows/V4/contract changes.
 
 ---
 
-## 14. Recommended First Execution Set (after V1.2 review approval)
+## 14. Recommended First Execution Set (after V1.2.1 review approval)
 
 1. **INFRA-T01** — CI trigger policy.
 2. **All 5 Spikes in parallel** (Pre-A): INFRA-S01, B-S01, C-S01, D-S01, E-S01.

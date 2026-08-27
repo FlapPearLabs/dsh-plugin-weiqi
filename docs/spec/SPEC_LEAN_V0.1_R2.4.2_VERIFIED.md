@@ -1121,7 +1121,7 @@ SHORT AFTERTALK
 TURN END
 ```
 
-A successful action must eventually be:
+A successful authoritative action may be:
 
 ```text
 go.play(...)
@@ -1133,7 +1133,20 @@ or:
 go.pass()
 ```
 
-Once the move has been committed, the same turn must not restart another analysis loop.
+or (R2.4.2):
+
+```text
+go.resign()
+```
+
+After committed play, pass, or resign, the same Go turn must not restart another analysis loop.
+
+After resign (R2.4.2):
+
+```text
+- the game is terminal immediately;
+- no further inspect / try_move / deep-think / model step is permitted for that game turn.
+```
 
 ---
 
