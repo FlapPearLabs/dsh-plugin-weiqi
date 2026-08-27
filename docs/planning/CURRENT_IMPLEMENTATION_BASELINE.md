@@ -58,9 +58,10 @@ baseline exists or should be created.
 | BL-RT-05 | Immutable UserMessage handoff | Spec §5/§7 exact source message | Contract references DSH `UserMessage`; no runtime handling | FOUNDATION_ONLY | Handoff behavior | A | IMPLEMENTATION_TICKET |
 | BL-RT-06 | Safe-boundary switching | Spec §7.1.1 step-boundary switch | Spike verified seam against real AgentLoop; not integrated | VERIFIED_FACT_NOT_INTEGRATED | Runtime integration | A | INTEGRATION_TICKET |
 | BL-RT-07 | Cooperative yield production integration | Spec §7.1.2 | Spike 3/3 pass; preferred seam = batch splice + reject + blocked/idle + external resume | VERIFIED_FACT_NOT_INTEGRATED | Runtime integration; gate already verified | A | INTEGRATION_TICKET |
-| BL-RT-08 | pausedLane / resume | Spec §5/§7.1.2 | Spike verified resume order (A→B→C→resume); no Runtime state machine | FOUNDATION_ONLY + VERIFIED FACT | State machine | A | IMPLEMENTATION_TICKET |
+| BL-RT-08 | pausedLane contract / state field | Spec §5/§7.1.2 | `RuntimeFocusState.pausedLane` contract exists in `src/contracts/focus.ts`; no Runtime state machine | FOUNDATION_ONLY | Behavior, not shape | A | IMPLEMENTATION_TICKET |
 | BL-RT-09 | Inactive-lane natural-language admission | Spec §7.2 | No code (concept only) | NOT_IMPLEMENTED | Runtime + UI admission path | A | IMPLEMENTATION_TICKET |
-| BL-RT-10 | Board click direct route | Spec §7.2/§32 | No code | NOT_IMPLEMENTED | Depends on GoRulesPort (BL-GR-01) and UI (BL-UI-02) | B/C | IMPLEMENTATION_TICKET |
+| BL-RT-10 | Board click direct route | Spec §7.2/§32 | No code | NOT_IMPLEMENTED | User interaction: board click → UI → GoRulesPort → resulting state/GameNotice → UI. Depends on BL-GR-01 (GoRulesPort behavior) and BL-UI-02 (production UI); not part of Go Agent tools | E | IMPLEMENTATION_TICKET |
+| BL-RT-11 | Resume sequencing / cooperative external resume integration | Spec §5/§7.1.2 | Verified cooperative-yield spike resume ordering (A→B→C→companion-resume) and external resume seam against pinned DSH `b150a551...`; not integrated into production Runtime | VERIFIED_FACT_NOT_INTEGRATED | Production Runtime integration | A | INTEGRATION_TICKET |
 
 ## Bridge / Context
 
@@ -171,6 +172,7 @@ second synonymous contract is forbidden; modifying these public contracts
 requires `ESCALATION_REQUIRED`:
 
 - `Lane`, `PendingFocusIntent`, `RuntimeFocusState` (BL-RT-03)
+- `RuntimeFocusState.pausedLane` state field (BL-RT-08)
 - `WorkSnapshot`, `GameNotice`, `AffectedGroupDelta`, `CompanionBridge` (BL-BR-01)
 - `CompanionState`, `AttentionMode` (BL-CMP-01, BL-CMP-04)
 
@@ -184,7 +186,14 @@ Upgrade gate:         IMPLEMENTED_VERIFIED (BL-PKG-09)
 Production integration: VERIFIED_FACT_NOT_INTEGRATED
 ```
 
-Future work may create only `INTEGRATION_TICKET`s for this seam. No new
+resume sequencing / cooperative external resume integration (BL-RT-11):
+
+```text
+Feasibility:          VERIFIED (spike resume ordering A→B→C→companion-resume, pinned DSH b150a551...)
+Production integration: VERIFIED_FACT_NOT_INTEGRATED
+```
+
+Future work may create only `INTEGRATION_TICKET`s for these seams. No new
 feasibility Spike.
 
 # REAL UNKNOWNS — SPIKE CANDIDATES

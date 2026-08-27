@@ -8,10 +8,11 @@ When sources conflict, use this strict order:
 
 1. verified Spec;
 2. executable evidence;
-3. current pinned source;
-4. frozen design;
-5. roadmap;
-6. Ticket.
+3. current pinned source / real repository state;
+4. Current Implementation Baseline (`docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md`);
+5. frozen design;
+6. roadmap;
+7. Ticket.
 
 The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4_VERIFIED.md`. The executable
 evidence record is `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`.
