@@ -14,8 +14,8 @@ production UI.
 
 - Architecture: **FROZEN — R2.4 VERIFIED**
 - Cooperative Yield: **VERIFIED**
-- Current Stage: **Repository Bootstrap**
-- Next Stage: **Ticket / Spike Decomposition**
+- Current Stage: **Ticket / Spike Decomposition**
+- Next Stage: **Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
 - Implementation Wave A: **NOT STARTED**
 

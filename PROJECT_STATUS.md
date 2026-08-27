@@ -2,8 +2,9 @@
 
 - Architecture: **FROZEN — R2.4 VERIFIED**
 - Cooperative Yield: **VERIFIED**
-- Current Stage: **Repository Bootstrap**
-- Next Stage: **Ticket / Spike Decomposition**
+- Repository Bootstrap: **COMPLETE**
+- Current Stage: **Ticket / Spike Decomposition**
+- Next Stage: **Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
 - Implementation Wave A: **NOT STARTED**
 - Ticketization: **NOT STARTED**
@@ -21,8 +22,8 @@ Wave and must not redefine a Spec Phase.
 
 ## Stage exit
 
-Bootstrap exits only after review. The next action is:
+Bootstrap is complete. The next action is:
 
 ```text
-Review bootstrap, then begin Ticket / Spike decomposition.
+Begin Ticket / Spike decomposition from latest main.
 ```
