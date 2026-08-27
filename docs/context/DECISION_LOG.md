@@ -19,6 +19,7 @@ This log points to decisions; it does not duplicate the verified Spec.
 | Persona and Mood internal schemas remain generic in Foundation | Bootstrap decision | R2.4 leaves shapes unfrozen |
 | Empty repository receives one README-only `main` initialization commit before the complete Foundation is committed on the work branch; Foundation remains unmerged | Bootstrap deviation | GitHub API requires a base ref before creating a non-default branch |
 | Resign is a terminal Companion Go action handled at the GoRulesPort boundary; Tenuki remains the sole board-rules engine behind the port; `resign` is a canonical GameAction (opponent wins by resignation, no board mutation, no UI-only truth, no GameLifecycleController) | Approved contract clarification | R2.4.1 §§25/26/28/31/32/36 + `docs/context/DECISION_LOG.md` |
+| DeepSeek resigns through the authoritative port: `go.resign` model tool → `GoRulesPort.resign` → authoritative terminal state → GameNotice/UI. Model-facing surface becomes 8 `go.*` + 2 `companion.*` = 10. No second authority, no UI-only truth | Approved contract clarification | R2.4.2 §20/§32 |
 
 ## Change rule
 

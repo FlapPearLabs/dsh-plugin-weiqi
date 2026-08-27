@@ -14,7 +14,7 @@ When sources conflict, use this strict order:
 6. roadmap;
 7. Ticket.
 
-The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4.1_VERIFIED.md`. The executable
+The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4.2_VERIFIED.md`. The executable
 evidence record is `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`.
 
 ## Frozen architecture
@@ -45,8 +45,9 @@ Explain the concrete reason and STOP. Do not implement the change.
 
 - Read `PROJECT_STATUS.md` before starting work.
 - Respect the current phase and explicit Ticket boundary.
-- Spec Phase means a product/architecture stage; Implementation Wave means a
-  ticket-driven construction slice within that stage.
+- Spec Phase means a product/architecture execution gate; Implementation Wave
+  means an organizational construction stream. A Ticket belongs to a Wave and
+  must not redefine a Spec Phase; a Wave is not contained inside a Spec Phase.
 - Future Tickets belong to an Implementation Wave and must not redefine a Spec
   Phase.
 - Do not start Implementation Wave A during Repository Bootstrap or
