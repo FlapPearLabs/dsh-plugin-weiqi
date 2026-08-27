@@ -4,11 +4,11 @@
 - Cooperative Yield: **VERIFIED**
 - Repository Bootstrap: **COMPLETE**
 - Planning Baseline: **ESTABLISHED**
-- Current Stage: **Ticket / Spike Decomposition**
-- Next Stage: **Implementation Wave A**
+- Current Stage: **Ticket / Spike Execution Ready**
+- Next Stage: **Pre-A Spikes + Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
 - Implementation Wave A: **NOT STARTED**
-- Ticketization: **REVIEW_PENDING**
+- Ticketization: **COMPLETE**
 
 ## Current scope
 
@@ -17,14 +17,15 @@ frozen contracts, documentation, tests, CI, and a repeatable cooperative-yield
 upgrade gate. The package also declares a DSH Profile Bundle whose patch mounts
 only the Foundation no-op plugin.
 
-Spec Phases are product and architecture stages. Implementation Waves are
-ticket-driven construction slices inside them; future Tickets must belong to a
-Wave and must not redefine a Spec Phase.
+Spec Phase is a product/architecture execution gate. Implementation Wave is an
+organizational construction stream. A Ticket belongs to a Wave and must not
+redefine a Spec Phase; a Wave is not contained inside a Spec Phase.
 
 ## Stage exit
 
-Bootstrap is complete. The next action is:
+Planning is complete and the approved Ticket Graph is materialized as GitHub
+Issues. The next action is:
 
 ```text
-Begin Ticket / Spike decomposition from latest main.
+Begin Pre-A Spikes and Implementation Wave A from latest main.
 ```
