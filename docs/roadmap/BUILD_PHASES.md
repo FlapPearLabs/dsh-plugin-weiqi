@@ -1,11 +1,25 @@
 # Implementation Waves
 
 The verified Spec defines product and architecture phases. In particular,
-**Spec Phase A** is the Minimal Technical Vertical Slice. This file instead
-defines ticket-driven implementation slices within that phase. A future Ticket
-belongs to an Implementation Wave and must not redefine a Spec Phase. Ticket
-and spike decomposition is the next project stage and is intentionally absent
-here.
+**Spec Phase A** is the Minimal Technical Vertical Slice and **Spec Phase B**
+is the Companion Layer. This file defines ticket-driven construction streams
+(Implementation Waves). A Ticket belongs to an Implementation Wave and must not
+redefine a Spec Phase.
+
+## Phase / Wave semantics (R2.4.1 governance correction)
+
+```text
+Implementation Wave = organizational construction stream.
+Spec Phase          = execution gate.
+```
+
+- A Ticket may be **planned** under a Wave before its Spec Phase opens.
+- A Ticket must **not execute** before its declared Spec Phase gate passes.
+- Spec Phase B Tickets may appear in the Ticket Graph early, but they are
+  `blocked_by` the Phase A Exit Gate (`WAVE-F-T04`, BL-HARD-05) and must not
+  execute until it has PASSED.
+- Wave labels A–F remain unchanged; they are NOT substitutes for Spec Phase.
+- Ticket and spike decomposition lives in `docs/planning/TICKET_GRAPH_V1.2.md`.
 
 ## Wave A — Runtime / dual session / focus / resume
 

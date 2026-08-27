@@ -14,7 +14,7 @@ When sources conflict, use this strict order:
 6. roadmap;
 7. Ticket.
 
-The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4_VERIFIED.md`. The executable
+The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4.1_VERIFIED.md`. The executable
 evidence record is `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`.
 
 ## Frozen architecture
@@ -72,6 +72,10 @@ Before any Ticket decomposition or implementation Ticket, read:
 - Verified facts cannot be re-spiked (`VERIFIED_FACT_NOT_INTEGRATED` → INTEGRATION_TICKET only).
 - `NEEDS_SPIKE` dependencies remain blocked until the Spike passes.
 - Any Ticket / Baseline / Spec contradiction → `ESCALATION_REQUIRED` and STOP.
+- Spec Phase is an execution gate: a Ticket may be planned under an
+  Implementation Wave before its Spec Phase opens, but it must not execute
+  before its declared Spec Phase gate passes. Spec Phase B Tickets must not
+  execute until the WAVE-F-T04 Phase A Exit Gate has PASSED.
 
 ## Git and verification
 
