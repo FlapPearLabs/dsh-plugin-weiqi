@@ -58,6 +58,20 @@ Explain the concrete reason and STOP. Do not implement the change.
   policy from prototype JavaScript.
 - When Design conflicts with the verified Spec, the verified Spec wins.
 
+## Planning discipline
+
+Before any Ticket decomposition or implementation Ticket, read:
+
+- `docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md`
+- `docs/planning/TICKET_DECOMPOSITION_CONTRACT.md`
+
+- Tickets must reference Baseline IDs.
+- Do not duplicate `IMPLEMENTED_VERIFIED` work.
+- Reuse `FOUNDATION_ONLY` contracts; do not recreate or redefine them.
+- Verified facts cannot be re-spiked (`VERIFIED_FACT_NOT_INTEGRATED` → INTEGRATION_TICKET only).
+- `NEEDS_SPIKE` dependencies remain blocked until the Spike passes.
+- Any Ticket / Baseline / Spec contradiction → `ESCALATION_REQUIRED` and STOP.
+
 ## Git and verification
 
 - Never use `git add -A`, `git add .`, or `git add --all`.

@@ -3,6 +3,7 @@
 - Architecture: **FROZEN — R2.4 VERIFIED**
 - Cooperative Yield: **VERIFIED**
 - Repository Bootstrap: **COMPLETE**
+- Planning Baseline: **ESTABLISHED**
 - Current Stage: **Ticket / Spike Decomposition**
 - Next Stage: **Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
