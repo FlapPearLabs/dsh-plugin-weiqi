@@ -112,6 +112,8 @@ baseline exists or should be created.
 | BL-BUD-03 | Deep-think boost (bounded) | Spec §23 | No code | NOT_IMPLEMENTED | Boost path | C | IMPLEMENTATION_TICKET |
 | BL-BUD-04 | Post-move no-analysis-loop rule | Spec §24 | No code | NOT_IMPLEMENTED | Rule enforcement | C | IMPLEMENTATION_TICKET |
 | BL-BUD-05 | Budget bypass tests | Spec §39.4 | No tests | NOT_IMPLEMENTED | Test suite with Wave C | C | IMPLEMENTATION_TICKET |
+| BL-BUD-06 | Automated cognition benchmark / production budget calibration | R2.4 §38 automated cognition benchmark: representative fixtures (opening / local capture / escape / ko / pressure / endgame) recording latency, total model tokens, model steps, inspect calls, try_move calls, deep-think use, illegal attempts; production GoTurnBudget numeric defaults chosen from real benchmark evidence | No benchmark harness / run / calibration record; current values must NOT be treated as production-frozen values | NOT_IMPLEMENTED | No benchmark harness / run / calibration record; production numeric defaults have no owner | C | IMPLEMENTATION_TICKET |
+| BL-BUD-07 | Pinned DSH request-level token hard-cap seam | Spec §22.1 per-request hard cap enforceable on pinned DSH | No executable proof of the request-level cap hook / config field / propagation / enforcement on pinned DSH; only the agent/request waterfall is evidenced | NEEDS_SPIKE | Pinned DSH request-level token cap real hook / config field / propagation / enforcement not executable-verified | C (gate) | SPIKE |
 
 ## Companion
 
@@ -204,7 +206,10 @@ feasibility Spike.
 | BL-GR-03 | Tenuki version satisfying area + positional-superko + komi 7.5 explicit config, passing §31 fixture | Spec §27 forbids defaults, silent downgrade, dual rules authority | GoRulesPort / TenukiAdapter version pin and implementation | No Tenuki dependency, no fixtures, no candidate evaluation record |
 | BL-UI-04 | DSH Web `conversation.view` extension seam actual capability | Spec §34 mandates proving seam before depending | Wave E UI architecture | No probe or smoke of the DSH Web UI seam |
 | BL-BR-03 | `ctx.systemPrompt.context` agent-scoped runtime-context provider semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | No provider code or DSH-internal probe |
+| BL-BUD-07 | Pinned DSH request-level token hard-cap seam | Spec §22.1 per-request hard cap must be enforceable at request creation | WAVE-C-T07 enforcement seam choice | No executable probe of request call-config / max-token field / propagation / enforcement on pinned DSH |
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
-(frozen), budget numeric values (benchmark-derived implementation task), crash/
-resume mechanism (conservative V0.1 strategy, implementation task).
+(frozen), crash/resume mechanism (conservative V0.1 strategy, implementation
+task). Production budget numeric values are owned by BL-BUD-06
+(IMPLEMENTATION_TICKET, benchmark-derived calibration) — they are a calibration
+task, not a Spike.
