@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Companion Go · DeepSeek Harness · V4</title>
+<style>
+  :root{
+    /* Apple DESIGN.md tokens */
+    --ap-canvas:#ffffff;
+    --ap-parchment:#f5f5f7;
+    --ap-pearl:#fafafc;
+    --ap-text:#1d1d1f;
+    --ap-sub:#6e6e73;
+    --ap-faint:#86868b;
+    --ap-blue:#0071e3;
+    --ap-blue-hover:#0077ed;
+    --ap-link:#0066cc;
+    --ap-green:#34c759;
+    --ap-red:#ff3b30;
+    --ap-hairline:rgba(0,0,0,.08);
+    --ap-hairline2:rgba(0,0,0,.14);
+    --ap-blue-tint:rgba(0,113,227,.10);
+    --ap-green-tint:rgba(52,199,89,.12);
+    --ap-red-tint:rgba(255,59,48,.08);
+    --sh-card:0 2px 10px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.05);
+    --sh-float:0 4px 14px rgba(0,0,0,.08), 0 18px 48px rgba(0,0,0,.10);
+    --sh-pop:0 24px 70px rgba(0,0,0,.18);
+    --r-card:18px;
+    --r-pill:980px;
+    --ds-blue:#3d63f2;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--ap-canvas);color:var(--ap-text);
+    font-family:"SF Pro Text","SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  button,input,select{font:inherit}
+  button{cursor:pointer;border:none;background:none}
+  button:active{transform:scale(.97)}
+  button{transition:transform .1s ease, background .15s ease, box-shadow .2s ease, border-color .2s ease}
+  button:focus-visible,select:focus-visible{outline:2px solid var(--ap-blue);outline-offset:2px}
+  ::selection{background:rgba(0,113,227,.15)}
+
+  .app{display:grid;grid-template-columns:256px 1fr;height:100vh;overflow:hidden}
+
+  /* ============ Sidebar — macOS parchment ============ */
+  .sidebar{background:var(--ap-parchment);border-right:1px solid var(--ap-hairline);
+    display:flex;flex-direction:column;min-width:0}
+  .brand{height:64px;display:flex;align-items:center;gap:10px;padding:0 20px}
+  .ds-tile{display:inline-grid;place-items:center;flex:0 0 auto;
+    background:linear-gradient(165deg,#6f92ff 0%,#4a6ef5 48%,#3556e8 100%);
+    border-radius:26%;box-shadow:inset 0 1px 1px rgba(255,255,255,.4), inset 0 -1px 2px rgba(20,40,140,.25), 0 3px 8px rgba(61,99,242,.32)}
+  .ds-tile svg{width:76%;height:76%;color:#fff;display:block}
+  .brand .ds-tile{width:26px;height:26px}
+  .brand-name{font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--ap-text)}
+  .brand-sub{font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ap-faint);margin-top:1px}
+  .brand-copy{display:flex;flex-direction:column;line-height:1.15}
+
+  .new{margin:4px 14px 16px;height:36px;border-radius:var(--r-pill);background:var(--ap-pearl);
+    border:1px solid var(--ap-hairline);font-weight:500;font-size:13px;color:var(--ap-text);
+    box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .new:hover{background:#fff}
+  .side-title{padding:0 22px 6px;color:var(--ap-faint);font-size:11px;font-weight:600;letter-spacing:.04em;
+    display:flex;align-items:center;justify-content:space-between}
+  .side-icons{font-size:13px;letter-spacing:5px;color:var(--ap-faint)}
+  .workspace{margin:0 12px 3px;padding:7px 10px;border-radius:9px;display:flex;align-items:center;gap:8px;
+    color:var(--ap-sub);font-size:13px;font-weight:600}
+  .workspace .folder{color:var(--ap-blue)}
+  .session{margin:0 12px 1px;padding:7px 10px;border-radius:9px;display:flex;align-items:center;gap:8px;
+    font-size:13px;color:var(--ap-text);cursor:pointer;transition:background .12s}
+  .session:hover{background:rgba(0,0,0,.045)}
+  .session.active{background:rgba(0,0,0,.07);font-weight:500}
+  .session .sd{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,.18);flex:0 0 auto}
+  .session.active .sd{background:var(--ap-blue)}
+  .session .label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit}
+  .session .time{color:var(--ap-faint);font-size:11px}
+  .side-spacer{flex:1}
+  .side-bottom{padding:10px 14px 16px;border-top:1px solid var(--ap-hairline)}
+  .side-link{height:34px;display:flex;align-items:center;gap:9px;padding:0 10px;border-radius:9px;
+    color:var(--ap-sub);font-size:13px;cursor:pointer}
+  .side-link:hover{background:rgba(0,0,0,.045)}
+
+  /* ============ Main ============ */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .glass{background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px)}
+  .topbar{height:60px;border-bottom:1px solid var(--ap-hairline);display:flex;align-items:center;
+    justify-content:space-between;padding:0 22px;flex:0 0 auto;z-index:5}
+  .title-wrap{display:flex;flex-direction:column;gap:1px}
+  .title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .subtitle{font-size:11px;color:var(--ap-faint)}
+  .top-actions{display:flex;align-items:center;gap:14px;color:var(--ap-sub);font-size:12px}
+  .move-badge b{color:var(--ap-text);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+  .agent{display:flex;align-items:center;gap:6px}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,.2);display:inline-block;transition:background .2s}
+  .status-dot.live{background:var(--ap-blue);animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,113,227,.35)}50%{box-shadow:0 0 0 5px rgba(0,113,227,0)}}
+  .v-div{width:1px;height:18px;background:var(--ap-hairline2)}
+  .topbtn{border:1px solid var(--ap-hairline2);background:var(--ap-pearl);border-radius:var(--r-pill);
+    height:30px;padding:0 14px;color:var(--ap-text);font-size:12px;font-weight:500}
+  .topbtn:hover{background:#fff}
+
+  .tabs{height:44px;border-bottom:1px solid var(--ap-hairline);display:flex;align-items:flex-end;
+    padding:0 22px;gap:22px;flex:0 0 auto;background:var(--ap-canvas)}
+  .tab{height:44px;display:flex;align-items:center;padding:0 4px;border-bottom:2px solid transparent;
+    color:var(--ap-faint);font-size:13px;cursor:pointer;transition:color .15s}
+  .tab:hover{color:var(--ap-sub)}
+  .tab.active{border-bottom-color:var(--ap-blue);color:var(--ap-text);font-weight:600}
+
+  .subbar{min-height:50px;border-bottom:1px solid var(--ap-hairline);display:flex;align-items:center;
+    gap:8px;padding:6px 22px;flex:0 0 auto;flex-wrap:wrap}
+  .pill{height:28px;border:1px solid var(--ap-hairline);border-radius:var(--r-pill);background:var(--ap-canvas);
+    display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--ap-sub);gap:7px}
+  .pill b{color:var(--ap-text);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .dot.blue{background:var(--ap-blue)}
+  .dot.green{background:var(--ap-green)}
+  .dot.gray{background:rgba(0,0,0,.22)}
+
+  .content{flex:1;min-height:0;overflow:auto}
+  .layout{width:min(1240px,calc(100% - 40px));margin:22px auto 34px;display:grid;
+    grid-template-columns:minmax(680px,1fr) 296px;gap:24px;align-items:start}
+
+  /* ============ Stage ============ */
+  .table{width:100%;aspect-ratio:1.42/1;border-radius:50%/50%;position:relative;
+    background:radial-gradient(ellipse at 50% 42%, #ffffff 0%, #fbfbfd 46%, #f5f5f7 80%, #eff0f3 100%);
+    border:1px solid var(--ap-hairline);
+    box-shadow:inset 0 0 0 14px rgba(255,255,255,.6), inset 0 0 70px rgba(0,0,0,.035), 0 20px 44px rgba(0,0,0,.06);
+    display:flex;align-items:center;justify-content:center}
+
+  .seat{position:absolute;z-index:9;display:flex;align-items:center;gap:11px;min-width:216px;
+    padding:9px 18px 9px 10px;border-radius:var(--r-card);
+    background:rgba(255,255,255,.82);border:1px solid var(--ap-hairline);
+    box-shadow:var(--sh-card);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
+    transition:box-shadow .25s ease,border-color .25s ease}
+  .seat.top{top:-26px;left:50%;transform:translateX(-50%)}
+  .seat.bottom{bottom:-26px;left:50%;transform:translateX(-50%)}
+  .seat.active{border-color:rgba(0,113,227,.45);
+    box-shadow:0 0 0 3px rgba(0,113,227,.14), 0 14px 34px rgba(0,113,227,.14)}
+  .avatar{position:relative;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+    font-weight:600;font-size:11px;letter-spacing:.3px;flex:0 0 auto}
+  .avatar.ai{border-radius:11px;overflow:visible}
+  .avatar.ai .ds-tile{width:38px;height:38px;border-radius:11px}
+  .avatar.you{background:var(--ap-parchment);color:var(--ap-sub);border:1px solid var(--ap-hairline2)}
+  .seat.thinking .avatar.ai .ds-tile:after{content:"";position:absolute;inset:-4px;border-radius:14px;
+    border:2px solid rgba(0,113,227,.5);animation:ring 1.3s ease-out infinite}
+  @keyframes ring{0%{transform:scale(.86);opacity:1}100%{transform:scale(1.26);opacity:0}}
+  .seat-copy{min-width:0;flex:1}
+  .seat-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;letter-spacing:-.01em}
+  .seat-meta{font-size:11px;color:var(--ap-faint);margin-top:3px;display:flex;align-items:center;gap:5px;min-height:14px}
+  .stone-mini{width:13px;height:13px;border-radius:50%;display:inline-block}
+  .stone-mini.black{background:radial-gradient(circle at 32% 26%,#5a5a5a,#161616 48%,#000)}
+  .stone-mini.white{background:radial-gradient(circle at 32% 26%,#fff,#efeff1 58%,#d3d6da);border:1px solid rgba(0,0,0,.14)}
+  .cap-chip{display:inline-flex;align-items:center;gap:4px;color:var(--ap-sub)}
+  .cap-chip b{font-variant-numeric:tabular-nums}
+  .tdots{display:inline-flex;gap:2.5px;margin-left:2px}
+  .tdots i{width:3.5px;height:3.5px;border-radius:50%;background:var(--ap-blue);animation:tk 1s infinite}
+  .tdots i:nth-child(2){animation-delay:.15s}
+  .tdots i:nth-child(3){animation-delay:.3s}
+  @keyframes tk{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+
+  .thinking{position:absolute;top:30px;left:50%;transform:translateX(-50%) translateY(-4px);
+    color:var(--ap-sub);font-size:11.5px;background:rgba(255,255,255,.9);border:1px solid var(--ap-hairline);
+    border-radius:var(--r-pill);padding:5px 13px;box-shadow:var(--sh-card);opacity:0;transition:.22s;z-index:10;
+    display:flex;align-items:center;gap:7px;pointer-events:none;backdrop-filter:blur(10px)}
+  .thinking.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* board */
+  .board-wrap{width:min(560px,66%);background:linear-gradient(155deg,#f3d8a5 0%,#edd09b 46%,#e6c48b 100%);
+    border-radius:14px;padding:14px;position:relative;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 6px rgba(122,88,38,.16), 0 12px 28px rgba(96,68,28,.20)}
+  .board-wrap:before{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;
+    background:repeating-linear-gradient(93deg, rgba(122,88,38,.028) 0 2px, transparent 2px 7px)}
+  svg#boardSvg{display:block;width:100%;height:auto;position:relative;z-index:1;touch-action:manipulation}
+  .grid-line{stroke:#6f5230;stroke-width:1;opacity:.82}
+  .grid-line.edge{stroke-width:1.5;opacity:.95}
+  .coord{fill:#96743f;font-size:8px;font-family:inherit;opacity:.85}
+  .star-pt{fill:#5a4428}
+  .stone{filter:drop-shadow(0 1px 1.4px rgba(46,30,8,.4))}
+  .stone.b{fill:url(#gBlack)}
+  .stone.w{fill:url(#gWhite);stroke:#b7bcc3;stroke-width:.45}
+  .stone.born{animation:born .2s cubic-bezier(.2,.9,.3,1.2);transform-box:fill-box;transform-origin:center}
+  @keyframes born{0%{opacity:.1;transform:scale(1.45)}100%{opacity:1;transform:scale(1)}}
+  .marker-on-b{fill:#f2f3f5}
+  .marker-on-w{fill:#3b4046}
+  .ghost{fill:#fff;opacity:.5;stroke:#9aa4af;stroke-width:.5;pointer-events:none}
+  .board-hot{fill:transparent;cursor:pointer}
+
+  /* settlement banner */
+  .banner{position:absolute;inset:0;z-index:20;display:grid;place-items:center;border-radius:50%/50%;
+    background:rgba(245,245,247,.4);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .28s}
+  .banner.show{opacity:1;pointer-events:auto}
+  .banner-card{background:rgba(255,255,255,.92);border:1px solid var(--ap-hairline);border-radius:22px;
+    box-shadow:var(--sh-pop);padding:26px 36px;text-align:center;transform:translateY(10px) scale(.97);
+    transition:transform .3s cubic-bezier(.2,.9,.3,1.1);backdrop-filter:saturate(180%) blur(20px)}
+  .banner.show .banner-card{transform:translateY(0) scale(1)}
+  .banner-title{font-size:21px;font-weight:600;letter-spacing:-.02em}
+  .banner-sub{font-size:12.5px;color:var(--ap-sub);margin-top:6px}
+  .banner-btn{margin-top:18px;height:36px;padding:0 24px;border-radius:var(--r-pill);background:var(--ap-blue);
+    color:#fff;font-weight:500;font-size:13px;box-shadow:0 6px 18px rgba(0,113,227,.32)}
+  .banner-btn:hover{background:var(--ap-blue-hover)}
+
+  /* ============ Control bar ============ */
+  .table-footer{margin-top:22px;display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
+  .table-info{display:flex;align-items:center;color:var(--ap-sub);font-size:13px;min-height:44px}
+  .stat{padding:0 18px;border-left:1px solid var(--ap-hairline)}
+  .stat:first-child{padding-left:0;border-left:0}
+  .stat .v{display:block;color:var(--ap-text);font-size:16px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .stat .k{display:block;font-size:9.5px;font-weight:600;color:var(--ap-faint);margin-top:2px;letter-spacing:.07em;text-transform:uppercase}
+  .controls{display:flex;align-items:center;gap:8px;justify-content:center;min-height:44px}
+  .ctrl{height:34px;padding:0 20px;border-radius:var(--r-pill);font-size:13px;font-weight:500;
+    border:1px solid var(--ap-hairline2);background:var(--ap-pearl);color:var(--ap-text)}
+  .ctrl:hover{background:#fff}
+  .ctrl.primary{background:var(--ap-blue);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(0,113,227,.28)}
+  .ctrl.primary:hover{background:var(--ap-blue-hover)}
+  .ctrl.danger{color:var(--ap-red)}
+  .ctrl.danger:hover{background:var(--ap-red-tint);border-color:rgba(255,59,48,.25)}
+  .settingbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+  .mode-sel{height:34px;border:1px solid var(--ap-hairline2);background:var(--ap-pearl);border-radius:var(--r-pill);
+    color:var(--ap-text);padding:0 12px;font-size:13px;outline:none;cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%2386868b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:26px}
+  .mode-sel:hover{background-color:#fff}
+  .sound-btn{height:34px;border:1px solid var(--ap-hairline2);background:var(--ap-pearl);border-radius:var(--r-pill);
+    color:var(--ap-text);padding:0 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px}
+  .sound-btn:hover{background:#fff}
+  .sound-btn svg{display:block}
+  .sound-btn:not(.active){color:var(--ap-faint)}
+  .sound-btn:not(.active) .wave{opacity:0}
+  .sound-btn.active{background:var(--ap-blue-tint);border-color:rgba(0,113,227,.3);color:var(--ap-link)}
+
+  .watching{margin-top:22px;display:flex;justify-content:center}
+  .watching-inner{font-size:11px;color:var(--ap-sub);background:var(--ap-canvas);border:1px solid var(--ap-hairline);
+    border-radius:var(--r-pill);padding:7px 15px;box-shadow:0 1px 4px rgba(0,0,0,.04);display:inline-flex;align-items:center}
+  .watching .live-dot{width:5px;height:5px;border-radius:50%;background:var(--ap-blue);margin-right:8px;animation:pulse 2s infinite}
+
+  /* ============ Right rail ============ */
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .card{border:1px solid var(--ap-hairline);background:var(--ap-canvas);border-radius:var(--r-card);
+    box-shadow:var(--sh-card);padding:16px 18px}
+  .card-title{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;
+    color:var(--ap-text);margin-bottom:10px;letter-spacing:-.01em}
+  .card-title a{color:var(--ap-link);text-decoration:none;font-weight:400;font-size:12px}
+  .card-title a:hover{text-decoration:underline}
+  .bullet{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--ap-sub);line-height:1.45;padding:5px 0}
+  .bullet .b{width:7px;height:7px;border-radius:50%;margin-top:6px;background:var(--ap-blue);flex:0 0 auto}
+  .bullet.green .b{background:var(--ap-green)}
+  .bullet.red .b{background:var(--ap-red)}
+  .job{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--ap-hairline)}
+  .job:first-of-type{border-top:0;padding-top:2px}
+  .job .name{font-size:13px;color:var(--ap-text);font-weight:500}
+  .job .time{font-size:11px;color:var(--ap-faint);font-variant-numeric:tabular-nums}
+  .chip{justify-self:start;font-size:10.5px;font-weight:600;padding:2.5px 9px;border-radius:var(--r-pill)}
+  .chip.run{background:var(--ap-blue-tint);color:var(--ap-link)}
+  .chip.pass{background:var(--ap-green-tint);color:#248a3d}
+  .go-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px}
+  .mini-stat{padding:11px 13px;border:1px solid var(--ap-hairline);background:var(--ap-pearl);border-radius:12px}
+  .mini-stat strong{display:block;color:var(--ap-text);font-size:13.5px;margin-bottom:3px;font-weight:600;letter-spacing:-.01em}
+  .mini-stat span{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ap-faint)}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);
+    opacity:0;background:rgba(29,29,31,.92);color:#fff;padding:10px 18px;border-radius:var(--r-pill);
+    font-size:12.5px;transition:.22s cubic-bezier(.2,.9,.3,1.1);z-index:99;
+    box-shadow:0 12px 32px rgba(0,0,0,.25);pointer-events:none;backdrop-filter:blur(8px)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:1180px){
+    .layout{grid-template-columns:1fr}
+    .rail{order:2;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  }
+  @media(max-width:900px){
+    .app{grid-template-columns:200px 1fr}
+    .table-footer{grid-template-columns:1fr;gap:12px}
+    .settingbar,.table-info{justify-content:center}
+    .controls{flex-wrap:wrap}
+    .seat{min-width:186px}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ds-whale" viewBox="0 0 48 48">
+    <ellipse cx="26.5" cy="26.5" rx="14.5" ry="10.5" fill="currentColor"/>
+    <path d="M13.8 24.8C9.2 23.2 5.6 19.2 4.6 13.6c3.4 1.9 5.8 1.9 7.3.4-.5 3.4.5 6 3 8z" fill="currentColor"/>
+    <circle cx="33.8" cy="23.8" r="1.7" fill="#fff"/>
+    <path d="M32.6 30q4 2.2 7.6-.4" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="ds-tile"><svg><use href="#ds-whale"/></svg></span>
+      <span class="brand-copy">
+        <span class="brand-name">deepseek</span>
+        <span class="brand-sub">Harness</span>
+      </span>
+    </div>
+
+    <button class="new" id="newSession">New Session</button>
+
+    <div class="side-title">
+      <span>Workspaces</span>
+      <span class="side-icons">⌕ ⌘ ＋</span>
+    </div>
+
+    <div class="workspace"><span class="folder">▱</span><span>companion-go</span></div>
+    <div class="session active"><span class="sd"></span><span class="label">Go with DeepSeek</span><span class="time">now</span></div>
+    <div class="session"><span class="sd"></span><span class="label">Refactor parser</span><span class="time">12m</span></div>
+    <div class="session"><span class="sd"></span><span class="label">Fix API bug</span><span class="time">1h</span></div>
+    <div class="session"><span class="sd"></span><span class="label">Hash normalization</span><span class="time">2h</span></div>
+
+    <div class="side-spacer"></div>
+    <div class="side-bottom">
+      <div class="side-link">♠ <span>All in</span></div>
+      <div class="side-link">⚙ <span>Settings</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar glass">
+      <div class="title-wrap">
+        <div class="title">Companion Go — 19×19</div>
+        <div class="subtitle">Play stones · just for fun</div>
+      </div>
+      <div class="top-actions">
+        <span class="move-badge">Move <b id="moveTop">1</b></span>
+        <span class="agent"><span class="status-dot" id="agentDot"></span><span id="agentState">Agent idle</span></span>
+        <span class="v-div"></span>
+        <button class="topbtn" id="resetTop">Reset</button>
+        <button class="topbtn" id="close">Close table</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab">Chat</div>
+      <div class="tab active">Go</div>
+      <div class="tab">Trajectory</div>
+    </div>
+
+    <div class="subbar glass">
+      <div class="pill"><span class="dot blue"></span><span>Go · <b id="turnTop">Your turn</b></span></div>
+      <div class="pill"><span class="dot green"></span><span>Work · <b>pytest running</b></span></div>
+      <div class="pill"><span class="dot gray"></span><span>Mode · <b id="modeTop">Normal</b></span></div>
+      <div class="pill"><span class="dot blue"></span><span>Sound · <b id="soundTop">On</b></span></div>
+    </div>
+
+    <section class="content">
+      <div class="layout">
+        <div class="stage">
+          <div class="table">
+            <div class="seat top" id="seatAI">
+              <div class="avatar ai"><span class="ds-tile"><svg><use href="#ds-whale"/></svg></span></div>
+              <div class="seat-copy">
+                <div class="seat-name">DeepSeek <span class="stone-mini black"></span></div>
+                <div class="seat-meta">
+                  <span class="cap-chip">提 <b id="aiCapture">0</b></span>
+                  <span>·</span>
+                  <span id="aiTurnLabel">watching</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="thinking" id="thinking">
+              <span class="tdots"><i></i><i></i><i></i></span>
+              <span>DeepSeek is thinking · <b id="thinkingSec">1</b>s</span>
+            </div>
+
+            <div class="board-wrap">
+              <svg id="boardSvg" viewBox="0 0 600 600" aria-label="Go board">
+                <defs>
+                  <radialGradient id="gBlack" cx="35%" cy="30%" r="75%">
+                    <stop offset="0%" stop-color="#6c6c6c"/>
+                    <stop offset="45%" stop-color="#242424"/>
+                    <stop offset="100%" stop-color="#000000"/>
+                  </radialGradient>
+                  <radialGradient id="gWhite" cx="36%" cy="30%" r="78%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="58%" stop-color="#f1f1f3"/>
+                    <stop offset="100%" stop-color="#ced1d6"/>
+                  </radialGradient>
+                </defs>
+                <g id="gridG"></g>
+                <g id="stonesG"></g>
+                <circle id="ghost" class="ghost" r="13.4" style="display:none"/>
+                <rect id="hot" class="board-hot" x="0" y="0" width="600" height="600"/>
+              </svg>
+            </div>
+
+            <div class="seat bottom" id="seatYou">
+              <div class="avatar you">YOU</div>
+              <div class="seat-copy">
+                <div class="seat-name">You <span class="stone-mini white"></span></div>
+                <div class="seat-meta">
+                  <span class="cap-chip">提 <b id="userCapture">0</b></span>
+                  <span>·</span>
+                  <span id="yourTurnLabel">your turn</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="banner" id="banner">
+              <div class="banner-card">
+                <div class="banner-title" id="bannerTitle">DeepSeek wins</div>
+                <div class="banner-sub" id="bannerSub">You resigned</div>
+                <button class="banner-btn" id="bannerBtn">New game</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-footer">
+            <div class="table-info">
+              <div class="stat"><span class="v" id="moveInfo">1</span><span class="k">Move</span></div>
+              <div class="stat"><span class="v" id="captInfo">B 0 · W 0</span><span class="k">Captures</span></div>
+              <div class="stat"><span class="v">6.5</span><span class="k">Komi</span></div>
+            </div>
+
+            <div class="controls">
+              <button class="ctrl primary" id="pass">Pass</button>
+              <button class="ctrl danger" id="resign">Resign</button>
+              <button class="ctrl" id="reset">Reset</button>
+            </div>
+
+            <div class="settingbar">
+              <select class="mode-sel" id="mode">
+                <option>Normal</option>
+                <option>Mofish</option>
+                <option>Strict</option>
+                <option>Manual</option>
+              </select>
+              <button class="sound-btn active" id="soundBtn">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <path d="M2 6v4h2.5L8 13V3L4.5 6H2z" fill="currentColor"/>
+                  <path class="wave" d="M10 5.6a3.4 3.4 0 010 4.8" stroke="currentColor" fill="none" stroke-width="1.4" stroke-linecap="round"/>
+                  <path class="wave" d="M11.8 3.9a5.8 5.8 0 010 8.2" stroke="currentColor" fill="none" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+                <span>Sound</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="watching">
+            <span class="watching-inner">
+              <span class="live-dot"></span>
+              <span id="watchText">Watching the board · your turn</span>
+            </span>
+          </div>
+        </div>
+
+        <aside class="rail">
+          <div class="card">
+            <div class="card-title"><span>Work</span></div>
+            <div class="bullet"><span class="b"></span><span>hash normalization changed</span></div>
+            <div class="bullet"><span class="b"></span><span>pytest running</span></div>
+            <div class="bullet red"><span class="b"></span><span>last result: 2 failed</span></div>
+            <div class="bullet green"><span class="b"></span><span>no blockers</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span>Jobs</span><a href="#">View all</a></div>
+            <div class="job"><div><div class="name">pytest</div><span class="chip run">Running</span></div><div class="time">2m 14s</div></div>
+            <div class="job"><div><div class="name">mypy</div><span class="chip pass">Passed</span></div><div class="time">1m 02s</div></div>
+            <div class="job"><div><div class="name">ruff</div><span class="chip pass">Passed</span></div><div class="time">45s</div></div>
+            <div class="job"><div><div class="name">build</div><span class="chip run">Running</span></div><div class="time">1m 33s</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span>Go Summary</span></div>
+            <div class="go-summary">
+              <div class="mini-stat"><strong id="goState">In progress</strong><span>Status</span></div>
+              <div class="mini-stat"><strong id="goMove">Move 1</strong><span>Current move</span></div>
+              <div class="mini-stat"><strong id="goToMove">You</strong><span>To move</span></div>
+              <div class="mini-stat"><strong id="goMode">Normal</strong><span>Attention mode</span></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const N = 19, M = 30, CELL = 30, SIZE = M * 2 + CELL * (N - 1);
+  const NS = 'http://www.w3.org/2000/svg';
+  const LETTERS = 'ABCDEFGHJKLMNOPQRST';
+
+  const $ = id => document.getElementById(id);
+  const svg = $('boardSvg'), gridG = $('gridG'), stonesG = $('stonesG'), ghost = $('ghost');
+  const moveTop = $('moveTop'), moveInfo = $('moveInfo'), captInfo = $('captInfo');
+  const agentState = $('agentState'), agentDot = $('agentDot');
+  const thinking = $('thinking'), thinkingSec = $('thinkingSec');
+  const watchText = $('watchText'), yourTurnLabel = $('yourTurnLabel'), aiTurnLabel = $('aiTurnLabel');
+  const seatAI = $('seatAI'), seatYou = $('seatYou');
+  const toast = $('toast'), modeSel = $('mode'), soundBtn = $('soundBtn');
+  const modeTop = $('modeTop'), soundTop = $('soundTop'), turnTop = $('turnTop');
+  const goMove = $('goMove'), goToMove = $('goToMove'), goMode = $('goMode'), goState = $('goState');
+  const banner = $('banner'), bannerTitle = $('bannerTitle'), bannerSub = $('bannerSub');
+
+  let state, history, move, yourTurn, ended, last, userCap, aiCap, lastWasPass;
+  let soundOn = true, audioCtx = null;
+
+  /* ---------- audio ---------- */
+  function initAudio(){
+    if(!audioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(Ctx) audioCtx = new Ctx();
+    }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep(freq, dur, type, gain){
+    if(!soundOn) return;
+    initAudio();
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(gain || 0.03, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + dur);
+  }
+  const playMoveSound = isAI => beep(isAI ? 430 : 610, 0.05, 'triangle', 0.032);
+  const playCaptureSound = () => { beep(520, 0.05, 'triangle', 0.03); setTimeout(() => beep(390, 0.07, 'triangle', 0.028), 55); };
+  const playPassSound = () => beep(300, 0.07, 'sine', 0.024);
+  const playEndSound = () => { beep(340, 0.12, 'sine', 0.03); setTimeout(() => beep(228, 0.2, 'sine', 0.028), 120); };
+
+  /* ---------- board scaffolding ---------- */
+  const pt = i => M + i * CELL;
+  function el(name, attrs){
+    const e = document.createElementNS(NS, name);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  (function buildGrid(){
+    for(let i = 0; i < N; i++){
+      const edge = (i === 0 || i === N - 1) ? 'grid-line edge' : 'grid-line';
+      gridG.appendChild(el('line', {x1: pt(0), y1: pt(i), x2: pt(N-1), y2: pt(i), class: edge}));
+      gridG.appendChild(el('line', {x1: pt(i), y1: pt(0), x2: pt(i), y2: pt(N-1), class: edge}));
+    }
+    [[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]].forEach(([x,y]) =>
+      gridG.appendChild(el('circle', {cx: pt(x), cy: pt(y), r: 3.4, class: 'star-pt'})));
+    for(let i = 0; i < N; i++){
+      const t1 = el('text', {x: pt(i), y: 16, class: 'coord', 'text-anchor': 'middle'});
+      t1.textContent = LETTERS[i];
+      const t2 = el('text', {x: pt(i), y: SIZE - 8, class: 'coord', 'text-anchor': 'middle'});
+      t2.textContent = LETTERS[i];
+      const t3 = el('text', {x: 11, y: pt(i) + 3, class: 'coord', 'text-anchor': 'middle'});
+      t3.textContent = N - i;
+      const t4 = el('text', {x: SIZE - 11, y: pt(i) + 3, class: 'coord', 'text-anchor': 'middle'});
+      t4.textContent = N - i;
+      gridG.append(t1, t2, t3, t4);
+    }
+  })();
+
+  function nearest(e){
+    const r = svg.getBoundingClientRect();
+    const x = Math.round(((e.clientX - r.left) * (SIZE / r.width) - M) / CELL);
+    const y = Math.round(((e.clientY - r.top) * (SIZE / r.height) - M) / CELL);
+    if(x < 0 || x >= N || y < 0 || y >= N) return null;
+    return {x, y};
+  }
+  svg.addEventListener('mousemove', e => {
+    const p = nearest(e);
+    if(!p || ended || !yourTurn || state[p.y][p.x] !== 0){ ghost.style.display = 'none'; return; }
+    ghost.setAttribute('cx', pt(p.x)); ghost.setAttribute('cy', pt(p.y));
+    ghost.style.display = 'block';
+  });
+  svg.addEventListener('mouseleave', () => ghost.style.display = 'none');
+  svg.addEventListener('click', e => {
+    const p = nearest(e);
+    if(p) userMove(p.x, p.y);
+  });
+
+  /* ---------- rules ---------- */
+  const neighbors = (x, y) =>
+    [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b]) => a >= 0 && a < N && b >= 0 && b < N);
+
+  function groupAndLibs(x, y){
+    const color = state[y][x];
+    const seen = new Set(), group = [], libs = new Set(), stack = [[x, y]];
+    while(stack.length){
+      const [cx, cy] = stack.pop(), key = cx + ',' + cy;
+      if(seen.has(key)) continue;
+      seen.add(key); group.push([cx, cy]);
+      for(const [nx, ny] of neighbors(cx, cy)){
+        if(state[ny][nx] === 0) libs.add(nx + ',' + ny);
+        else if(state[ny][nx] === color) stack.push([nx, ny]);
+      }
+    }
+    return {group, libs};
+  }
+
+  const boardKey = () => state.flat().join('');
+
+  // returns captured count, or -1 illegal (occupied/suicide), -2 superko repeat
+  function tryPlace(x, y, color){
+    if(state[y][x] !== 0) return -1;
+    const snap = state.map(r => r.slice());
+    state[y][x] = color;
+    const enemy = color === 1 ? 2 : 1;
+    let captured = 0;
+    for(const [nx, ny] of neighbors(x, y)){
+      if(state[ny][nx] !== enemy) continue;
+      const info = groupAndLibs(nx, ny);
+      if(info.libs.size === 0){
+        captured += info.group.length;
+        for(const [gx, gy] of info.group) state[gy][gx] = 0;
+      }
+    }
+    if(groupAndLibs(x, y).libs.size === 0){ state = snap; return -1; }
+    const k = boardKey();
+    if(history.has(k)){ state = snap; return -2; }
+    history.add(k);
+    return captured;
+  }
+
+  /* ---------- rendering ---------- */
+  function render(){
+    stonesG.innerHTML = '';
+    for(let y = 0; y < N; y++){
+      for(let x = 0; x < N; x++){
+        const v = state[y][x];
+        if(!v) continue;
+        const c = el('circle', {cx: pt(x), cy: pt(y), r: 13.4, class: 'stone ' + (v === 1 ? 'w' : 'b')});
+        if(last && last.x === x && last.y === y) c.classList.add('born');
+        stonesG.appendChild(c);
+        if(last && last.x === x && last.y === y)
+          stonesG.appendChild(el('circle', {cx: pt(x), cy: pt(y), r: 3.4,
+            class: v === 1 ? 'marker-on-w' : 'marker-on-b'}));
+      }
+    }
+    moveTop.textContent = move;
+    moveInfo.textContent = move;
+    goMove.textContent = 'Move ' + move;
+    captInfo.textContent = `B ${aiCap} · W ${userCap}`;
+    $('aiCapture').textContent = aiCap;
+    $('userCapture').textContent = userCap;
+
+    yourTurnLabel.textContent = ended ? 'game over' : (yourTurn ? 'your turn' : 'waiting');
+    aiTurnLabel.textContent = ended ? 'game over' : (yourTurn ? 'watching' : 'thinking');
+    turnTop.textContent = ended ? 'Game over' : (yourTurn ? 'Your turn' : 'DeepSeek thinking');
+    goToMove.textContent = ended ? '—' : (yourTurn ? 'You' : 'DeepSeek');
+    goState.textContent = ended ? 'Finished' : 'In progress';
+    watchText.textContent = ended ? 'Table closed' :
+      (yourTurn ? 'Watching the board · your turn' : 'Watching the board · DeepSeek is thinking');
+
+    seatYou.classList.toggle('active', !ended && yourTurn);
+    seatAI.classList.toggle('active', !ended && !yourTurn);
+    seatAI.classList.toggle('thinking', !ended && !yourTurn);
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  /* ---------- game flow ---------- */
+  function userMove(x, y){
+    if(ended) return showToast('Game is over — start a new one');
+    if(!yourTurn) return showToast('DeepSeek is thinking…');
+    const res = tryPlace(x, y, 1);
+    if(res === -1) return showToast(state[y][x] !== 0 ? 'Point occupied' : 'Illegal move · suicide');
+    if(res === -2) return showToast('Ko · position may not repeat');
+    userCap += res;
+    if(res > 0) playCaptureSound(); else playMoveSound(false);
+    last = {x, y}; lastWasPass = false;
+    move++; yourTurn = false;
+    render();
+    aiThink();
+  }
+
+  function aiCandidate(){
+    const cands = [];
+    if(last){
+      for(let r = 1; r <= 3; r++)
+        for(let dy = -r; dy <= r; dy++)
+          for(let dx = -r; dx <= r; dx++){
+            const x = last.x + dx, y = last.y + dy;
+            if(x >= 0 && x < N && y >= 0 && y < N && state[y][x] === 0) cands.push([x, y]);
+          }
+    }
+    if(cands.length && Math.random() < .8)
+      return cands[Math.floor(Math.random() * cands.length)];
+    const empties = [];
+    for(let y = 0; y < N; y++) for(let x = 0; x < N; x++)
+      if(state[y][x] === 0) empties.push([x, y]);
+    return empties.length ? empties[Math.floor(Math.random() * empties.length)] : null;
+  }
+
+  function aiThink(){
+    agentState.textContent = 'Agent thinking';
+    agentDot.classList.add('live');
+    thinking.classList.add('show');
+    let t = 1; thinkingSec.textContent = t;
+    const timer = setInterval(() => { t++; thinkingSec.textContent = t; }, 1000);
+    const base = {Mofish: 650, Normal: 1100, Strict: 1700, Manual: 2200}[modeSel.value] || 1100;
+    setTimeout(() => {
+      clearInterval(timer);
+      thinking.classList.remove('show');
+      agentState.textContent = 'Agent idle';
+      agentDot.classList.remove('live');
+      if(ended) return;
+      let placed = false;
+      for(let i = 0; i < 80; i++){
+        const c = aiCandidate();
+        if(!c) break;
+        const res = tryPlace(c[0], c[1], 2);
+        if(res >= 0){
+          aiCap += res;
+          if(res > 0) playCaptureSound(); else playMoveSound(true);
+          last = {x: c[0], y: c[1]};
+          placed = true;
+          break;
+        }
+      }
+      if(placed){
+        lastWasPass = false;
+        move++; yourTurn = true;
+        render();
+      } else {
+        playPassSound();
+        if(lastWasPass){
+          endGame('Game over', 'Both players passed · Move ' + move);
+        } else {
+          lastWasPass = true; last = null;
+          move++; yourTurn = true;
+          render();
+          showToast('DeepSeek passed');
+        }
+      }
+    }, base + Math.random() * 900);
+  }
+
+  function endGame(title, sub){
+    ended = true;
+    bannerTitle.textContent = title;
+    bannerSub.textContent = sub;
+    banner.classList.add('show');
+    playEndSound();
+    render();
+  }
+
+  $('pass').addEventListener('click', () => {
+    if(ended) return;
+    if(!yourTurn) return showToast('Wait for DeepSeek');
+    lastWasPass = true; last = null;
+    move++; yourTurn = false;
+    playPassSound(); render();
+    showToast('You passed');
+    aiThink();
+  });
+
+  $('resign').addEventListener('click', () => {
+    if(ended) return;
+    endGame('DeepSeek wins', 'You resigned · Move ' + move + ' · Captures B ' + aiCap + ' · W ' + userCap);
+  });
+
+  function reset(){
+    state = Array.from({length: N}, () => Array(N).fill(0));
+    history = new Set([state.flat().join('')]);
+    move = 1; yourTurn = true; ended = false; last = null;
+    userCap = 0; aiCap = 0; lastWasPass = false;
+    agentState.textContent = 'Agent idle';
+    agentDot.classList.remove('live');
+    thinking.classList.remove('show');
+    banner.classList.remove('show');
+    render();
+    showToast('Board reset');
+  }
+
+  $('reset').addEventListener('click', reset);
+  $('resetTop').addEventListener('click', reset);
+  $('newSession').addEventListener('click', reset);
+  $('bannerBtn').addEventListener('click', reset);
+  $('close').addEventListener('click', () => showToast('Table minimized'));
+
+  modeSel.addEventListener('change', () => {
+    modeTop.textContent = modeSel.value;
+    goMode.textContent = modeSel.value;
+    showToast('Mode · ' + modeSel.value);
+  });
+
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundBtn.classList.toggle('active', soundOn);
+    soundTop.textContent = soundOn ? 'On' : 'Off';
+    showToast('Sound ' + (soundOn ? 'on' : 'off'));
+    if(soundOn) beep(580, 0.04, 'triangle', 0.03);
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>
