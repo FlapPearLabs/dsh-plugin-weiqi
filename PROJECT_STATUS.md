@@ -8,7 +8,7 @@
 - Next Stage: **Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
 - Implementation Wave A: **NOT STARTED**
-- Ticketization: **NOT STARTED**
+- Ticketization: **REVIEW_PENDING**
 
 ## Current scope
 
