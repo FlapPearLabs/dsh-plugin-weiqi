@@ -1,0 +1,3 @@
+- insert:
+    - id: companion-go
+      name: '@flappearlabs/dsh-plugin-weiqi'

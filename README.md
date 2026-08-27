@@ -16,7 +16,8 @@ production UI.
 - Cooperative Yield: **VERIFIED**
 - Current Stage: **Repository Bootstrap**
 - Next Stage: **Ticket / Spike Decomposition**
-- Build Phase A: **NOT STARTED**
+- Spec Phase A: **Minimal Technical Vertical Slice**
+- Implementation Wave A: **NOT STARTED**
 
 See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the authoritative stage marker.
 
@@ -43,6 +44,10 @@ The independent `DSH cooperative-yield upgrade gate` GitHub workflow checks out
 the pinned upstream DSH source on a fresh Ubuntu runner and executes all three
 recorded experiments against the real AgentLoop.
 
+The independent `DSH profile-install smoke` workflow builds and packs this
+package, installs it with `dsh plugin --profile ... add`, verifies bundle
+reconciliation and patch composition, then mounts the Foundation no-op plugin.
+
 ## Repository map
 
 - `src/index.ts` — real, lifecycle-safe DSH/Cordis plugin entry
@@ -52,7 +57,11 @@ recorded experiments against the real AgentLoop.
 - `docs/validation/` — executed cooperative-yield evidence
 - `docs/design/` — frozen V4 UI/UX reference and prototype
 - `docs/context/` — concise project context and decisions
-- `docs/roadmap/` — phase boundaries only; no ticket decomposition
+- `docs/roadmap/` — Implementation Wave boundaries only; no ticket decomposition
+
+Spec Phases are product and architecture stages. Implementation Waves are
+ticket-driven construction slices; future Tickets belong to a Wave and must
+not redefine a Spec Phase.
 
 ## Foundation boundary
 

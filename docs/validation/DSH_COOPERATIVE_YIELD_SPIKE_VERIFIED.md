@@ -122,5 +122,5 @@ Do not assume the following remain stable across DSH upgrades:
 
 ```text
 Validation Gate A: COMPLETE / PASS
-Build Phase A: READY TO START
+Spec Phase A: READY TO START
 ```

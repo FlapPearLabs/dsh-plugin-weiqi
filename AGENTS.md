@@ -44,9 +44,19 @@ Explain the concrete reason and STOP. Do not implement the change.
 
 - Read `PROJECT_STATUS.md` before starting work.
 - Respect the current phase and explicit Ticket boundary.
-- Do not start Build Phase A during Repository Bootstrap or ticketization.
+- Spec Phase means a product/architecture stage; Implementation Wave means a
+  ticket-driven construction slice within that stage.
+- Future Tickets belong to an Implementation Wave and must not redefine a Spec
+  Phase.
+- Do not start Implementation Wave A during Repository Bootstrap or
+  ticketization.
 - Keep the package single-package until pinned DSH proves a split necessary.
 - Preserve V4 as the current UI/UX reference; do not restart style exploration.
+- Design and prototype files are authoritative only for UI/UX presentation
+  unless the verified Spec explicitly delegates behavior to them.
+- Never derive Go rules, strategy, budget, Attention semantics, or capability
+  policy from prototype JavaScript.
+- When Design conflicts with the verified Spec, the verified Spec wins.
 
 ## Git and verification
 
