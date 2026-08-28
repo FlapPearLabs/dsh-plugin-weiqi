@@ -90,13 +90,14 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 
 #### INFRA-S01 — GitHub source install spike
 - **Type:** SPIKE | **Wave:** Infra | **Spec Phase:** Pre-A | **Baseline IDs:** BL-PKG-06
-- **Current Baseline State:** BL-PKG-06: NEEDS_SPIKE | **Target State:** VERIFIED_FACT_NOT_INTEGRATED
+- **Current Baseline State:** BL-PKG-06: NEEDS_SPIKE | **Target State:** IMPLEMENTED_VERIFIED (the Spike verifies the GitHub-source installation capability itself, so PASS advances the row to IMPLEMENTED_VERIFIED directly, not to VERIFIED_FACT_NOT_INTEGRATED)
+- **Post-Spike State on PASS:** BL-PKG-06 → `IMPLEMENTED_VERIFIED` directly — no `VERIFIED_FACT_NOT_INTEGRATED` staging; the Spike-verified `github:` install path is the production capability, not a fact awaiting later integration (Post-Spike Stability Rule).
 - **Spec Authority:** BL-PKG-05/06 evidence boundary
 - **Scope:** On pinned DSH (`b150a551...`, `0.1.1-rc.2`, Node 24.11.1, pnpm 11.7.0), run real `dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`; observe resolution → clone → build → activation. Do not guess prepare/prepack before observing.
 - **Explicit Non-Goals:** No publish-config change; no new install code; no profile-smoke modification.
 - **Dependencies / blocked_by:** none
 - **Expected Surfaces:** DSH CLI, `package.json`, `lib/`, `tests/profile-install/`
-- **Acceptance Criteria (PASS):** command resolves/builds/activates in clean profile; `profile-mount-smoke.mjs` assertions pass; trace uploaded. **FAIL:** record exact behavior + fallback (packed tarball docs); mark `VERIFIED_FACT_NOT_INTEGRATED`.
+- **Acceptance Criteria (PASS):** command resolves/builds/activates in clean profile; `profile-mount-smoke.mjs` assertions pass; trace uploaded → BL-PKG-06 = IMPLEMENTED_VERIFIED. **FAIL:** record exact behavior + fallback (packed tarball docs); state reflects evidence (do not force IMPLEMENTED_VERIFIED without PASS).
 - **Required Review Evidence:** executed trace; assertions; no invented success.
 - **Stop / Escalation Condition:** frozen packaging mutation → `ESCALATION_REQUIRED`.
 
@@ -203,6 +204,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Scope:** Evaluate candidates against §31 positional-superko fixture + area/komi 7.5 explicit config; produce pinned version + conformance record.
 - **Explicit Non-Goals:** No port/adapter code; no second superko layer; no silent downgrade.
 - **Dependencies / blocked_by:** none
+- **Post-Spike Consumer (predeclared):** WAVE-B-T02 — already `blocked_by` this Spike; its approved Scope consumes the pinned version + conformance record via explicit config. On PASS: BL-GR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; B-T02 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
 - **Acceptance Criteria (PASS):** candidate passes; version pinned; record written. **FAIL:** → `ESCALATION_REQUIRED`.
 - **Required Review Evidence:** fixture trace; pin; conformance record.
 - **Stop / Escalation Condition:** dual rules authority / default reliance → `ESCALATION_REQUIRED`.
@@ -425,6 +427,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Scope:** Probe agent scope/registration/rendering/materialization/O(1) delivery on pinned DSH.
 - **Explicit Non-Goals:** No Bridge implementation; no DSH core patch.
 - **Dependencies / blocked_by:** none
+- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the verified `ctx.systemPrompt.context` seam ("per D-S01 findings", pinned DSH context seam). On PASS: BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
 - **Acceptance Criteria (PASS):** provider registers agent-scoped; reads only Runtime-held snapshot (no rescan); materializes only on change; O(1)-suitable. **FAIL:** record; fallback `agent.inject`; note D-T03 impact.
 - **Required Review Evidence:** probe trace; assertions.
 - **Stop / Escalation Condition:** new mechanism / DSH patch → `ESCALATION_REQUIRED`.
