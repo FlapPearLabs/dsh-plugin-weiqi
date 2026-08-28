@@ -77,6 +77,14 @@ Spec Phase or project scope formally changes.
 Each Baseline Gap has exactly one primary Ticket / Spike that closes it.
 Other Tickets may depend on it; they must not re-implement the same gap.
 
+**Clarification (NEEDS_SPIKE chains):** a Gap whose state is `NEEDS_SPIKE`
+has two disjunct ownership slices over time: the Spike owns
+`NEEDS_SPIKE` -> `VERIFIED_FACT_NOT_INTEGRATED`, and a predeclared downstream
+consumer owns `VERIFIED_FACT_NOT_INTEGRATED` -> `IMPLEMENTED_VERIFIED`. As long
+as the two transitions do not overlap and the consumer was statically declared
+before the Spike executed, this is not duplicate ownership. No new ownership
+system is introduced.
+
 ## Rule 9 — Multi-gap Ticket must justify coupling
 
 A Ticket that closes multiple Baseline IDs must state why those gaps must be
@@ -95,6 +103,13 @@ Once the Ticket Graph is complete, every Baseline gap that is not
 Ticket/Spike ownership, or explicitly recorded as `ESCALATION_REQUIRED`.
 Nothing may be silently left uncovered.
 
+**Clarification (Spike PASS producing `VERIFIED_FACT_NOT_INTEGRATED`):** if a
+Spike PASS advances a Gap to `VERIFIED_FACT_NOT_INTEGRATED`, a predeclared
+downstream consumer must already exist before the Spike executes. Exception: if
+the Spike acceptance itself fully verifies the target production capability and
+no later integration step exists, PASS may advance the Gap directly to
+`IMPLEMENTED_VERIFIED` (no consumer needed).
+
 ## Rule 12 — Baseline updates follow evidence
 
 A completed Ticket does not self-declare the Baseline done. The corresponding
@@ -107,6 +122,13 @@ VERIFIED_FACT_NOT_INTEGRATED   -> IMPLEMENTED_VERIFIED
 ```
 
 The Baseline represents repository reality, not a task plan.
+
+**Clarification (Spike terminal states):** `NEEDS_SPIKE` ->
+`VERIFIED_FACT_NOT_INTEGRATED` is the common Spike transition, not a mandatory
+unique outcome. `NEEDS_SPIKE` -> `IMPLEMENTED_VERIFIED` is allowed only when
+the Spike acceptance itself directly, completely and executably verifies the
+target capability and no residual integration gap exists. Current approved
+instance: WAVE-INFRA-S01 (BL-PKG-06). No further rules or exceptions are added.
 
 ## Post-Spike Stability Rule
 

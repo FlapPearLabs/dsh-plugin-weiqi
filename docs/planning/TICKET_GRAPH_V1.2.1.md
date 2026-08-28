@@ -1,6 +1,7 @@
 # Companion Go — Ticket / Spike Graph V1.2.1
 
-**Status:** REVIEW_PENDING
+**Status:** APPROVED — FROZEN FOR EXECUTION
+**Planning Freeze:** normal Ticket/Spike completion updates Baseline evidence and execution readiness only; reopen this Graph only under the Post-Spike Stability / `ESCALATION_REQUIRED` conditions.
 **Supersedes for review:** `TICKET_GRAPH_V1.2.md`
 **Current Spec Authority:** `docs/spec/SPEC_LEAN_V0.1_R2.4.2_VERIFIED.md`
 **Reason (narrow fix, 4 items):**
