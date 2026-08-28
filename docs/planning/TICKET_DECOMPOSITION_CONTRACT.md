@@ -117,7 +117,9 @@ Once a Spike PASSes and its executable evidence is merged:
 1. the corresponding Baseline evidence state advances per Rule 12
    (`NEEDS_SPIKE` -> `VERIFIED_FACT_NOT_INTEGRATED`);
 2. the Spike Issue may be closed;
-3. existing Tickets blocked on the Spike may have their dependency released;
+3. for existing Tickets blocked on the Spike, the dependency is considered
+   satisfied for execution readiness; the approved dependency edge remains
+   unchanged;
 4. the Ticket Graph remains frozen by default.
 
 Spike PASS alone is never grounds for:
@@ -142,7 +144,8 @@ An existing Ticket is the **predeclared downstream consumer** of a Spike when:
 
 After Spike PASS, for such a Ticket:
 
-- the dependency is released directly;
+- the dependency is considered satisfied for execution readiness; the approved
+  dependency edge remains unchanged;
 - the merged executable evidence is used;
 - no new Ticket is needed;
 - the Ticket is **not** re-classified because of the Baseline state change.
@@ -160,6 +163,58 @@ already says "use findings / verified seam"
 → consumes evidence
 → IMPLEMENTED_VERIFIED
 ```
+
+### C. Rule 5 compatibility
+
+Rule 5 (`VERIFIED_FACT_NOT_INTEGRATED` -> `INTEGRATION_TICKET` only) applies
+when a **new** Ticket is created / decomposed after the Baseline is already
+`VERIFIED_FACT_NOT_INTEGRATED`.
+
+Rule 5 does **not** require an already-approved predeclared downstream consumer
+to change its Ticket Type solely because its prerequisite Spike passed.
+
+If the existing Ticket was already `blocked_by` the Spike and its approved
+Scope already consumes the verified seam / capability / evidence:
+
+- retain the existing Ticket identity and Type;
+- use the merged executable evidence;
+- do not reopen post-Spike ticketization.
+
+Already-approved ownership transitions stay as-is: e.g. WAVE-C-T07 (owns
+BL-BUD-07) and WAVE-E-T01 (owns BL-UI-04) remain `INTEGRATION_TICKET` — do not
+revert them.
+
+### D. When the Graph may reopen
+
+Only the following conditions permit reopening the approved Ticket Graph:
+
+1. executable evidence proves the existing dependency relationship is wrong;
+2. executable evidence contradicts the frozen Spec / architecture contract;
+3. the approved downstream Ticket scope cannot actually consume the Spike
+   result and a new architecture decision is required.
+
+In these cases:
+
+```text
+ESCALATION_REQUIRED
+```
+
+Do not automatically re-ticketize.
+
+### E. No new planning subsystem
+
+This rule does **not** introduce:
+
+- a graph validator;
+- a graph compiler;
+- a lifecycle engine;
+- a state database;
+- a JSON/YAML registry;
+- automatic Graph rewriting;
+- a second planning system.
+
+The existing Markdown (Baseline + Ticket Graph + this contract) + GitHub Issues
++ merged executable evidence remain sufficient.
 
 ---
 
