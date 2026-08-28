@@ -108,6 +108,59 @@ VERIFIED_FACT_NOT_INTEGRATED   -> IMPLEMENTED_VERIFIED
 
 The Baseline represents repository reality, not a task plan.
 
+## Post-Spike Stability Rule
+
+### A. Default behaviour on Spike PASS
+
+Once a Spike PASSes and its executable evidence is merged:
+
+1. the corresponding Baseline evidence state advances per Rule 12
+   (`NEEDS_SPIKE` -> `VERIFIED_FACT_NOT_INTEGRATED`);
+2. the Spike Issue may be closed;
+3. existing Tickets blocked on the Spike may have their dependency released;
+4. the Ticket Graph remains frozen by default.
+
+Spike PASS alone is never grounds for:
+
+- creating a new Ticket;
+- re-running `/TO-TICKET`;
+- changing the Ticket total;
+- redesigning the dependency graph;
+- creating a second "integration shell" Ticket;
+- changing Ticket Type;
+- changing Ticket ownership;
+- rewriting unrelated GitHub Issues;
+- adding a new planning registry / JSON / YAML / database.
+
+### B. Predeclared downstream consumer
+
+An existing Ticket is the **predeclared downstream consumer** of a Spike when:
+
+1. it is explicitly `blocked_by` that Spike in the approved Graph; and
+2. its existing Scope already states that it consumes the Spike's verified
+   seam / capability / evidence.
+
+After Spike PASS, for such a Ticket:
+
+- the dependency is released directly;
+- the merged executable evidence is used;
+- no new Ticket is needed;
+- the Ticket is **not** re-classified because of the Baseline state change.
+
+The following relationship is allowed:
+
+```text
+Spike
+NEEDS_SPIKE
+→ VERIFIED_FACT_NOT_INTEGRATED
+
+existing downstream Ticket
+already blocked_by Spike
+already says "use findings / verified seam"
+→ consumes evidence
+→ IMPLEMENTED_VERIFIED
+```
+
 ---
 
 ## Escalation rule
