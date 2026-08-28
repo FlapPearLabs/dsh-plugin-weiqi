@@ -35,12 +35,12 @@ Counted by unique `BL-*` ID extraction; the closing SPIKE-CANDIDATES table repea
 | `IMPLEMENTED_VERIFIED` / NO_ACTION | 8 |
 | `KEEP_AS_UPGRADE_GATE` | 1 (BL-PKG-09) |
 | `DEFERRED` | 2 (BL-UI-03, BL-HARD-04) |
-| `NEEDS_SPIKE` | 5 (BL-PKG-06, BL-GR-03, BL-BR-03, BL-UI-04, BL-BUD-07) |
+| `NEEDS_SPIKE` | 3 (BL-PKG-06, BL-GR-03, BL-BR-03) |
 | `FOUNDATION_ONLY` | 7 (BL-RT-03/05/08, BL-BR-01/04, BL-CMP-01/04) |
-| `VERIFIED_FACT_NOT_INTEGRATED` | 3 (BL-RT-06/07/11) |
+| `VERIFIED_FACT_NOT_INTEGRATED` | 5 (BL-RT-06/07/11, BL-BUD-07, BL-UI-04) |
 | `NOT_IMPLEMENTED` | 36 |
 
-Breakdown check: 8 + 1 + 2 + 5 + 7 + 3 + 36 = 62 ✓
+Breakdown check: 8 + 1 + 2 + 3 + 7 + 5 + 36 = 62 ✓
 
 ---
 
@@ -51,13 +51,13 @@ Breakdown check: 8 + 1 + 2 + 5 + 7 + 3 + 36 = 62 ✓
 | Infra | 0 | 0 | 1 | 1 | 2 |
 | Wave A | 4 | 3 | 0 | 0 | 7 |
 | Wave B | 6 | 0 | 0 | 1 | 7 |
-| Wave C | 10 | 0 | 0 | 1 | 11 |
+| Wave C | 9 | 1 | 0 | 1 | 11 |
 | Wave D | 8 | 0 | 0 | 1 | 9 |
-| Wave E | 2 | 0 | 0 | 1 | 3 |
+| Wave E | 1 | 1 | 0 | 1 | 3 |
 | Wave F | 3 | 2 | 0 | 0 | 5 |
-| **Total** | **33** | **5** | **1** | **5** | **44** |
+| **Total** | **31** | **7** | **1** | **5** | **44** |
 
-51 actionable gaps → 44 Tickets/Spikes (5 multi-gap Tickets own 12 gaps atomically; see §9). Check: 33 + 5 + 1 + 5 = 44 ✓
+51 actionable gaps → 44 Tickets/Spikes (5 multi-gap Tickets own 14 gaps atomically; see §9). Check: 31 + 7 + 1 + 5 = 44 ✓
 
 ### Spec Phase distribution
 
@@ -367,10 +367,10 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Stop / Escalation Condition:** freezing values without §38 evidence → `ESCALATION_REQUIRED`.
 
 #### WAVE-C-T07 — Budget enforcement + post-move no-analysis-loop
-- **Type:** IMPLEMENTATION_TICKET | **Wave:** C | **Spec Phase:** A | **Baseline IDs:** BL-BUD-02, BL-BUD-04
-- **Current Baseline State:** BL-BUD-02/04: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
+- **Type:** INTEGRATION_TICKET | **Wave:** C | **Spec Phase:** A | **Baseline IDs:** BL-BUD-02, BL-BUD-04, BL-BUD-07
+- **Current Baseline State:** BL-BUD-02/04: NOT_IMPLEMENTED; BL-BUD-07: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** IMPLEMENTED_VERIFIED
 - **Spec Authority:** §22.1-22.4, §24 (R2.4.2: after committed play / pass / resign the same turn must not restart an analysis loop; after resign the game is terminal with no further inspect / try_move / deep-think / model step)
-- **Scope:** Enforcement engine: per-request hard cap **using the C-S01-verified seam** (never guessed), turn-level cap, per-tool accounting, exhaustion, no-analysis-loop (incl. resign-terminal end-of-turn).
+- **Scope (atomicity):** Enforcement engine: per-request hard cap **using the C-S01-verified seam** (never guessed), turn-level cap, per-tool accounting, exhaustion, no-analysis-loop (incl. resign-terminal end-of-turn). **Atomicity (post-Spike ownership transition):** BL-BUD-07's verified request-cap seam only has meaning integrated within the same budget-enforcement boundary, so it is atomic with BL-BUD-02/04 (splitting would create a shell INTEGRATION_TICKET).
 - **Explicit Non-Goals:** No boost (C-T08); no bypass tests (C-T09); no benchmark (C-T10); no DSH core patch.
 - **Dependencies / blocked_by:** WAVE-C-T06, WAVE-C-S01
 - **Expected Surfaces:** `src/budget/`
@@ -545,10 +545,10 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Stop / Escalation Condition:** DSH core patch → `ESCALATION_REQUIRED`.
 
 #### WAVE-E-T01 — Production Harness **Core** Go UI + board-click direct route (Phase A)
-- **Type:** IMPLEMENTATION_TICKET | **Wave:** E | **Spec Phase:** A | **Baseline IDs:** BL-UI-02, BL-RT-10
-- **Current Baseline State:** BL-UI-02/BL-RT-10: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
+- **Type:** INTEGRATION_TICKET | **Wave:** E | **Spec Phase:** A | **Baseline IDs:** BL-UI-02, BL-RT-10, BL-UI-04
+- **Current Baseline State:** BL-UI-02/BL-RT-10: NOT_IMPLEMENTED; BL-UI-04: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** IMPLEMENTED_VERIFIED
 - **Spec Authority:** §32 (R2.4.2 core board), §33 (DSH-native shell; seats), §7.2 (board click → GoRulesPort directly), §34 (seam smoke)
-- **Scope (atomicity):** Phase A **core** Go view: native Harness Go view; 9x9/13x13/19x19; stones; captures; last move; turn; Pass; **Resign**; final result; minimal placement/capture animation; minimal stone sound; board click direct route; no transcript fusion; no prototype behavior inheritance. **Production mini-surface completion is NOT in E-T01 acceptance** (E-S01 Phase A smoke still verifies seam/placement capability; full mini-surface UX is E-T02, Phase B).
+- **Scope (atomicity):** Phase A **core** Go view: native Harness Go view; 9x9/13x13/19x19; stones; captures; last move; turn; Pass; **Resign**; final result; minimal placement/capture animation; minimal stone sound; board click direct route; no transcript fusion; no prototype behavior inheritance. **Production mini-surface completion is NOT in E-T01 acceptance** (E-S01 Phase A smoke still verifies seam/placement capability; full mini-surface UX is E-T02, Phase B). **Atomicity (post-Spike ownership transition):** the `conversation.view` seam's production integration and the Harness Go view mount/lifecycle form the same production boundary; splitting into a second ticket would create a shell INTEGRATION_TICKET.
 - **Explicit Non-Goals:** No desktop wrapper (BL-UI-03 DEFERRED); no TUI; no Companion mini-surface UX (E-T02); no prototype logic; no transcript fusion.
 - **Dependencies / blocked_by:** WAVE-E-S01, WAVE-B-T05, WAVE-D-T01, WAVE-A-T01
 - **Expected Surfaces:** `src/ui/` (Harness Web view extension), `src/bridge/`
@@ -821,7 +821,7 @@ F-T03 is the Phase A core e2e milestone; **F-T04** is the Phase A exit gate (con
 | BL-RT-07 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-A-T04 | A | A-T03 | COVERED |
 | BL-RT-08 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-A-T02 | A | A-T01 | COVERED |
 | BL-RT-09 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-A-T06 | A | A-T02, A-T05 | COVERED |
-| BL-RT-10 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-E-T01 | A | E-S01, B-T05, D-T01, A-T01 | COVERED |
+| BL-RT-10 | NOT_IMPLEMENTED | INTEGRATION_TICKET | WAVE-E-T01 | A | E-S01, B-T05, D-T01, A-T01 | COVERED |
 | BL-RT-11 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-A-T07 | A | A-T02, A-T04 | COVERED |
 | BL-BR-01 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
 | BL-BR-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
@@ -842,21 +842,21 @@ F-T03 is the Phase A core e2e milestone; **F-T04** is the Phase A exit gate (con
 | BL-CAP-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T04 | A | A-T01 | COVERED |
 | BL-CAP-03 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T05 | A | C-T04 | COVERED |
 | BL-BUD-01 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T06 | A | none | COVERED |
-| BL-BUD-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T07 | A | C-T06, C-S01 | COVERED |
+| BL-BUD-02 | NOT_IMPLEMENTED | INTEGRATION_TICKET | WAVE-C-T07 | A | C-T06, C-S01 | COVERED |
 | BL-BUD-03 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T08 | A | C-T02, C-T07 | COVERED |
-| BL-BUD-04 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T07 | A | C-T06, C-S01 | COVERED |
+| BL-BUD-04 | NOT_IMPLEMENTED | INTEGRATION_TICKET | WAVE-C-T07 | A | C-T06, C-S01 | COVERED |
 | BL-BUD-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T09 | A | C-T07, C-T08 | COVERED |
 | BL-BUD-06 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-C-T10 | A | B-T05, C-T02, C-T07, C-T08 | COVERED |
-| BL-BUD-07 | NEEDS_SPIKE | SPIKE | WAVE-C-S01 | Pre-A | none | COVERED |
+| BL-BUD-07 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-C-T07 | A | C-S01 | COVERED |
 | BL-CMP-01 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T04 | A | none | COVERED |
 | BL-CMP-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T05 | B | D-T04, F-T04 | COVERED |
 | BL-CMP-03 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T08 | B | D-T04, F-T04 | COVERED |
 | BL-CMP-04 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T06 | B | D-T04, F-T04 | COVERED |
 | BL-CMP-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T07 | B | A-T02, D-T06, F-T04 | COVERED |
 | BL-UI-01 | IMPLEMENTED_VERIFIED | NO_ACTION | — | — | — | NO_ACTION |
-| BL-UI-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-E-T01 | A | E-S01, B-T05, D-T01, A-T01 | COVERED |
+| BL-UI-02 | NOT_IMPLEMENTED | INTEGRATION_TICKET | WAVE-E-T01 | A | E-S01, B-T05, D-T01, A-T01 | COVERED |
 | BL-UI-03 | DEFERRED | DEFER | — | — | — | DEFERRED |
-| BL-UI-04 | NEEDS_SPIKE | SPIKE | WAVE-E-S01 | Pre-A | none | COVERED |
+| BL-UI-04 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-E-T01 | A | E-S01 | COVERED |
 | BL-UI-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-E-T02 | B | F-T04, E-S01, D-T01, D-T05, D-T06 | COVERED |
 | BL-HARD-01 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-F-T01 | A | A-T01, B-T06, D-T04 | COVERED |
 | BL-HARD-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-F-T02 | A | B-T06 | COVERED |
@@ -871,10 +871,10 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 
 ## 10. Duplicate / Orphan Audit
 
-- **duplicate owners = 0** — 51 actionable rows → 44 primary owners. Multi-gap Tickets (5) own 12 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04 = budget execution + lifecycle rule), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-E-T01 (BL-UI-02/BL-RT-10 = core board incl. click path). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
+- **duplicate owners = 0** — 51 actionable rows → 44 primary owners. Multi-gap Tickets (5) own 14 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04/07 = budget execution + lifecycle rule + verified request-cap seam, one enforcement boundary), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-E-T01 (BL-UI-02/BL-RT-10/BL-UI-04 = core board incl. click path + verified conversation.view seam, one production boundary). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
 - **orphan actionable gaps = 0** — all 51 actionable rows have a primary owner.
 - **orphan tickets = 0** — every Ticket/Spike references ≥1 Baseline ID.
-- **repeated feasibility spikes = 0** — BL-RT-06/07/11 → INTEGRATION_TICKET only; five NEEDS_SPIKE rows → one Spike each; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
+- **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; three remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03/BL-BR-03) → one Spike each; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
 
 ---
 
