@@ -110,11 +110,11 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Type:** IMPLEMENTATION_TICKET | **Wave:** A | **Spec Phase:** A | **Baseline IDs:** BL-RT-01
 - **Current Baseline State:** BL-RT-01: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
 - **Spec Authority:** §4, §44 "TWO isolated durable Session histories"
-- **Scope:** Runtime creates/owns two durable isolated DSH sessions (`work`, `go`) on pinned DSH with distinct histories; minimal session registry.
+- **Scope:** Runtime owns the stable logical lane identities and resolution contract (`work` → `companion-go-work`, `go` → `companion-go-go`). Pinned DSH AgentLoop owns live Agent-bound Session materialization and lifecycle through its creation transaction. Runtime must not pre-create those exact ids with `SessionStore.create()`; keep only a minimal lane-session resolver.
 - **Explicit Non-Goals:** No focus arbitration; no tools; no Bridge.
 - **Dependencies / blocked_by:** none
 - **Expected Surfaces:** `src/runtime/`, pinned DSH Session API
-- **Acceptance Criteria:** both sessions created; message admitted to `work` never appears in `go` history (deterministic); smoke on pinned AgentLoop.
+- **Acceptance Criteria:** real pinned AgentLoop materializes both exact SessionIds; Runtime resolves each lane to the corresponding current live Session; the sessions are distinct and a message admitted to `work` never appears in `go` history (deterministic); AgentLoop disposal/remount owns removal and recreation/restoration; no eager `SessionStore.create()` collision.
 - **Required Review Evidence:** test run log; isolation assertions.
 - **Stop / Escalation Condition:** raw history injection → `ESCALATION_REQUIRED`.
 
