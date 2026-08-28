@@ -77,6 +77,14 @@ Spec Phase or project scope formally changes.
 Each Baseline Gap has exactly one primary Ticket / Spike that closes it.
 Other Tickets may depend on it; they must not re-implement the same gap.
 
+**Clarification (NEEDS_SPIKE chains):** a Gap whose state is `NEEDS_SPIKE`
+has two disjunct ownership slices over time: the Spike owns
+`NEEDS_SPIKE` -> `VERIFIED_FACT_NOT_INTEGRATED`, and a predeclared downstream
+consumer owns `VERIFIED_FACT_NOT_INTEGRATED` -> `IMPLEMENTED_VERIFIED`. As long
+as the two transitions do not overlap and the consumer was statically declared
+before the Spike executed, this is not duplicate ownership. No new ownership
+system is introduced.
+
 ## Rule 9 — Multi-gap Ticket must justify coupling
 
 A Ticket that closes multiple Baseline IDs must state why those gaps must be
@@ -95,6 +103,13 @@ Once the Ticket Graph is complete, every Baseline gap that is not
 Ticket/Spike ownership, or explicitly recorded as `ESCALATION_REQUIRED`.
 Nothing may be silently left uncovered.
 
+**Clarification (Spike PASS producing `VERIFIED_FACT_NOT_INTEGRATED`):** if a
+Spike PASS advances a Gap to `VERIFIED_FACT_NOT_INTEGRATED`, a predeclared
+downstream consumer must already exist before the Spike executes. Exception: if
+the Spike acceptance itself fully verifies the target production capability and
+no later integration step exists, PASS may advance the Gap directly to
+`IMPLEMENTED_VERIFIED` (no consumer needed).
+
 ## Rule 12 — Baseline updates follow evidence
 
 A completed Ticket does not self-declare the Baseline done. The corresponding
@@ -107,6 +122,121 @@ VERIFIED_FACT_NOT_INTEGRATED   -> IMPLEMENTED_VERIFIED
 ```
 
 The Baseline represents repository reality, not a task plan.
+
+**Clarification (Spike terminal states):** `NEEDS_SPIKE` ->
+`VERIFIED_FACT_NOT_INTEGRATED` is the common Spike transition, not a mandatory
+unique outcome. `NEEDS_SPIKE` -> `IMPLEMENTED_VERIFIED` is allowed only when
+the Spike acceptance itself directly, completely and executably verifies the
+target capability and no residual integration gap exists. Current approved
+instance: WAVE-INFRA-S01 (BL-PKG-06). No further rules or exceptions are added.
+
+## Post-Spike Stability Rule
+
+### A. Default behaviour on Spike PASS
+
+Once a Spike PASSes and its executable evidence is merged:
+
+1. the corresponding Baseline evidence state advances per Rule 12
+   (`NEEDS_SPIKE` -> `VERIFIED_FACT_NOT_INTEGRATED`);
+2. the Spike Issue may be closed;
+3. for existing Tickets blocked on the Spike, the dependency is considered
+   satisfied for execution readiness; the approved dependency edge remains
+   unchanged;
+4. the Ticket Graph remains frozen by default.
+
+Spike PASS alone is never grounds for:
+
+- creating a new Ticket;
+- re-running `/TO-TICKET`;
+- changing the Ticket total;
+- redesigning the dependency graph;
+- creating a second "integration shell" Ticket;
+- changing Ticket Type;
+- changing Ticket ownership;
+- rewriting unrelated GitHub Issues;
+- adding a new planning registry / JSON / YAML / database.
+
+### B. Predeclared downstream consumer
+
+An existing Ticket is the **predeclared downstream consumer** of a Spike when:
+
+1. it is explicitly `blocked_by` that Spike in the approved Graph; and
+2. its existing Scope already states that it consumes the Spike's verified
+   seam / capability / evidence.
+
+After Spike PASS, for such a Ticket:
+
+- the dependency is considered satisfied for execution readiness; the approved
+  dependency edge remains unchanged;
+- the merged executable evidence is used;
+- no new Ticket is needed;
+- the Ticket is **not** re-classified because of the Baseline state change.
+
+The following relationship is allowed:
+
+```text
+Spike
+NEEDS_SPIKE
+→ VERIFIED_FACT_NOT_INTEGRATED
+
+existing downstream Ticket
+already blocked_by Spike
+already says "use findings / verified seam"
+→ consumes evidence
+→ IMPLEMENTED_VERIFIED
+```
+
+### C. Rule 5 compatibility
+
+Rule 5 (`VERIFIED_FACT_NOT_INTEGRATED` -> `INTEGRATION_TICKET` only) applies
+when a **new** Ticket is created / decomposed after the Baseline is already
+`VERIFIED_FACT_NOT_INTEGRATED`.
+
+Rule 5 does **not** require an already-approved predeclared downstream consumer
+to change its Ticket Type solely because its prerequisite Spike passed.
+
+If the existing Ticket was already `blocked_by` the Spike and its approved
+Scope already consumes the verified seam / capability / evidence:
+
+- retain the existing Ticket identity and Type;
+- use the merged executable evidence;
+- do not reopen post-Spike ticketization.
+
+Already-approved ownership transitions stay as-is: e.g. WAVE-C-T07 (owns
+BL-BUD-07) and WAVE-E-T01 (owns BL-UI-04) remain `INTEGRATION_TICKET` — do not
+revert them.
+
+### D. When the Graph may reopen
+
+Only the following conditions permit reopening the approved Ticket Graph:
+
+1. executable evidence proves the existing dependency relationship is wrong;
+2. executable evidence contradicts the frozen Spec / architecture contract;
+3. the approved downstream Ticket scope cannot actually consume the Spike
+   result and a new architecture decision is required.
+
+In these cases:
+
+```text
+ESCALATION_REQUIRED
+```
+
+Do not automatically re-ticketize.
+
+### E. No new planning subsystem
+
+This rule does **not** introduce:
+
+- a graph validator;
+- a graph compiler;
+- a lifecycle engine;
+- a state database;
+- a JSON/YAML registry;
+- automatic Graph rewriting;
+- a second planning system.
+
+The existing Markdown (Baseline + Ticket Graph + this contract) + GitHub Issues
++ merged executable evidence remain sufficient.
 
 ---
 
