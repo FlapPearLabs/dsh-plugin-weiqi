@@ -113,7 +113,7 @@ baseline exists or should be created.
 | BL-BUD-04 | Post-move no-analysis-loop rule | Spec §24 (R2.4.2): after committed play / pass / **resign**, the same Go turn must not restart another analysis loop; after resign the game is terminal immediately with no further inspect / try_move / deep-think / model step permitted for that turn | No code | NOT_IMPLEMENTED | Rule enforcement (incl. resign terminal) | C | IMPLEMENTATION_TICKET |
 | BL-BUD-05 | Budget bypass tests | Spec §39.4 | No tests | NOT_IMPLEMENTED | Test suite with Wave C | C | IMPLEMENTATION_TICKET |
 | BL-BUD-06 | Automated cognition benchmark / production budget calibration | R2.4.2 §38 automated cognition benchmark — fixture classes: opening, simple capture, escape, local fight, ko, large-group pressure, endgame, ambiguous position. For EACH fixture record: latency, input token usage, output token usage (total token usage if useful), model steps, inspect calls, try_move calls, deep-think requests, illegal attempts, final move, variation across repeated runs. Production GoTurnBudget numeric defaults chosen from real benchmark evidence; do not collapse input/output tokens into one field, large-group pressure into vague "pressure", simple capture into an unrelated category, or drop repeated-run variation | No benchmark harness / run / calibration record; current values must NOT be treated as production-frozen values | NOT_IMPLEMENTED | No benchmark harness / run / calibration record; production numeric defaults have no owner | C | IMPLEMENTATION_TICKET |
-| BL-BUD-07 | Pinned DSH request-level token hard-cap seam | Spec §22.1 per-request hard cap enforceable on pinned DSH | No executable proof of the request-level cap hook / config field / propagation / enforcement on pinned DSH; only the agent/request waterfall is evidenced | NEEDS_SPIKE | Pinned DSH request-level token cap real hook / config field / propagation / enforcement not executable-verified | C (gate) | SPIKE |
+| BL-BUD-07 | Pinned DSH request-level token hard-cap seam | Spec §22.1 per-request hard cap enforceable on pinned DSH | `docs/validation/DSH_REQUEST_TOKEN_HARD_CAP_SEAM_VERIFIED.md` + `tests/upgrade-gates/request-token-hard-cap/request-token-hard-cap.spec.ts` + `.github/workflows/request-token-hard-cap-gate.yml` (merged PR #45); verified waterfall: `agent/request` → `LlmCallConfig.maxTokens` → `request/header` → `GenerateOptions` → DeepSeek `max_tokens` | VERIFIED_FACT_NOT_INTEGRATED | Seam verified, not seam unknown: Go-agent scoped; oversized request clamped; Work agent unaffected; no DSH core patch; fixture `257/8192` are not production budget values. Remaining production enforcement is downstream WAVE-C-T07 / BL-BUD-02 | C (gate) | INTEGRATION_TICKET |
 
 ## Companion
 
@@ -132,7 +132,7 @@ baseline exists or should be created.
 | BL-UI-01 | V4 design / prototype reference | Frozen UI/UX reference | `COMPANION_GO_DESIGN_V4.md` + `companion-go-apple-style-v4.html`; boundaries doc fixes komi 7.5 vs 6.5, random AI, fake timing as presentation-only | IMPLEMENTED_VERIFIED | None (reference only, not production) | — | NO_ACTION |
 | BL-UI-02 | Production Harness **Core** Go UI | Spec §32/§33 (R2.4.2) core board in Harness Web: 9x9/13x13/19x19, stones, captures, last move, turn, Pass, **Resign (Resign control → GoRulesPort.resign → authoritative terminal state → final-result UI; no UI-only gameOver truth)**, final result, minimal placement/capture animation, minimal stone sound, board click direct route, no transcript fusion, no prototype behavior inheritance | No production code; no view extension | NOT_IMPLEMENTED | Core UI implementation (Goban, seats, controls, board click, resign, sound) | E | IMPLEMENTATION_TICKET (blocked by BL-UI-04) |
 | BL-UI-03 | Desktop wrapper | Spec §33 compatible desktop second | No code | DEFERRED | Out of V0.1 scope | — | DEFER |
-| BL-UI-04 | DSH Web / conversation.view extension seam | Spec §34 capability smoke before depending | No probe; seam capability unknown on pinned DSH | NEEDS_SPIKE | Go view coexistence with Chat/Trajectory, dual-session single shell, mini-surface placement, no transcript fusion | E (gate) | SPIKE |
+| BL-UI-04 | DSH Web / conversation.view extension seam | Spec §34 capability smoke before depending | `docs/validation/DSH_CONVERSATION_VIEW_SEAM_VERIFIED.md` + `tests/upgrade-gates/conversation-view/conversation-view.spec.tsx` + `.github/workflows/conversation-view-seam-gate.yml` (merged PR #46); verified: plugin-owned Go view registers through `conversation.view`; shipped Chat + Trajectory + Go coexist; view receives current session binding; Work / Go transcripts remain isolated; mini-surface placement seams verified; dual-session single-shell supported; no DSH core patch required | VERIFIED_FACT_NOT_INTEGRATED | Seam verified, not seam unknown; `conversation.view` is a global ring contribution with no per-session tab predicate. Remaining production work is downstream WAVE-E-T01 / E-T02 | E (gate) | INTEGRATION_TICKET |
 | BL-UI-05 | Companion mini-surface / projection UX | Spec §33/§35 (R2.4.2): Work View Go status / Go notice UX; Go View WorkSnapshot UX; clean mini-surface placement proven by E-S01; Companion-mode/persona peripheral presentation where applicable; latest-value projections only, no transcript fusion, no prototype rule/AI semantics | No code | NOT_IMPLEMENTED | Companion mini-surface UX (Spec Phase B) | E | IMPLEMENTATION_TICKET |
 
 ## Hardening
@@ -198,6 +198,24 @@ Feasibility:          VERIFIED (spike resume ordering A→B→C→companion-resu
 Production integration: VERIFIED_FACT_NOT_INTEGRATED
 ```
 
+request-level token hard-cap seam (BL-BUD-07):
+
+```text
+Feasibility:          VERIFIED (pinned DSH request-token-hard-cap gate PASS, merged PR #45)
+Waterfall:            agent/request → LlmCallConfig.maxTokens → request/header → GenerateOptions → DeepSeek max_tokens
+Nuances:              Go-agent scoped; oversized request clamped; Work agent unaffected; no DSH core patch; fixture 257/8192 ≠ production budget
+Production integration: VERIFIED_FACT_NOT_INTEGRATED
+```
+
+DSH Web conversation.view extension seam (BL-UI-04):
+
+```text
+Feasibility:          VERIFIED (pinned DSH conversation-view seam gate PASS, merged PR #46)
+Capability:           plugin-owned Go view registers through conversation.view; shipped Chat + Trajectory + Go coexist; view receives current session binding; Work / Go transcripts remain isolated; mini-surface placement seams verified; dual-session single-shell supported; no DSH core patch
+Known limitation:     conversation.view is a global ring contribution; no per-session tab predicate
+Production integration: VERIFIED_FACT_NOT_INTEGRATED
+```
+
 Future work may create only `INTEGRATION_TICKET`s for these seams. No new
 feasibility Spike.
 
@@ -207,9 +225,7 @@ feasibility Spike.
 |---|---|---|---|---|
 | BL-PKG-06 | GitHub source install (`dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`) | `github:` spec resolution/clone/build/activate path is unverified | Installation docs, Wave F installation acceptance | Smoke covers local tarball only; no `github:` path code or CI evidence |
 | BL-GR-03 | Tenuki version satisfying area + positional-superko + komi 7.5 explicit config, passing §31 fixture | Spec §27 forbids defaults, silent downgrade, dual rules authority | GoRulesPort / TenukiAdapter version pin and implementation | No Tenuki dependency, no fixtures, no candidate evaluation record |
-| BL-UI-04 | DSH Web `conversation.view` extension seam actual capability | Spec §34 mandates proving seam before depending | Wave E UI architecture | No probe or smoke of the DSH Web UI seam |
 | BL-BR-03 | `ctx.systemPrompt.context` agent-scoped runtime-context provider semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | No provider code or DSH-internal probe |
-| BL-BUD-07 | Pinned DSH request-level token hard-cap seam | Spec §22.1 per-request hard cap must be enforceable at request creation | WAVE-C-T07 enforcement seam choice | No executable probe of request call-config / max-token field / propagation / enforcement on pinned DSH |
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
 (frozen), crash/resume mechanism (conservative V0.1 strategy, implementation
