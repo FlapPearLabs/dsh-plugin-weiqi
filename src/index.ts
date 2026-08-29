@@ -1,24 +1,27 @@
-/**
- * Companion Go's DeepSeek Harness plugin entry.
- *
- * Foundation deliberately registers no Runtime, tools, UI, or game engine.
- * Later phases extend this real Cordis/DSH entry without changing the frozen
- * public contracts established in `src/contracts`.
- */
+/** Companion Go's named Cordis function-plugin entry. */
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-agent'
+import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
 
 export * from './contracts/index.js'
 
-/** Cordis plugin name used by DSH loader diagnostics. */
+/** Cordis plugin name used by DSH Loader diagnostics. */
 export const name = 'companion-go'
 
-/** Foundation config is intentionally empty until an implementation ticket freezes options. */
+/** AgentRegistry delegates real Agent/Session creation to the active AgentLoop. */
+export const inject = ['agents'] as const
+
+/** Foundation config remains intentionally empty. */
 export interface Config {}
 
 /**
- * Mount the Companion Go plugin.
- *
- * The Foundation stage is a lifecycle-safe no-op: it proves the package is a
- * genuine DSH/Cordis plugin while avoiding any unapproved Runtime behavior.
+ * Materialize the two stable lane identities through AgentLoop's public
+ * factory boundary. Each returned handle is structurally owned by this
+ * plugin's calling fiber, so Cordis rollback/disposal tears down both the
+ * Agent and its Session without a second lifecycle registry here.
  */
-export function apply(_ctx: Context, _config: Config = {}): void {}
+export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
+  for (const lane of COMPANION_LANES) {
+    await ctx.agents.create({ sessionId: laneSessionId(lane) })
+  }
+}
