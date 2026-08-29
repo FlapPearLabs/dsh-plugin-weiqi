@@ -51,7 +51,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-RT-01 | Work / Go two isolated sessions | Two durable isolated DSH sessions | No runtime code; only `Lane` type | NOT_IMPLEMENTED | Session creation + lifecycle | A | IMPLEMENTATION_TICKET |
+| BL-RT-01 | Work / Go two isolated sessions | Two durable isolated DSH sessions | `src/runtime/lane-session.ts` fixes `work` -> `companion-go-work` / `go` -> `companion-go-go` and resolves current live Sessions; `src/index.ts` requests both identities through AgentLoop; real pinned session-ownership gate + production profile Loader smoke verify isolated histories, collision rollback, plugin-fiber disposal/remount (merged PR #50, `5a4623f`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-02 | One foreground cognition lane | At most one active lane invariant | No runtime code; only `RuntimeFocusState.activeLane` type | NOT_IMPLEMENTED | Lane arbitration state machine | A | IMPLEMENTATION_TICKET |
 | BL-RT-03 | Lane / PendingFocusIntent / RuntimeFocusState contracts | Spec §5 exact shapes | `src/contracts/focus.ts` matches Spec field-for-field; type-level tests | FOUNDATION_ONLY | Behavior, not shape | A | IMPLEMENTATION_TICKET |
 | BL-RT-04 | user_command > self_initiated arbitration | Spec §5 precedence | No code beyond `origin` field | NOT_IMPLEMENTED | Arbitration logic | A | IMPLEMENTATION_TICKET |
