@@ -7,15 +7,15 @@
 - Current Stage: **Ticket / Spike Execution Ready**
 - Next Stage: **Pre-A Spikes + Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
-- Implementation Wave A: **NOT STARTED**
+- Implementation Wave A: **IN PROGRESS — WAVE-A-T01 MERGED**
 - Ticketization: **COMPLETE**
 
 ## Current scope
 
-The repository contains only the project Foundation: a real DSH plugin entry,
-frozen contracts, documentation, tests, CI, and a repeatable cooperative-yield
-upgrade gate. The package also declares a DSH Profile Bundle whose patch mounts
-only the Foundation no-op plugin.
+The repository contains the project Foundation plus the first verified Wave A
+Runtime slice: AgentLoop-owned Work/Go Agent-Session pairs with stable lane IDs,
+isolated histories, live Session resolution, and deterministic disposal/remount.
+The package declares a DSH Profile Bundle whose patch mounts this Runtime entry.
 
 Spec Phase is a product/architecture execution gate. Implementation Wave is an
 organizational construction stream. A Ticket belongs to a Wave and must not
