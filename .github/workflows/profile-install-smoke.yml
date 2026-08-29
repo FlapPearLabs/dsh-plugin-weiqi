@@ -1,9 +1,9 @@
 name: DSH profile-install smoke
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - work/bootstrap-foundation-v1
     paths:
       - .github/workflows/profile-install-smoke.yml
       - cordis.patch.yml
