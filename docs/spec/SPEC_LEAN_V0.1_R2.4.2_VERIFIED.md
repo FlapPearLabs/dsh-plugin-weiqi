@@ -205,6 +205,7 @@ Therefore:
 - a pending `user_command` may never be overwritten by a later `self_initiated` request;
 - a `user_command` may replace a pending `self_initiated` request;
 - a newer `self_initiated` request may replace an older `self_initiated` request;
+- when both the pending and incoming intents are `user_command`, retain the existing pending user command until it is consumed; the incoming direct user input remains unconsumed and must not be silently discarded, and no FIFO is introduced unless Phase A evidence triggers the tiny-FIFO upgrade below;
 - direct user inputs themselves must never be silently discarded merely because focus arbitration chose another lane first.
 
 If Phase A proves that multiple unconsumed cross-lane user commands can legitimately accumulate before one handoff, upgrade only the user-command storage to a tiny FIFO. Do not introduce a generalized event bus.
