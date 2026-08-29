@@ -1,28 +1,27 @@
-name: DSH profile-install smoke
+name: Pinned DSH session ownership gate
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - .github/workflows/profile-install-smoke.yml
-      - cordis.patch.yml
+      - .github/workflows/session-ownership-gate.yml
       - package.json
       - pnpm-lock.yaml
       - src/**
-      - tests/profile-install/**
+      - tests/upgrade-gates/session-ownership/**
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  profile-install:
-    name: packed bundle, profile reconciliation, mount
+  ownership:
+    name: real AgentLoop materialization and lifecycle
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
-      - name: Checkout Companion Go Foundation
+      - name: Checkout Companion Go
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Checkout pinned DeepSeek Harness
@@ -49,28 +48,20 @@ jobs:
           test "$(pnpm --version)" = "11.7.0"
           test "$(git -C dsh rev-parse HEAD)" = "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e"
 
-      - name: Fresh install of Foundation dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Fresh install of pinned Harness dependencies
+      - name: Install pinned Harness dependencies
         working-directory: dsh
         run: pnpm install --frozen-lockfile
 
-      - name: Build pinned Harness host packages used by source CLI
-        working-directory: dsh
-        run: pnpm run build:lib:host
-
-      - name: Run real profile-install and mount smoke
-        shell: bash
+      - name: Run real AgentLoop ownership gate
         env:
-          DSH_SOURCE_DIR: ${{ github.workspace }}/dsh
-          PROFILE_SMOKE_ROOT: ${{ runner.temp }}/companion-go-profile-smoke
-        run: bash tests/profile-install/run-profile-install-smoke.sh 2>&1 | tee profile-install-trace.log
+          DSH_PINNED_ROOT: ${{ github.workspace }}/dsh
+          TRACE_LOG: ${{ runner.temp }}/session-ownership-trace.log
+        run: bash tests/upgrade-gates/session-ownership/run-session-ownership.sh
 
       - name: Upload executed trace
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dsh-profile-install-smoke-trace
-          path: profile-install-trace.log
+          name: session-ownership-gate-trace
+          path: ${{ runner.temp }}/session-ownership-trace.log
           if-no-files-found: error

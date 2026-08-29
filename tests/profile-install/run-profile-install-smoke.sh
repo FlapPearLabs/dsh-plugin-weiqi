@@ -10,6 +10,7 @@ dsh_home_path="$profile_smoke_root/dsh-home"
 artifact_dir="$profile_smoke_root/artifacts"
 profile_dump_path="$profile_smoke_root/profile-dump.yml"
 dsh_cli_path="$dsh_source_dir/apps/cli/lib/bin.js"
+pnpm_command=(corepack pnpm@11.7.0)
 
 mkdir -p "$artifact_dir" "$dsh_home_path"
 
@@ -24,13 +25,13 @@ if [[ ! -f "$dsh_cli_path" ]]; then
   exit 1
 fi
 
-echo "TRACE pin dsh=$actual_dsh_commit node=$(node --version) pnpm=$(pnpm --version)"
+echo "TRACE pin dsh=$actual_dsh_commit node=$(node --version) pnpm=$("${pnpm_command[@]}" --version)"
 echo "TRACE package build start"
-pnpm --dir "$plugin_dir" run clean
-pnpm --dir "$plugin_dir" run build
+"${pnpm_command[@]}" --dir "$plugin_dir" run clean
+"${pnpm_command[@]}" --dir "$plugin_dir" run build
 
 echo "TRACE package pack start"
-pnpm --dir "$plugin_dir" pack --pack-destination "$artifact_dir"
+"${pnpm_command[@]}" --dir "$plugin_dir" pack --pack-destination "$artifact_dir"
 mapfile -t packed_tarballs < <(find "$artifact_dir" -maxdepth 1 -type f -name '*.tgz' -print)
 if [[ ${#packed_tarballs[@]} -ne 1 ]]; then
   echo "Expected exactly one packed tarball, found ${#packed_tarballs[@]}" >&2
@@ -62,4 +63,4 @@ env \
   DSH_SOURCE_DIR="$dsh_source_dir" \
   node "$script_dir/profile-mount-smoke.mjs"
 
-echo "TRACE result=PASS bundle-recognized patch-applied plugin-mounted product-logic=absent"
+echo "TRACE result=PASS bundle-recognized patch-applied plugin-mounted agent-loop-pairs=live-isolated"
