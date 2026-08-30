@@ -23,7 +23,10 @@ export type ExecutingStep = Readonly<{
 
 /** A boundary at which no already-started model or tool work is in flight. */
 export type SafeHandoffBoundary =
-  | Readonly<{ kind: 'idle' }>
+  | Readonly<{
+    /** No observed DSH step is executing; this does not assert Agent idle/settled. */
+    kind: 'no-step'
+  }>
   | Readonly<{
     kind: 'step-end'
     lane: Lane
@@ -73,17 +76,17 @@ export class RuntimeFocusOwner {
     return this.focusState
   }
 
-  /** Current real DSH step, or undefined at a safe boundary. */
+  /** Current real DSH step, or undefined when no observed step is executing. */
   get executingStep(): ExecutingStep | undefined {
     return this.currentStep
   }
 
-  /** Arbitrate one intent, reporting it immediately only when already safe. */
+  /** Arbitrate one intent, reporting eligibility when no step/model is observed. */
   submitFocusIntent(intent: PendingFocusIntent): FocusIntentSubmission {
     const transition = submitFocusIntent(this.focusState, intent)
     this.focusState = transition.state
     const eligibility = this.currentStep === undefined && !this.focusState.llmRunning
-      ? this.eligiblePendingAt({ kind: 'idle' })
+      ? this.eligiblePendingAt({ kind: 'no-step' })
       : undefined
     return {
       disposition: transition.disposition,

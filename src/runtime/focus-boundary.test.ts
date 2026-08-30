@@ -71,7 +71,7 @@ describe('RuntimeFocusOwner safe DSH boundary', () => {
     expect(owner.state.activeLane).toBe('work')
   })
 
-  it('reports idle eligibility without consuming pendingFocus or switching lanes', () => {
+  it('reports no-step eligibility without treating the Agent as idle or switching lanes', () => {
     const owner = new RuntimeFocusOwner('work')
     const pending = intent('go')
 
@@ -81,7 +81,7 @@ describe('RuntimeFocusOwner safe DSH boundary', () => {
       from: 'work',
       to: 'go',
       intent: pending,
-      boundary: { kind: 'idle' },
+      boundary: { kind: 'no-step' },
     })
     expect(owner.state).toEqual({
       activeLane: 'work',
@@ -90,20 +90,21 @@ describe('RuntimeFocusOwner safe DSH boundary', () => {
     })
   })
 
-  it('reports an after-step-end intent as idle-eligible without suppressing continuation', () => {
+  it('reports after-step-end no-step eligibility; no-step does not mean Agent idle', () => {
     const owner = new RuntimeFocusOwner('work')
     const pending = intent('go', 'user_command')
 
     owner.stepStarted('work', 8, 3)
     expect(owner.stepCommitted('work', 8, 3)).toBeUndefined()
 
+    // No observed step is executing; this says nothing about Agent settle or continuation.
     const submitted = owner.submitFocusIntent(pending)
 
     expect(submitted.eligibility).toEqual({
       from: 'work',
       to: 'go',
       intent: pending,
-      boundary: { kind: 'idle' },
+      boundary: { kind: 'no-step' },
     })
     expect(owner.executingStep).toBeUndefined()
     expect(owner.state).toEqual({
