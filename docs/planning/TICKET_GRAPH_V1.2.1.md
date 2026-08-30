@@ -131,16 +131,16 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Required Review Evidence:** matrix/property output; additive-only contract diff.
 - **Stop / Escalation Condition:** second pause/resume field or shape change → `ESCALATION_REQUIRED`.
 
-#### WAVE-A-T03 — Safe-boundary switching (integration)
+#### WAVE-A-T03 — Safe-boundary eligibility detection (integration)
 - **Type:** INTEGRATION_TICKET | **Wave:** A | **Spec Phase:** A | **Baseline IDs:** BL-RT-06
 - **Current Baseline State:** BL-RT-06: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** IMPLEMENTED_VERIFIED
 - **Spec Authority:** §7.1.1, §44 "SAFE focus handoff occurs between DSH steps"
-- **Scope:** Wire A-T02 machine to pinned-DSH step boundary: switches only between committed `step/end` and next `step/start`; never mid-step; never aborting started work.
-- **Explicit Non-Goals:** No yield (A-T04); no resume (A-T07); no re-spike.
+- **Scope:** Wire A-T02 state to the pinned-DSH step lifecycle and expose safe handoff eligibility only after the current step fully commits. A-T03 does not perform continuation suppression, Agent settling, or actual `activeLane` switching.
+- **Explicit Non-Goals:** No continuation interception or yield (A-T04); no actual lane switch; no resume (A-T07); no re-spike.
 - **Dependencies / blocked_by:** WAVE-A-T01, WAVE-A-T02
 - **Expected Surfaces:** `src/runtime/`, pinned AgentLoop
-- **Acceptance Criteria:** 20+ step synthetic Work turn; focus requested after step 3 commits; assert no step-4 `step/start`, step-3 completes, handoff at first continuation boundary.
-- **Required Review Evidence:** executed trace; no-step-4 assertion.
+- **Acceptance Criteria:** pending focus during an executing 20+ continuation multi-tool Work turn does not interrupt the current step; every requested tool result commits; eligibility appears only after matching committed `step/end`; `activeLane` remains the current lane after eligibility; after-boundary intent submission may be immediately `no-step`-eligible without claiming Agent idle/settled or continuation suppression; production contains no continuation interception.
+- **Required Review Evidence:** executed committed-step trace; eligibility ordering; unchanged-`activeLane` assertion; no-interception audit.
 - **Stop / Escalation Condition:** new shared mechanism (lease/epoch/timer) → `ESCALATION_REQUIRED`.
 
 #### WAVE-A-T04 — Cooperative-yield production integration
@@ -148,11 +148,11 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Current Baseline State:** BL-RT-07: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** IMPLEMENTED_VERIFIED
 - **Spec Authority:** §7.1.2 (splice→reject→blocked→idle→whenIdle→switch), §44 "PINNED DSH yield guard uses synchronous inbox batch-splice + continuation reject"
 - **Existing Asset / Contract Reused:** verified seam from `DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`; no re-spike.
-- **Scope:** Implement verified yield path; do NOT retain `cancel(keepInbox)` (unnecessary on pinned commit).
+- **Scope:** Implement the verified cooperative-yield path and own the actual `activeLane` switch only after the current Agent either naturally settles or reaches blocked→idle through the verified continuation-yield path; do NOT retain `cancel(keepInbox)` (unnecessary on pinned commit).
 - **Explicit Non-Goals:** No resume (A-T07); no fixture change.
 - **Dependencies / blocked_by:** WAVE-A-T03
 - **Expected Surfaces:** `src/runtime/`, `agent/pre-step`, `agent.inbox`
-- **Acceptance Criteria:** reproduce main-path trace; inbox exactly `[A,B,C]`; no duplicate pending MessageId; no lost claimed message; negative control no same-lane auto-restart.
+- **Acceptance Criteria:** natural-settle path does not invoke cooperative yield unnecessarily; continuation path restores the claimed inbox batch, rejects continuation, and converges blocked→idle; actual `activeLane` switch occurs exactly once only after confirmed settle; A-T03 eligibility alone never switches; winning `pendingFocus` remains authoritative until the switch/admission path consumes it; inbox exactly `[A,B,C]`; no duplicate pending MessageId; no lost claimed message; negative control no same-lane auto-restart.
 - **Required Review Evidence:** trace; message-integrity assertions.
 - **Stop / Escalation Condition:** pinned-commit divergence → STOP + report; no silent new seam.
 

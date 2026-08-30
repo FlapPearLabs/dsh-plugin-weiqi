@@ -1,7 +1,9 @@
 /** Companion Go's named Cordis function-plugin entry. */
 import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Lane } from './contracts/focus.js'
 import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
+import { RuntimeFocusOwner, bindPinnedDshFocusBoundary } from './runtime/focus-boundary.js'
 
 export * from './contracts/index.js'
 
@@ -9,7 +11,7 @@ export * from './contracts/index.js'
 export const name = 'companion-go'
 
 /** AgentRegistry delegates real Agent/Session creation to the active AgentLoop. */
-export const inject = ['agents'] as const
+export const inject = ['agents', 'llm'] as const
 
 /** Foundation config remains intentionally empty. */
 export interface Config {}
@@ -21,7 +23,11 @@ export interface Config {}
  * Agent and its Session without a second lifecycle registry here.
  */
 export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
+  const agents = {} as Record<Lane, Agent>
   for (const lane of COMPANION_LANES) {
-    await ctx.agents.create({ sessionId: laneSessionId(lane) })
+    agents[lane] = (await ctx.agents.create({ sessionId: laneSessionId(lane) })).agent
   }
+
+  const focusOwner = new RuntimeFocusOwner('work')
+  bindPinnedDshFocusBoundary(ctx, focusOwner, agents)
 }
