@@ -7,15 +7,18 @@
 - Current Stage: **Ticket / Spike Execution Ready**
 - Next Stage: **Pre-A Spikes + Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
-- Implementation Wave A: **IN PROGRESS — WAVE-A-T01 MERGED**
+- Implementation Wave A: **IN PROGRESS — WAVE-A-T01 / WAVE-A-T02 MERGED**
 - Ticketization: **COMPLETE**
 
 ## Current scope
 
-The repository contains the project Foundation plus the first verified Wave A
-Runtime slice: AgentLoop-owned Work/Go Agent-Session pairs with stable lane IDs,
-isolated histories, live Session resolution, and deterministic disposal/remount.
-The package declares a DSH Profile Bundle whose patch mounts this Runtime entry.
+The repository contains the project Foundation plus the first two verified Wave
+A Runtime slices: AgentLoop-owned Work/Go Agent-Session pairs with stable lane
+IDs, isolated histories, live Session resolution, and deterministic
+disposal/remount; and the pure RuntimeFocusState machine with one active lane,
+explicit `llmRunning`, single-slot focus arbitration, and one optional paused
+lane. The package declares a DSH Profile Bundle whose patch mounts this Runtime
+entry.
 
 Spec Phase is a product/architecture execution gate. Implementation Wave is an
 organizational construction stream. A Ticket belongs to a Wave and must not
