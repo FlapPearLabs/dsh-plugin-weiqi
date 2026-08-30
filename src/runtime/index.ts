@@ -24,6 +24,13 @@ export {
   type ExecutingStep,
   type FocusBoundaryBindingOptions,
   type FocusIntentSubmission,
+  type FocusSettleKind,
   type PairedLaneAgents,
   type SafeHandoffBoundary,
+  type SettledFocusSwitch,
 } from './focus-boundary.js'
+
+export {
+  bindPinnedDshCooperativeYield,
+  type FocusYieldBindingOptions,
+} from './focus-yield.js'

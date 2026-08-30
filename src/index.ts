@@ -4,6 +4,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { Lane } from './contracts/focus.js'
 import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
 import { RuntimeFocusOwner, bindPinnedDshFocusBoundary } from './runtime/focus-boundary.js'
+import { bindPinnedDshCooperativeYield } from './runtime/focus-yield.js'
 
 export * from './contracts/index.js'
 
@@ -30,4 +31,5 @@ export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
 
   const focusOwner = new RuntimeFocusOwner('work')
   bindPinnedDshFocusBoundary(ctx, focusOwner, agents)
+  bindPinnedDshCooperativeYield(ctx, focusOwner, agents)
 }
