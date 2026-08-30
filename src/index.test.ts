@@ -5,7 +5,7 @@ import * as CompanionGo from './index.js'
 describe('Companion Go Cordis entry', () => {
   it('uses the named function-plugin namespace required by Loader', () => {
     expect(CompanionGo.name).toBe('companion-go')
-    expect(CompanionGo.inject).toEqual(['agents'])
+    expect(CompanionGo.inject).toEqual(['agents', 'llm'])
     expect(typeof CompanionGo.apply).toBe('function')
     expect('default' in CompanionGo).toBe(false)
   })
@@ -18,11 +18,12 @@ describe('Companion Go Cordis entry', () => {
   })
 
   it('asks the AgentRegistry factory to materialize both exact lane identities', async () => {
-    const create = vi.fn(async (_options: unknown) => ({
-      agent: {},
+    const create = vi.fn(async (options: { sessionId: string }) => ({
+      agent: { session: { id: options.sessionId } },
       dispose: async () => undefined,
     }))
-    const ctx = { agents: { create } } as unknown as Context
+    const on = vi.fn((_event: string, _listener: unknown) => vi.fn())
+    const ctx = { agents: { create }, on } as unknown as Context
 
     await CompanionGo.apply(ctx)
 
@@ -30,6 +31,10 @@ describe('Companion Go Cordis entry', () => {
     expect(create.mock.calls.map(([options]) => options)).toEqual([
       { sessionId: 'companion-go-work' },
       { sessionId: 'companion-go-go' },
+    ])
+    expect(on.mock.calls.map(([event]) => event)).toEqual([
+      'session/event',
+      'llm/stream',
     ])
   })
 
