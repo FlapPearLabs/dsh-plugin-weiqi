@@ -8,7 +8,6 @@ import type {
   RuntimeFocusState,
 } from '../contracts/focus.js'
 import {
-  activateLane,
   createRuntimeFocusState,
   setLlmRunning,
   submitFocusIntent,
@@ -43,7 +42,7 @@ export type EligibleFocusHandoff = Readonly<{
 /** Result of submitting one intent to the A-T02 single-slot machine. */
 export type FocusIntentSubmission = Readonly<{
   disposition: FocusIntentDisposition
-  handoff?: EligibleFocusHandoff
+  eligibility?: EligibleFocusHandoff
 }>
 
 /** The exact Work/Go agents whose real DSH lifecycle this owner observes. */
@@ -51,15 +50,15 @@ export type PairedLaneAgents = Readonly<Record<Lane, Agent>>
 
 /** Narrow observability for the committed boundary; not a wake or yield path. */
 export type FocusBoundaryBindingOptions = Readonly<{
-  onHandoff?: (handoff: EligibleFocusHandoff) => void
+  onEligibility?: (eligibility: EligibleFocusHandoff) => void
 }>
 
 /**
  * Sole mutable owner of RuntimeFocusState and its real-step execution marker.
  *
- * A-T03 only serves a pending lane transition after the current step has
- * committed. It deliberately leaves the winning pendingFocus intact for the
- * later handoff/admission Tickets and contains no cooperative-yield sequence.
+ * A-T03 only reports that a pending lane transition is eligible after the
+ * current step has committed. It leaves activeLane and the winning pendingFocus
+ * intact for the later yield/switch Tickets and contains no yield sequence.
  */
 export class RuntimeFocusOwner {
   private focusState: RuntimeFocusState
@@ -79,16 +78,16 @@ export class RuntimeFocusOwner {
     return this.currentStep
   }
 
-  /** Arbitrate one intent, serving it immediately only when already safe. */
+  /** Arbitrate one intent, reporting it immediately only when already safe. */
   submitFocusIntent(intent: PendingFocusIntent): FocusIntentSubmission {
     const transition = submitFocusIntent(this.focusState, intent)
     this.focusState = transition.state
-    const handoff = this.currentStep === undefined && !this.focusState.llmRunning
-      ? this.servePendingAt({ kind: 'idle' })
+    const eligibility = this.currentStep === undefined && !this.focusState.llmRunning
+      ? this.eligiblePendingAt({ kind: 'idle' })
       : undefined
     return {
       disposition: transition.disposition,
-      ...handoff === undefined ? {} : { handoff },
+      ...eligibility === undefined ? {} : { eligibility },
     }
   }
 
@@ -119,7 +118,7 @@ export class RuntimeFocusOwner {
   }
 
   /**
-   * Observe committed `step/end`, then serve the first eligible handoff.
+   * Observe committed `step/end`, then report the eligible handoff.
    * Pinned AgentLoop emits this only after every requested tool result commits.
    */
   stepCommitted(lane: Lane, turn: number, step: number): EligibleFocusHandoff | undefined {
@@ -140,7 +139,7 @@ export class RuntimeFocusOwner {
     }
 
     this.currentStep = undefined
-    return this.servePendingAt({ kind: 'step-end', lane, turn, step })
+    return this.eligiblePendingAt({ kind: 'step-end', lane, turn, step })
   }
 
   private assertExecutingLane(lane: Lane): void {
@@ -150,12 +149,11 @@ export class RuntimeFocusOwner {
     }
   }
 
-  private servePendingAt(boundary: SafeHandoffBoundary): EligibleFocusHandoff | undefined {
+  private eligiblePendingAt(boundary: SafeHandoffBoundary): EligibleFocusHandoff | undefined {
     const intent = this.focusState.pendingFocus
     if (intent === undefined || intent.target === this.focusState.activeLane) return undefined
 
     const from = this.focusState.activeLane
-    this.focusState = activateLane(this.focusState, intent.target)
     return Object.freeze({ from, to: intent.target, intent, boundary })
   }
 }
@@ -185,8 +183,8 @@ export function bindPinnedDshFocusBoundary(
     }
     if (event.type !== 'step/end') return
 
-    const handoff = owner.stepCommitted(lane, event.data.turn, event.data.step)
-    if (handoff !== undefined) options.onHandoff?.(handoff)
+    const eligibility = owner.stepCommitted(lane, event.data.turn, event.data.step)
+    if (eligibility !== undefined) options.onEligibility?.(eligibility)
   })
 
   ctx.on('llm/stream', (request: GenerateOptions, next) => {
