@@ -35,6 +35,8 @@ describe('Companion Go Cordis entry', () => {
     expect(on.mock.calls.map(([event]) => event)).toEqual([
       'session/event',
       'llm/stream',
+      'agent/pre-step',
+      'agent/status',
     ])
   })
 

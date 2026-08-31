@@ -8,7 +8,9 @@ import type {
   RuntimeFocusState,
 } from '../contracts/focus.js'
 import {
+  activateLane,
   createRuntimeFocusState,
+  markLanePaused,
   setLlmRunning,
   submitFocusIntent,
   type FocusIntentDisposition,
@@ -48,6 +50,17 @@ export type FocusIntentSubmission = Readonly<{
   eligibility?: EligibleFocusHandoff
 }>
 
+/** The real Agent settlement path that authorized one active-lane switch. */
+export type FocusSettleKind = 'natural' | 'cooperative-yield'
+
+/** One post-settle switch using the winning A-T02 pending intent. */
+export type SettledFocusSwitch = Readonly<{
+  from: Lane
+  to: Lane
+  intent: PendingFocusIntent
+  settle: FocusSettleKind
+}>
+
 /** The exact Work/Go agents whose real DSH lifecycle this owner observes. */
 export type PairedLaneAgents = Readonly<Record<Lane, Agent>>
 
@@ -81,13 +94,17 @@ export class RuntimeFocusOwner {
     return this.currentStep
   }
 
+  /** Current A-T03 eligibility, without inferring that the Agent is settled. */
+  get eligibleHandoff(): EligibleFocusHandoff | undefined {
+    if (this.currentStep !== undefined || this.focusState.llmRunning) return undefined
+    return this.eligiblePendingAt({ kind: 'no-step' })
+  }
+
   /** Arbitrate one intent, reporting eligibility when no step/model is observed. */
   submitFocusIntent(intent: PendingFocusIntent): FocusIntentSubmission {
     const transition = submitFocusIntent(this.focusState, intent)
     this.focusState = transition.state
-    const eligibility = this.currentStep === undefined && !this.focusState.llmRunning
-      ? this.eligiblePendingAt({ kind: 'no-step' })
-      : undefined
+    const eligibility = this.eligibleHandoff
     return {
       disposition: transition.disposition,
       ...eligibility === undefined ? {} : { eligibility },
@@ -143,6 +160,31 @@ export class RuntimeFocusOwner {
 
     this.currentStep = undefined
     return this.eligiblePendingAt({ kind: 'step-end', lane, turn, step })
+  }
+
+  /**
+   * Switch only after the binding has confirmed the active Agent is truly idle.
+   * The winning pending intent remains present for the later admission/wake path.
+   */
+  switchAfterConfirmedSettle(
+    lane: Lane,
+    settle: FocusSettleKind,
+  ): SettledFocusSwitch | undefined {
+    if (lane !== this.focusState.activeLane) return undefined
+    if (this.currentStep !== undefined || this.focusState.llmRunning) {
+      throw new Error(`cannot switch lane ${lane}: active Agent work is not settled`)
+    }
+
+    const intent = this.focusState.pendingFocus
+    if (intent === undefined || intent.target === lane) return undefined
+
+    const from = lane
+    if (settle === 'cooperative-yield') {
+      this.focusState = markLanePaused(this.focusState, from)
+    }
+    this.focusState = activateLane(this.focusState, intent.target)
+
+    return Object.freeze({ from, to: intent.target, intent, settle })
   }
 
   private assertExecutingLane(lane: Lane): void {

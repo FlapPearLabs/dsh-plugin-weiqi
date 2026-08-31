@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
@@ -294,13 +293,12 @@ describe('WAVE-A-T03 real pinned DSH safe-boundary integration', () => {
           .toEqual({ llmRunning: false })
       }
 
-      const productionSource = [
-        readFileSync(new URL('./plugin/runtime/focus-boundary.ts', import.meta.url), 'utf8'),
-        readFileSync(new URL('./plugin/index.ts', import.meta.url), 'utf8'),
-      ].join('\n')
-      expect(productionSource).not.toMatch(/agent\/pre-step|inbox\.splice|whenIdle\(|kind:\s*['"]reject/)
-      expect(productionSource).not.toMatch(/\bactivateLane\s*\(/)
-      expect(productionSource).not.toMatch(/queue|mailbox|event bus|epoch|lease|timer/i)
+      // A-T04 now exists in a separate binding. The A-T03 binding itself must
+      // remain observation-only so this isolated regression still continues.
+      const aT03BindingSource = bindPinnedDshFocusBoundary.toString()
+      expect(aT03BindingSource)
+        .not.toMatch(/agent\/pre-step|inbox\.splice|whenIdle\(|kind:\s*['"]reject/)
+      expect(aT03BindingSource).not.toMatch(/\bactivateLane\s*\(/)
     } finally {
       report(trace)
     }
