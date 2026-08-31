@@ -51,9 +51,10 @@ export type FocusResumeBindingOptions = Readonly<{
  * that resumed the paused lane (`transition.resumedLane`, set atomically by
  * the owner). It decides whether the lane's real wake already exists and,
  * only when it does not, emits exactly one plugin-sourced companion-resume
- * through the verified `agent.steer()` seam. The pause marker itself was
- * already consumed inside `switchAfterConfirmedSettle`, so no second
- * admission can exist for one pause cycle.
+ * through the verified `agent.steer()` seam. The pause marker and the winning
+ * pending intent were already consumed inside `switchAfterConfirmedSettle`
+ * (the immutable intent survives via the transition), so no second admission
+ * can exist for one pause cycle.
  */
 export type FocusResumeBinding = Readonly<{
   admitResume: (transition: SettledFocusSwitch) => void
@@ -65,10 +66,17 @@ export type FocusResumeBinding = Readonly<{
  * RuntimeFocusOwner remains the sole state owner. This binding observes the
  * A-T04 post-settle switch through `focus/lane-switched`; only the switch
  * that resumed the deliberately paused lane reaches the resume decision. The
- * synthetic resume exists to wake preserved next-step context: it is
- * suppressed when a real user wake already exists — a running driver,
- * user-origin pending input, or a user-command intent carrying the user's
- * own source message — or when the preserved batch was already consumed.
+ * synthetic resume wakes the resumed driver so the preserved continuation —
+ * whether or not it still carries an inbox batch — is claimed at the next
+ * step boundary. It is suppressed only when a REAL user wake already exists:
+ * a running driver, or a user-origin message already parked in the lane's
+ * inbox that will wake/drive it. Merely storing a `sourceMessage` inside the
+ * winning intent is not a wake: it proves the immutable user message exists
+ * and must be preserved, but not that the target Agent received it, entered
+ * nextTurn/nextStep, or became non-idle. Likewise the preserved batch length
+ * is not evidence of consumption: a deliberately yielded continuation can
+ * carry an empty inbox batch (durable tool results still require another
+ * model step), so the pausedLane marker itself is the authoritative fact.
  * Natural settlements never pause a lane, so they never reach this path.
  * The whole path is synchronous and creates no queue, timer, mailbox, or
  * event of its own.
@@ -85,11 +93,17 @@ export function bindPinnedDshLaneResume(
     if (owner.state.activeLane !== lane) return
 
     const agent = agents[lane]
+    // Only an actual wake signal suppresses the synthetic resume: the lane's
+    // driver already runs, or a user-origin message already sits in the lane's
+    // inbox and will wake/drive it. `transition.intent.sourceMessage` alone is
+    // NOT such a signal (P1-1); it remains preserved via the transition for
+    // the delivery path owned by later Tickets.
     const realUserWake = agent.status !== 'idle'
       || hasUserWake(agent)
-      || (transition.intent.origin === 'user_command'
-        && transition.intent.sourceMessage !== undefined)
-    const syntheticResume = !realUserWake && agent.inbox.nextStep.length > 0
+    // The deliberately paused lane needs resume admission regardless of the
+    // preserved batch length (P1-2): an empty nextStep is a normal
+    // tool-results continuation, not evidence the pause was consumed.
+    const syntheticResume = !realUserWake
 
     options.onResumeAdmitted?.({ lane, syntheticResume })
     if (!syntheticResume) return

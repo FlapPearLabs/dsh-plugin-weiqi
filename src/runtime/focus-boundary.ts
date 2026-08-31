@@ -10,6 +10,7 @@ import type {
 import {
   activateLane,
   admitPausedLaneResume,
+  consumePendingFocus,
   createRuntimeFocusState,
   markLanePaused,
   setLlmRunning,
@@ -178,6 +179,16 @@ export class RuntimeFocusOwner {
    * frozen A-T02 primitive BEFORE any cooperative-yield marker is recorded,
    * so a cooperative return re-marks the yielding lane without displacing the
    * resumed lane's admission. The switch reports `resumedLane` exactly once.
+   *
+   * A-T07 P1-3: the resume admission also consumes the winning pending intent
+   * through the frozen A-T02 `consumePendingFocus` primitive, so the single
+   * slot cannot remain a stale `user_command` lock that blocks every later
+   * focus request. The immutable winning intent (including its `sourceMessage`,
+   * if any) is not discarded: it stays available to the admission path through
+   * the returned `SettledFocusSwitch.intent`, which is exactly the consumer
+   * handle the A-T04 contract retained the intent for. The away switch (no
+   * `resumedLane`) still retains the intent, matching the accepted A-T04
+   * contract.
    */
   switchAfterConfirmedSettle(
     lane: Lane,
@@ -197,6 +208,7 @@ export class RuntimeFocusOwner {
       : undefined
     if (resumedLane !== undefined) {
       this.focusState = admitPausedLaneResume(this.focusState)
+      this.focusState = consumePendingFocus(this.focusState)
     }
     if (settle === 'cooperative-yield') {
       this.focusState = markLanePaused(this.focusState, from)

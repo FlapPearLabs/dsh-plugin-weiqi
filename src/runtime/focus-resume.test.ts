@@ -96,7 +96,7 @@ type Fixture = ReturnType<typeof fixture>
  * `emitLaneSwitched`, exactly as `src/index.ts` wires it.
  */
 async function yieldAway(f: Fixture, batch: readonly UserMessage[]): Promise<void> {
-  const next = vi.fn(async () => ({ kind: 'enter', messages: [batch[0]!] } as const))
+  const next = vi.fn(async () => ({ kind: 'enter', messages: [...batch] } as const))
   const decision = await f.listener('agent/pre-step')({
     agent: f.work.value,
     messages: batch,
@@ -148,12 +148,13 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
       onCompanionResumeCreated: m => created.push(m),
       onResumeSent: ({ messageId }) => {
         // At send time the pause marker must already be consumed (the owner
-        // admitted inside the switch) and the preserved batch must be intact.
+        // admitted inside the switch), the winning pendingFocus must already
+        // be consumed (P1-3), and the preserved batch must be intact.
         expect(f.owner.state).toEqual({
           activeLane: 'work',
           llmRunning: false,
-          pendingFocus: returnIntent,
         })
+        expect(f.owner.state).not.toHaveProperty('pendingFocus')
         expect(f.owner.state).not.toHaveProperty('pausedLane')
         expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([a.id, b.id, c.id])
         sentIds.push(messageId)
@@ -166,14 +167,16 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
 
     returnToPausedLane(f, returnIntent)
 
-    // Admission happened at the return switch: pausedLane cleared exactly once.
+    // Admission happened at the return switch: pausedLane cleared exactly once
+    // and the winning intent consumed (P1-3), so a later request is free.
     expect(admitted).toEqual([{ lane: 'work', syntheticResume: true }])
     expect(f.owner.state).toEqual({
       activeLane: 'work',
       llmRunning: false,
-      pendingFocus: returnIntent,
     })
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
     expect(f.owner.state).not.toHaveProperty('pausedLane')
+    expect(f.owner.submitFocusIntent(intent('go')).disposition).toBe('admitted')
 
     // Exactly one synthetic resume, plugin-sourced, through the verified steer seam.
     expect(f.work.steered).toHaveLength(1)
@@ -260,8 +263,8 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
     expect(f.owner.state).toEqual({
       activeLane: 'work',
       llmRunning: false,
-      pendingFocus: returnIntent,
     })
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
     expect(f.owner.state).not.toHaveProperty('pausedLane')
     // The preserved batch and the user wake are both left untouched for the
     // real driver wake to consume.
@@ -269,7 +272,39 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
     expect(f.work.mutable.inbox.nextTurn.map(item => item.id)).toEqual([userWake.id])
   })
 
-  it('a user-command intent carrying the user message suppresses the synthetic resume', async () => {
+  it('a non-idle lane (already-running driver) suppresses the synthetic resume but pausedLane is still cleared', async () => {
+    const f = fixture()
+    const a = message('A', 'A')
+    const returnIntent = intent('work')
+    f.owner.submitFocusIntent(intent('go'))
+
+    bindPinnedDshCooperativeYield(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
+    bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value }, {
+      onResumeAdmitted: ({ lane, syntheticResume }) => {
+        expect(lane).toBe('work')
+        expect(syntheticResume).toBe(false)
+      },
+      onCompanionResumeCreated: () => {
+        throw new Error('a running driver must not produce a synthetic resume')
+      },
+      onResumeSent: () => {
+        throw new Error('a running driver must not steer a synthetic resume')
+      },
+    })
+
+    await yieldAway(f, [a])
+    // The driver is already running when focus returns: an actual wake signal.
+    f.work.mutable.status = 'running'
+    returnToPausedLane(f, returnIntent)
+
+    expect(f.work.steered).toEqual([])
+    expect(f.owner.state.activeLane).toBe('work')
+    expect(f.owner.state).not.toHaveProperty('pausedLane')
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
+    expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([a.id])
+  })
+
+  it('a user-command intent with only a stored sourceMessage still synthesizes exactly one companion-resume', async () => {
     const f = fixture()
     const a = message('A', 'A')
     const userMessage = message('U', 'user says continue', { kind: 'user' })
@@ -279,51 +314,79 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
     bindPinnedDshCooperativeYield(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
     bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value }, {
       onResumeAdmitted: ({ syntheticResume }) => {
-        expect(syntheticResume).toBe(false)
-      },
-      onCompanionResumeCreated: () => {
-        throw new Error('a user-command wake must not produce a synthetic resume')
-      },
-      onResumeSent: () => {
-        throw new Error('a user-command wake must not steer a synthetic resume')
+        expect(syntheticResume).toBe(true)
       },
     })
 
     await yieldAway(f, [a])
-    returnToPausedLane(f, returnIntent)
+    const transition = returnToPausedLane(f, returnIntent)
 
-    expect(f.work.steered).toEqual([])
+    // P1-1: the stored sourceMessage alone is NOT an actual wake — it was not
+    // delivered into the Work inbox, so exactly one synthetic resume is steered.
+    expect(f.work.steered).toHaveLength(1)
+    // The immutable sourceMessage survives via the transition, unchanged, for
+    // the delivery path owned by later Tickets.
+    expect(transition.intent).toBe(returnIntent)
+    expect(transition.intent.sourceMessage?.message).toBe(userMessage)
+    expect(f.work.mutable.inbox.nextTurn).toEqual([])
+    expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([a.id])
     expect(f.owner.state.activeLane).toBe('work')
     expect(f.owner.state).not.toHaveProperty('pausedLane')
-    expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([a.id])
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
+    // No stale user_command lock: a later request is admitted normally.
+    expect(f.owner.submitFocusIntent(intent('go')).disposition).toBe('admitted')
   })
 
-  it('a consumed batch suppresses the synthetic resume', async () => {
+  it('an empty preserved continuation batch still synthesizes exactly one companion-resume', async () => {
     const f = fixture()
-    const a = message('A', 'A')
     f.owner.submitFocusIntent(intent('go'))
     bindPinnedDshCooperativeYield(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
     bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value }, {
       onResumeAdmitted: ({ syntheticResume }) => {
-        expect(syntheticResume).toBe(false)
-      },
-      onCompanionResumeCreated: () => {
-        throw new Error('a consumed batch must not produce a synthetic resume')
-      },
-      onResumeSent: () => {
-        throw new Error('a consumed batch must not be resumed synthetically')
+        expect(syntheticResume).toBe(true)
       },
     })
 
-    await yieldAway(f, [a])
-    // A real user turn consumed the preserved batch before the return switch.
-    f.work.mutable.inbox.nextStep.length = 0
+    // A deliberately yielded continuation with an empty proposed batch
+    // (durable tool results still require another model step).
+    await yieldAway(f, [])
     returnToPausedLane(f, intent('work'))
 
-    expect(f.work.steered).toEqual([])
+    // P1-2: batch length is not evidence of consumption; the pausedLane
+    // marker drives the resume.
+    expect(f.work.steered).toHaveLength(1)
+    expect(f.work.mutable.inbox.nextStep).toEqual([])
     expect(f.owner.state.activeLane).toBe('work')
     expect(f.owner.state).not.toHaveProperty('pausedLane')
-    expect(f.work.mutable.inbox.nextStep).toEqual([])
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
+  })
+
+  it('consumes the winning user_command at the resume admission so later focus requests are not blocked', async () => {
+    const f = fixture()
+    const a = message('A', 'A')
+    const userMessage = message('U', 'later user command', { kind: 'user' })
+    const returnIntent = intent('work', 'user_command', userMessage)
+    f.owner.submitFocusIntent(intent('go'))
+
+    bindPinnedDshCooperativeYield(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
+    bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
+
+    await yieldAway(f, [a])
+    const transition = returnToPausedLane(f, returnIntent)
+
+    // P1-3: the winning user_command was consumed at the resume admission;
+    // its immutable sourceMessage remains preserved via the transition.
+    expect(transition.intent.origin).toBe('user_command')
+    expect(transition.intent.sourceMessage?.message).toBe(userMessage)
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
+
+    // No stale user_command lock: a later user_command is admitted directly
+    // (the old one was consumed), and arbitration then works normally.
+    expect(f.owner.submitFocusIntent(
+      intent('work', 'user_command', message('U2', 'second command', { kind: 'user' })),
+    ).disposition).toBe('admitted')
+    expect(f.owner.submitFocusIntent(intent('go', 'self_initiated')).disposition)
+      .toBe('retained-existing')
   })
 
   it('never resumes a lane that was never paused (stale/negative control)', async () => {

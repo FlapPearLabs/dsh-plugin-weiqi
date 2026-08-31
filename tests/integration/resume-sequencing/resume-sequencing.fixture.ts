@@ -16,6 +16,7 @@ import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import {
   RuntimeFocusOwner,
   bindPinnedDshFocusBoundary,
+  type SettledFocusSwitch,
 } from './plugin/runtime/focus-boundary.ts'
 import { bindPinnedDshCooperativeYield } from './plugin/runtime/focus-yield.ts'
 import {
@@ -294,13 +295,18 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
       expect(recordedEntries(work, ['go task'])).toEqual([])
 
       expect(admitted).toEqual([{ lane: 'work', syntheticResume: true }])
-      // Work resumed; Go is now the deliberately paused lane.
+      // Work resumed; Go is now the deliberately paused lane. The winning
+      // return intent was consumed at the resume admission (P1-3), so a later
+      // focus request is arbitrated normally instead of being stale-locked.
       expect(runtime!.owner.state).toEqual({
         activeLane: 'work',
         llmRunning: false,
-        pendingFocus: returnIntent,
         pausedLane: 'go',
       })
+      expect(runtime!.owner.state).not.toHaveProperty('pendingFocus')
+      expect(runtime!.owner.submitFocusIntent(
+        Object.freeze({ target: 'go', origin: 'self_initiated' } as const),
+      ).disposition).toBe('admitted')
 
       // Ordering: the preserved batch claims before the resume message at the
       // turn-2 boundary. (A,B were also claimed in turn 1 before the reject.)
@@ -330,13 +336,13 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
     }
   })
 
-  it('a user-command return carrying the user message suppresses the synthetic resume', async () => {
+  it('a user-command return with only a stored sourceMessage still steers exactly one companion-resume', async () => {
     const adapter = new MockAdapter([
       toolCallResponse('step-1', 'echo', { text: 'step-1' }),
       toolCallResponse('step-2', 'echo', { text: 'step-2' }),
       toolCallResponse('step-3', 'focus-and-stage', { text: 'step-3' }),
       toolCallResponse('go-1', 'return-focus-user-command', { text: 'go-1' }),
-      textResponse('user-driven'),
+      textResponse('resumed'),
     ])
     const ctx = await harness(adapter)
     const { work, go } = await pairedAgents(ctx, 'a-t07-user-wake')
@@ -355,6 +361,7 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
     const trace: TraceEntry[] = []
     const admitted = Promise.withResolvers<void>()
     let steerInsertions = 0
+    let seenTransitionIntent: SettledFocusSwitch['intent'] | undefined
     let staged = false
     let runtime: ReturnType<typeof bindProductionRuntime> | undefined
 
@@ -363,6 +370,9 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
       if (event.type === 'turn/end') {
         trace.push({ event: 'turn/end', turn: event.data.turn, detail: event.data.reason })
       }
+    })
+    ctx.on('focus/lane-switched', transition => {
+      if (transition.resumedLane === 'work') seenTransitionIntent = transition.intent
     })
 
     ctx.tools.register(defineContentToolFixture({
@@ -404,8 +414,10 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
     runtime = bindProductionRuntime(ctx, work, go, {
       onResumeAdmitted: event => {
         expect(event.lane).toBe('work')
-        expect(event.syntheticResume).toBe(false)
-        trace.push({ event: 'resume:admitted-without-synthetic' })
+        // P1-1: the stored sourceMessage is NOT an actual wake — it was never
+        // delivered into Work's inbox, so the synthetic resume must fire.
+        expect(event.syntheticResume).toBe(true)
+        trace.push({ event: 'resume:admitted' })
         admitted.resolve()
       },
     })
@@ -427,10 +439,7 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
         source: { kind: 'user' },
       }))
       await go.whenIdle()
-      // The switch admitted without a synthetic resume; the user's own
-      // message is the real wake (delivered by the admission path seam).
       await admitted.promise
-      work.followup(userWake)
       await work.whenIdle()
 
       expect(reasons(work)).toEqual([
@@ -438,19 +447,160 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
         { kind: 'completed' },
       ])
       expect(reasons(go)).toEqual([{ kind: 'blocked' }])
-      expect(steerInsertions).toBe(0)
+      // Exactly one synthetic companion-resume was steered; nothing more.
+      expect(steerInsertions).toBe(1)
       expect(work.inbox.hasPending).toBe(false)
-      expect(runtime!.owner.state.pausedLane).toBe('go')
+      expect(runtime!.owner.state).toEqual({
+        activeLane: 'work',
+        llmRunning: false,
+        pausedLane: 'go',
+      })
+      expect(runtime!.owner.state).not.toHaveProperty('pendingFocus')
+      // The immutable sourceMessage survives via the transition, unchanged,
+      // for the delivery path owned by later Tickets — it was NOT delivered
+      // into Work, and no manual followup masked the Runtime behavior.
+      expect(seenTransitionIntent?.sourceMessage?.message).toBe(userWake)
+      expect(runtime!.owner.submitFocusIntent(
+        Object.freeze({ target: 'go', origin: 'user_command' } as const),
+      ).disposition).toBe('admitted')
 
-      // The real user wake consumed the preserved batch in stored order; no
-      // companion-resume message ever existed in the Work transcript.
+      // The synthetic resume consumed the preserved batch in stored order;
+      // the user's source message never entered the Work transcript.
       const durable = recordedEntries(work, ['A', 'B', 'C', 'companion-resume', 'user says continue'])
       expect(durable.map(entry => entry.text))
-        .toEqual(['A', 'B', 'C', 'user says continue'])
+        .toEqual(['A', 'B', 'C', 'companion-resume'])
       expect(durable.map(entry => entry.id)).toEqual([a.id, b.id, c.id, durable[3]!.id])
-      report('user-wake-suppression', trace)
+      expect(new Set(durable.map(entry => entry.id)).size).toBe(4)
+      report('user-command-without-wake', trace)
     } finally {
-      report('user-wake-suppression-final', trace)
+      report('user-command-without-wake-final', trace)
+    }
+  })
+
+  it('resumes an empty preserved continuation batch with exactly one companion-resume', async () => {
+    const adapter = new MockAdapter([
+      toolCallResponse('step-1', 'echo', { text: 'step-1' }),
+      toolCallResponse('step-2', 'echo', { text: 'step-2' }),
+      toolCallResponse('step-3', 'focus-without-stage', { text: 'step-3' }),
+      toolCallResponse('go-1', 'return-focus', { text: 'go-1' }),
+      textResponse('resumed'),
+    ])
+    const ctx = await harness(adapter)
+    const { work, go } = await pairedAgents(ctx, 'a-t07-empty-batch')
+    const returnIntent = Object.freeze({
+      target: 'work',
+      origin: 'self_initiated',
+    } as const)
+    const trace: TraceEntry[] = []
+    const resumed = Promise.withResolvers<void>()
+    const admitted: Array<Readonly<{ lane: string; syntheticResume: boolean }>> = []
+    let runtime: ReturnType<typeof bindProductionRuntime> | undefined
+
+    ctx.on('agent/status', ({ agent, status }) => {
+      if (agent === work) trace.push({ event: `status:${status}` })
+    })
+    ctx.on('agent/inbox/claimed', ({ agent, message: claimed, turn }) => {
+      if (agent === work) {
+        trace.push({ event: 'inbox/claimed', turn, texts: textsOf([claimed]) })
+      }
+    })
+    ctx.on('session/event', (session, event) => {
+      if (session !== work.session) return
+      if (event.type === 'turn/end') {
+        trace.push({ event: 'turn/end', turn: event.data.turn, detail: event.data.reason })
+      }
+    })
+
+    ctx.tools.register(defineContentToolFixture({
+      name: 'focus-without-stage',
+      description: 'submit focus without staging any inbox batch during step 3',
+      parameters: { text: { type: 'string', required: true } },
+      execute: async ({ text }) => {
+        runtime!.owner.submitFocusIntent(
+          Object.freeze({ target: 'go', origin: 'self_initiated' } as const),
+        )
+        trace.push({ event: 'focus:pending,empty-batch' })
+        return [{ type: 'text', text }]
+      },
+    }))
+    ctx.tools.register(defineContentToolFixture({
+      name: 'return-focus',
+      description: 'submit the winning return focus intent during the Go step',
+      parameters: { text: { type: 'string', required: true } },
+      execute: async ({ text }) => {
+        runtime!.owner.submitFocusIntent(returnIntent)
+        trace.push({ event: 'go:return-focus-submitted' })
+        return [{ type: 'text', text }]
+      },
+    }))
+
+    // P1-2: the yield boundary proposes an EMPTY continuation batch (durable
+    // tool results still require another model step); the lane is still
+    // deliberately paused and must resume.
+    ctx.on('agent/pre-step', async (payload, next) => {
+      if (payload.agent !== work || payload.turn !== 1 || payload.step !== 4) return next()
+      expect(textsOf(payload.messages)).toEqual([])
+      trace.push({ event: 'arrival:empty-batch-at-yield' })
+      const decision = await next()
+      trace.push({ event: `pre-step:${decision.kind}` })
+      return decision
+    })
+
+    runtime = bindProductionRuntime(ctx, work, go, {
+      onResumeAdmitted: event => {
+        admitted.push(event)
+        expect(event.lane).toBe('work')
+        expect(event.syntheticResume).toBe(true)
+        trace.push({ event: 'resume:admitted' })
+      },
+    })
+    ctx.on('agent/inbox/inserted', ({ agent, message: inserted }) => {
+      if (agent === work && inserted.source.kind === 'plugin'
+        && inserted.source.plugin === 'companion-go-resume') {
+        trace.push({ event: 'resume:inserted', texts: textsOf([inserted]) })
+        resumed.resolve()
+      }
+    })
+
+    try {
+      work.followup(createUserMessage({
+        content: [{ type: 'text', text: 'start' }],
+        source: { kind: 'user' },
+      }))
+      await work.whenIdle()
+      go.followup(createUserMessage({
+        content: [{ type: 'text', text: 'go task' }],
+        source: { kind: 'user' },
+      }))
+      await go.whenIdle()
+      await resumed.promise
+      await work.whenIdle()
+
+      expect(reasons(work)).toEqual([
+        { kind: 'blocked' },
+        { kind: 'completed' },
+      ])
+      expect(reasons(go)).toEqual([{ kind: 'blocked' }])
+      expect(admitted).toEqual([{ lane: 'work', syntheticResume: true }])
+      expect(work.inbox.hasPending).toBe(false)
+      expect(runtime!.owner.state).toEqual({
+        activeLane: 'work',
+        llmRunning: false,
+        pausedLane: 'go',
+      })
+      expect(runtime!.owner.state).not.toHaveProperty('pendingFocus')
+
+      // Exactly one companion-resume in the durable transcript; the empty
+      // continuation did not dead-idle the lane.
+      const durable = recordedEntries(work, ['companion-resume'])
+      expect(durable.map(entry => entry.text)).toEqual(['companion-resume'])
+      const claims = trace
+        .filter(entry => entry.event === 'inbox/claimed')
+        .map(entry => entry.texts?.[0])
+      expect(claims.slice(-1)).toEqual(['companion-resume'])
+      report('empty-batch-resume', trace)
+    } finally {
+      report('empty-batch-resume-final', trace)
     }
   })
 
