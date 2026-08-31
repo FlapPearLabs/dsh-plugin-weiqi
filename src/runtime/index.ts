@@ -35,3 +35,11 @@ export {
   type FocusYieldBinding,
   type FocusYieldBindingOptions,
 } from './focus-yield.js'
+
+export {
+  bindPinnedDshLaneResume,
+  COMPANION_RESUME_PLUGIN,
+  emitLaneSwitched,
+  type FocusResumeBinding,
+  type FocusResumeBindingOptions,
+} from './focus-resume.js'

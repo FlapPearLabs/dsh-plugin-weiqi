@@ -9,6 +9,7 @@ import type {
 } from '../contracts/focus.js'
 import {
   activateLane,
+  admitPausedLaneResume,
   createRuntimeFocusState,
   markLanePaused,
   setLlmRunning,
@@ -59,6 +60,12 @@ export type SettledFocusSwitch = Readonly<{
   to: Lane
   intent: PendingFocusIntent
   settle: FocusSettleKind
+  /**
+   * A-T07: present only when this switch resumed the deliberately paused
+   * lane — the pause marker was consumed at this exact admission point
+   * through the frozen A-T02 primitive before the switch completed.
+   */
+  resumedLane?: Lane
 }>
 
 /** The exact Work/Go agents whose real DSH lifecycle this owner observes. */
@@ -165,6 +172,12 @@ export class RuntimeFocusOwner {
   /**
    * Switch only after the binding has confirmed the active Agent is truly idle.
    * The winning pending intent remains present for the later admission/wake path.
+   *
+   * A-T07: when the winning target is the deliberately paused lane, this
+   * switch IS the resume admission — the pause marker is consumed through the
+   * frozen A-T02 primitive BEFORE any cooperative-yield marker is recorded,
+   * so a cooperative return re-marks the yielding lane without displacing the
+   * resumed lane's admission. The switch reports `resumedLane` exactly once.
    */
   switchAfterConfirmedSettle(
     lane: Lane,
@@ -179,12 +192,36 @@ export class RuntimeFocusOwner {
     if (intent === undefined || intent.target === lane) return undefined
 
     const from = lane
+    const resumedLane = this.focusState.pausedLane === intent.target
+      ? intent.target
+      : undefined
+    if (resumedLane !== undefined) {
+      this.focusState = admitPausedLaneResume(this.focusState)
+    }
     if (settle === 'cooperative-yield') {
       this.focusState = markLanePaused(this.focusState, from)
     }
     this.focusState = activateLane(this.focusState, intent.target)
 
-    return Object.freeze({ from, to: intent.target, intent, settle })
+    return Object.freeze({
+      from,
+      to: intent.target,
+      intent,
+      settle,
+      ...(resumedLane === undefined ? {} : { resumedLane }),
+    })
+  }
+
+  /**
+   * Admit the deliberately paused lane back to foreground state through the
+   * frozen A-T02 pure primitive: `pausedLane` is consumed and `activeLane`
+   * becomes the paused lane in one replacement. This is the single admission
+   * point A-T07's resume sequencing calls; it is a no-op without a pause
+   * marker and never touches pendingFocus.
+   */
+  admitPausedLaneResume(): RuntimeFocusState {
+    this.focusState = admitPausedLaneResume(this.focusState)
+    return this.focusState
   }
 
   private assertExecutingLane(lane: Lane): void {
