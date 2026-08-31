@@ -233,7 +233,7 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
     expect(f.owner.state).not.toHaveProperty('pausedLane')
   })
 
-  it('a real user wake parked in next-turn suppresses the synthetic resume but pausedLane is still cleared', async () => {
+  it('a parked user-origin message in next-turn is not a real wake: the synthetic resume still steers exactly once', async () => {
     const f = fixture()
     const a = message('A', 'A')
     const userWake = message('U', 'continue on your own terms', { kind: 'user' })
@@ -244,32 +244,55 @@ describe('pinned DSH lane resume sequencing (A-T07)', () => {
     bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value }, {
       onResumeAdmitted: ({ lane, syntheticResume }) => {
         expect(lane).toBe('work')
-        expect(syntheticResume).toBe(false)
-      },
-      onCompanionResumeCreated: () => {
-        throw new Error('a real user wake must not produce a synthetic resume')
-      },
-      onResumeSent: () => {
-        throw new Error('a real user wake must not steer a synthetic resume')
+        expect(syntheticResume).toBe(true)
       },
     })
 
     await yieldAway(f, [a])
-    // The user wake arrives while the lane is paused; the return intent wins.
+    // A user-origin message arrives while the lane is paused and idle; it is
+    // merely parked in the inbox. Pinned DSH: idle = no active driver, and a
+    // parked message does not wake the driver, so resume must still steer.
     f.work.mutable.inbox.nextTurn.push(userWake)
     returnToPausedLane(f, returnIntent)
 
-    expect(f.work.steered).toEqual([])
+    expect(f.work.steered).toHaveLength(1)
+    expect(f.work.steered[0]!.source).toEqual({ kind: 'plugin', plugin: COMPANION_RESUME_PLUGIN })
     expect(f.owner.state).toEqual({
       activeLane: 'work',
       llmRunning: false,
     })
     expect(f.owner.state).not.toHaveProperty('pendingFocus')
     expect(f.owner.state).not.toHaveProperty('pausedLane')
-    // The preserved batch and the user wake are both left untouched for the
-    // real driver wake to consume.
+    // The preserved batch and the parked user message are left untouched for
+    // the driver woken by the resume to claim.
     expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([a.id])
     expect(f.work.mutable.inbox.nextTurn.map(item => item.id)).toEqual([userWake.id])
+  })
+
+  it('a parked user-origin message in the restored next-step batch is not a real wake either', async () => {
+    const f = fixture()
+    const userInBatch = message('U', 'restored user input', { kind: 'user' })
+    const returnIntent = intent('work')
+    f.owner.submitFocusIntent(intent('go'))
+
+    bindPinnedDshCooperativeYield(f.ctx, f.owner, { work: f.work.value, go: f.go.value })
+    bindPinnedDshLaneResume(f.ctx, f.owner, { work: f.work.value, go: f.go.value }, {
+      onResumeAdmitted: ({ lane, syntheticResume }) => {
+        expect(lane).toBe('work')
+        expect(syntheticResume).toBe(true)
+      },
+    })
+
+    await yieldAway(f, [userInBatch])
+    returnToPausedLane(f, returnIntent)
+
+    // The restored batch contains a user-origin message, but the lane is idle
+    // and the driver is not running: the resume must still steer once.
+    expect(f.work.steered).toHaveLength(1)
+    expect(f.work.mutable.inbox.nextStep.map(item => item.id)).toEqual([userInBatch.id])
+    expect(f.owner.state.activeLane).toBe('work')
+    expect(f.owner.state).not.toHaveProperty('pausedLane')
+    expect(f.owner.state).not.toHaveProperty('pendingFocus')
   })
 
   it('a non-idle lane (already-running driver) suppresses the synthetic resume but pausedLane is still cleared', async () => {

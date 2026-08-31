@@ -224,18 +224,6 @@ export class RuntimeFocusOwner {
     })
   }
 
-  /**
-   * Admit the deliberately paused lane back to foreground state through the
-   * frozen A-T02 pure primitive: `pausedLane` is consumed and `activeLane`
-   * becomes the paused lane in one replacement. This is the single admission
-   * point A-T07's resume sequencing calls; it is a no-op without a pause
-   * marker and never touches pendingFocus.
-   */
-  admitPausedLaneResume(): RuntimeFocusState {
-    this.focusState = admitPausedLaneResume(this.focusState)
-    return this.focusState
-  }
-
   private assertExecutingLane(lane: Lane): void {
     if (this.currentStep?.lane !== lane) {
       const actual = this.currentStep?.lane ?? 'none'

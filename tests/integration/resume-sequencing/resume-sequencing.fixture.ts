@@ -47,6 +47,13 @@ function pluginMessage(text: string, plugin = 'a-t04-integration'): UserMessage 
   })
 }
 
+function userMessage(text: string): UserMessage {
+  return createUserMessage({
+    content: [{ type: 'text', text }],
+    source: { kind: 'user' },
+  })
+}
+
 function textsOf(inputs: readonly UserMessage[]): string[] {
   return inputs.map(item => item.content
     .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
@@ -333,6 +340,154 @@ describe('WAVE-A-T07 real pinned DSH production integration', () => {
       report('resume-sequencing', trace)
     } finally {
       report('resume-sequencing-final', trace)
+    }
+  })
+
+  it('a parked user-origin message in the restored continuation batch does not suppress the resume', async () => {
+    const adapter = new MockAdapter([
+      toolCallResponse('step-1', 'echo', { text: 'step-1' }),
+      toolCallResponse('step-2', 'echo', { text: 'step-2' }),
+      toolCallResponse('step-3', 'focus-and-stage-user-batch', { text: 'step-3' }),
+      toolCallResponse('go-1', 'return-focus', { text: 'go-1' }),
+      textResponse('resumed'),
+    ])
+    const ctx = await harness(adapter)
+    const { work, go } = await pairedAgents(ctx, 'a-t07-parked-user-batch')
+    // A is USER-origin: the yield restores it into nextStep while the Work
+    // driver is idle. Pinned DSH: idle = no active driver; a parked
+    // user-origin message does NOT wake the driver, so the resume must steer.
+    const a = userMessage('A')
+    const b = pluginMessage('B')
+    const c = pluginMessage('C')
+    const returnIntent = Object.freeze({
+      target: 'work',
+      origin: 'self_initiated',
+    } as const)
+    const trace: TraceEntry[] = []
+    const resumed = Promise.withResolvers<void>()
+    const admitted: Array<Readonly<{ lane: string; syntheticResume: boolean }>> = []
+    let steerInsertions = 0
+    let staged = false
+    let runtime: ReturnType<typeof bindProductionRuntime> | undefined
+
+    ctx.on('agent/inbox/claimed', ({ agent, message: claimed, turn }) => {
+      if (agent === work) {
+        trace.push({ event: 'inbox/claimed', turn, texts: textsOf([claimed]) })
+      }
+    })
+    ctx.on('agent/status', ({ agent, status }) => {
+      if (agent === work) trace.push({ event: `status:${status}` })
+    })
+    ctx.on('session/event', (session, event) => {
+      if (session !== work.session) return
+      if (event.type === 'turn/end') {
+        trace.push({ event: 'turn/end', turn: event.data.turn, detail: event.data.reason })
+      }
+    })
+
+    ctx.tools.register(defineContentToolFixture({
+      name: 'focus-and-stage-user-batch',
+      description: 'submit focus and stage [A(user-origin), B] during step 3',
+      parameters: { text: { type: 'string', required: true } },
+      execute: async ({ text }) => {
+        runtime!.owner.submitFocusIntent(
+          Object.freeze({ target: 'go', origin: 'self_initiated' } as const),
+        )
+        work.inject(a)
+        work.inject(b)
+        staged = true
+        trace.push({ event: 'focus:pending,stage:A(user),B' })
+        return [{ type: 'text', text }]
+      },
+    }))
+    ctx.tools.register(defineContentToolFixture({
+      name: 'return-focus',
+      description: 'submit the winning return focus intent during the Go step',
+      parameters: { text: { type: 'string', required: true } },
+      execute: async ({ text }) => {
+        runtime!.owner.submitFocusIntent(returnIntent)
+        trace.push({ event: 'go:return-focus-submitted' })
+        return [{ type: 'text', text }]
+      },
+    }))
+
+    ctx.on('agent/pre-step', async (payload, next) => {
+      if (payload.agent !== work || payload.turn !== 1 || payload.step !== 4) return next()
+      expect(textsOf(payload.messages)).toEqual(['A', 'B'])
+      expect(staged).toBe(true)
+      work.inject(c)
+      const decision = await next()
+      trace.push({ event: `pre-step:${decision.kind}` })
+      return decision
+    })
+
+    runtime = bindProductionRuntime(ctx, work, go, {
+      onResumeAdmitted: event => {
+        admitted.push(event)
+        expect(event.lane).toBe('work')
+        // The driver is still idle at the admission point (blocked -> idle,
+        // nothing woke it): the parked user-origin A must NOT be mistaken for
+        // an existing wake.
+        expect(work.status).toBe('idle')
+        expect(event.syntheticResume).toBe(true)
+        trace.push({ event: 'resume:admitted' })
+      },
+    })
+    ctx.on('agent/inbox/inserted', ({ agent, message: inserted }) => {
+      if (agent === work && inserted.source.kind === 'plugin'
+        && inserted.source.plugin === 'companion-go-resume') {
+        steerInsertions += 1
+        trace.push({ event: 'resume:inserted', texts: textsOf([inserted]) })
+        resumed.resolve()
+      }
+    })
+
+    try {
+      work.followup(createUserMessage({
+        content: [{ type: 'text', text: 'start' }],
+        source: { kind: 'user' },
+      }))
+      await work.whenIdle()
+      go.followup(createUserMessage({
+        content: [{ type: 'text', text: 'go task' }],
+        source: { kind: 'user' },
+      }))
+      await go.whenIdle()
+      await resumed.promise
+      await work.whenIdle()
+
+      expect(reasons(work)).toEqual([
+        { kind: 'blocked' },
+        { kind: 'completed' },
+      ])
+      expect(reasons(go)).toEqual([{ kind: 'blocked' }])
+      // Exactly one synthetic companion-resume; no manual followup of A.
+      expect(steerInsertions).toBe(1)
+      expect(admitted).toEqual([{ lane: 'work', syntheticResume: true }])
+      expect(work.inbox.hasPending).toBe(false)
+      expect(runtime!.owner.state).toEqual({
+        activeLane: 'work',
+        llmRunning: false,
+        pausedLane: 'go',
+      })
+      expect(runtime!.owner.state).not.toHaveProperty('pendingFocus')
+
+      // Message integrity: original A/B/C IDs unchanged, resume ID unique,
+      // no duplicates, no loss, exactly one resume, drain completed.
+      const durable = recordedEntries(work, ['A', 'B', 'C', 'companion-resume'])
+      expect(durable.map(entry => entry.text))
+        .toEqual(['A', 'B', 'C', 'companion-resume'])
+      expect(durable.map(entry => entry.id))
+        .toEqual([a.id, b.id, c.id, durable[3]!.id])
+      expect(new Set(durable.map(entry => entry.id)).size).toBe(4)
+
+      const claims = trace
+        .filter(entry => entry.event === 'inbox/claimed')
+        .map(entry => entry.texts?.[0])
+      expect(claims.slice(-4)).toEqual(['A', 'B', 'C', 'companion-resume'])
+      report('parked-user-origin-batch', trace)
+    } finally {
+      report('parked-user-origin-batch-final', trace)
     }
   })
 

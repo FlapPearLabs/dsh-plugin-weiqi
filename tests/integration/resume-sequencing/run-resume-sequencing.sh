@@ -19,6 +19,45 @@ test "$(git -C "$dsh_root" rev-parse HEAD)" = "$expected_dsh_commit"
 test "$(node --version)" = "$expected_node"
 test "$(corepack pnpm@11.7.0 --version)" = "$expected_pnpm"
 
+# A-T07 P1-2: the gate must prove that the PLUGIN actually adopts the pinned
+# DSH version, not only that the scratch DSH checkout is pinned. A future
+# plugin package.json upgrade (e.g. 0.1.1-rc.2 -> 0.1.1-rc.3) must fail this
+# gate until the fixture is rerun against that upgrade. (pnpm-lock.yaml is not
+# read here: with exact peer/dev pins, a lockfile drift is impossible.)
+node --input-type=module - "$plugin_root" "$expected_dsh_version" <<'NODE'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const [pluginRoot, expected] = process.argv.slice(2)
+const manifest = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8'))
+const packages = [
+  '@deepseek-ai/dsh-agent',
+  '@deepseek-ai/dsh-llm',
+  '@deepseek-ai/dsh-session',
+]
+for (const pkg of packages) {
+  let found = false
+  for (const section of ['peerDependencies', 'devDependencies']) {
+    const actual = manifest[section]?.[pkg]
+    if (actual === undefined) continue
+    found = true
+    if (actual !== expected) {
+      throw new Error(
+        `PLUGIN_PIN_MISMATCH: plugin package.json ${section}.${pkg} expected ${expected}, received ${actual}`
+        + ` — rerun the resume-sequencing fixture against the upgraded pin before claiming pinned evidence`,
+      )
+    }
+    console.log(`plugin package.json ${section}.${pkg}: ${actual}`)
+  }
+  if (!found) {
+    throw new Error(
+      `PLUGIN_PIN_MISSING: ${pkg} not declared in plugin package.json peerDependencies or devDependencies`
+      + ` — verify the authoritative pin location before claiming pinned evidence`,
+    )
+  }
+}
+NODE
+
 node --input-type=module - "$dsh_root" "$expected_dsh_version" <<'NODE'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'

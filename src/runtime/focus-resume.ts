@@ -1,5 +1,4 @@
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm'
 import type { Lane } from '../contracts/focus.js'
 import {
@@ -68,18 +67,19 @@ export type FocusResumeBinding = Readonly<{
  * that resumed the deliberately paused lane reaches the resume decision. The
  * synthetic resume wakes the resumed driver so the preserved continuation —
  * whether or not it still carries an inbox batch — is claimed at the next
- * step boundary. It is suppressed only when a REAL user wake already exists:
- * a running driver, or a user-origin message already parked in the lane's
- * inbox that will wake/drive it. Merely storing a `sourceMessage` inside the
- * winning intent is not a wake: it proves the immutable user message exists
- * and must be preserved, but not that the target Agent received it, entered
- * nextTurn/nextStep, or became non-idle. Likewise the preserved batch length
- * is not evidence of consumption: a deliberately yielded continuation can
- * carry an empty inbox batch (durable tool results still require another
- * model step), so the pausedLane marker itself is the authoritative fact.
- * Natural settlements never pause a lane, so they never reach this path.
- * The whole path is synchronous and creates no queue, timer, mailbox, or
- * event of its own.
+ * step boundary. It is suppressed only when the driver is already running
+ * (`agent.status !== 'idle'`). Message provenance is never a wake signal:
+ * parked user-origin input in `nextTurn`/`nextStep` (injected or restored by
+ * the yield guard) does not wake an idle pinned-DSH driver, and a stored
+ * `sourceMessage` inside the winning intent only proves the immutable user
+ * message exists and must be preserved — not that the target Agent received
+ * it, entered nextTurn/nextStep, or became non-idle. Likewise the preserved
+ * batch length is not evidence of consumption: a deliberately yielded
+ * continuation can carry an empty inbox batch (durable tool results still
+ * require another model step), so the pausedLane marker itself is the
+ * authoritative fact. Natural settlements never pause a lane, so they never
+ * reach this path. The whole path is synchronous and creates no queue,
+ * timer, mailbox, or event of its own.
  */
 export function bindPinnedDshLaneResume(
   ctx: Context,
@@ -93,17 +93,16 @@ export function bindPinnedDshLaneResume(
     if (owner.state.activeLane !== lane) return
 
     const agent = agents[lane]
-    // Only an actual wake signal suppresses the synthetic resume: the lane's
-    // driver already runs, or a user-origin message already sits in the lane's
-    // inbox and will wake/drive it. `transition.intent.sourceMessage` alone is
-    // NOT such a signal (P1-1); it remains preserved via the transition for
-    // the delivery path owned by later Tickets.
-    const realUserWake = agent.status !== 'idle'
-      || hasUserWake(agent)
+    // Pinned DSH semantic: idle = no active driver. Only a running driver is
+    // a real wake. A parked user-origin message in the inbox (injected or
+    // restored) does NOT wake the driver, and `transition.intent.sourceMessage`
+    // is not a wake either; the sourceMessage remains preserved via the
+    // transition for the delivery path owned by later Tickets.
+    const driverRunning = agent.status !== 'idle'
     // The deliberately paused lane needs resume admission regardless of the
     // preserved batch length (P1-2): an empty nextStep is a normal
     // tool-results continuation, not evidence the pause was consumed.
-    const syntheticResume = !realUserWake
+    const syntheticResume = !driverRunning
 
     options.onResumeAdmitted?.({ lane, syntheticResume })
     if (!syntheticResume) return
@@ -122,12 +121,6 @@ export function bindPinnedDshLaneResume(
   })
 
   return { admitResume }
-}
-
-/** Whether any pending waking input in the lane's inbox came from the user. */
-function hasUserWake(agent: Agent): boolean {
-  const pending = [...agent.inbox.nextTurn, ...agent.inbox.nextStep]
-  return pending.some(message => message.source.kind === 'user')
 }
 
 /**
