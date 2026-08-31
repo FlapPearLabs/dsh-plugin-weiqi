@@ -32,5 +32,6 @@ export {
 
 export {
   bindPinnedDshCooperativeYield,
+  type FocusYieldBinding,
   type FocusYieldBindingOptions,
 } from './focus-yield.js'

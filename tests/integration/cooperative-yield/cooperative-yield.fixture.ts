@@ -313,4 +313,75 @@ describe('WAVE-A-T04 real pinned DSH production integration', () => {
       report('natural-settle', trace)
     }
   })
+
+  it('reconciles a cross-lane focus submitted while the Work Agent is already idle', async () => {
+    const adapter = new MockAdapter([textResponse('already-idle-work')])
+    const ctx = await harness(adapter)
+    const { work, go } = await pairedAgents(ctx, 'a-t04-already-idle')
+    const owner = new RuntimeFocusOwner('work')
+    const pending = Object.freeze({ target: 'go', origin: 'user_command' } as const)
+    const trace: TraceEntry[] = []
+    let switchCount = 0
+
+    observeLifecycle(ctx, work, trace)
+    bindPinnedDshFocusBoundary(ctx, owner, { work, go })
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work, go }, {
+      onBatchRestored: () => {
+        throw new Error('an already-idle agent must not restore a continuation batch')
+      },
+      onSettleConfirmed: ({ settle }) => {
+        trace.push({ event: `whenIdle:${settle}` })
+        expect(work.status).toBe('idle')
+        expect(owner.state.activeLane).toBe('work')
+      },
+      onLaneSwitch: (transition) => {
+        switchCount += 1
+        trace.push({ event: 'activeLane:work->go', detail: transition })
+      },
+    })
+
+    try {
+      work.followup(createUserMessage({
+        content: [{ type: 'text', text: 'settle first' }],
+        source: { kind: 'user' },
+      }))
+      await work.whenIdle()
+
+      // Work has naturally settled. Record the observed idle transitions now;
+      // the switch below must not require any further `agent/status: idle`.
+      const idleBefore = indexOf(trace, 'status:idle')
+      const idleEventCount = trace.filter(entry => entry.event === 'status:idle').length
+
+      const submission = owner.submitFocusIntent(pending)
+      expect(work.status).toBe('idle')
+      expect(submission.disposition).toBe('admitted')
+      expect(submission.eligibility?.boundary).toEqual({ kind: 'no-step' })
+      trace.push({ event: 'focus:submitted-already-idle' })
+
+      await binding.reconcileCurrentEligibility()
+
+      expect(adapter.requests).toHaveLength(1)
+      expect(reasons(work)).toEqual([{ kind: 'completed' }])
+      expect(work.inbox.nextStep).toEqual([])
+      expect(work.session.events.filter(event =>
+        event.type === 'agent/inbox/spliced' && event.data.target === 'next-step')).toEqual([])
+      expect(go.session.events.some(event => event.type === 'step/start')).toBe(false)
+      expect(owner.state).toEqual({
+        activeLane: 'go',
+        llmRunning: false,
+        pendingFocus: pending,
+      })
+      expect(owner.state).not.toHaveProperty('pausedLane')
+      expect(switchCount).toBe(1)
+
+      // No synthetic idle transition was injected after the submission; the
+      // reconciliation seam actively observed the already-idle state.
+      expect(trace.filter(entry => entry.event === 'status:idle')).toHaveLength(idleEventCount)
+      expect(indexOf(trace, 'focus:submitted-already-idle')).toBeGreaterThan(idleBefore)
+      expect(indexOf(trace, 'focus:submitted-already-idle')).toBeLessThan(indexOf(trace, 'whenIdle:natural'))
+      expect(indexOf(trace, 'whenIdle:natural')).toBeLessThan(indexOf(trace, 'activeLane:work->go'))
+    } finally {
+      report('already-idle-reconcile', trace)
+    }
+  })
 })

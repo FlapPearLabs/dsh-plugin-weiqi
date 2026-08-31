@@ -3,7 +3,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 import { describe, expect, it, vi } from 'vitest'
 import type { PendingFocusIntent } from '../contracts/focus.js'
-import { RuntimeFocusOwner } from './focus-boundary.js'
+import { RuntimeFocusOwner, type SettledFocusSwitch } from './focus-boundary.js'
 import { bindPinnedDshCooperativeYield } from './focus-yield.js'
 
 type Listener = (...args: any[]) => any
@@ -249,5 +249,127 @@ describe('pinned DSH cooperative focus yield', () => {
 
     expect(owner.state.activeLane).toBe('go')
     expect(owner.state).not.toHaveProperty('pausedLane')
+  })
+})
+
+describe('already-idle settle reconciliation', () => {
+  it('A. switches an already-idle active agent once after a cross-lane focus submission', async () => {
+    const { ctx, work, go, owner } = fixture()
+    const submission = owner.submitFocusIntent(intent('go'))
+    expect(submission.eligibility?.boundary).toEqual({ kind: 'no-step' })
+
+    const switches: SettledFocusSwitch[] = []
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value }, {
+      onLaneSwitch: transition => switches.push(transition),
+    })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(work.mutable.whenIdle).toHaveBeenCalledOnce()
+    expect(work.trace).toEqual(['whenIdle'])
+    expect(switches).toHaveLength(1)
+    expect(switches[0]).toEqual({
+      from: 'work',
+      to: 'go',
+      intent: intent('go'),
+      settle: 'natural',
+    })
+    expect(owner.state).toEqual({
+      activeLane: 'go',
+      llmRunning: false,
+      pendingFocus: intent('go'),
+    })
+    expect(owner.state).not.toHaveProperty('pausedLane')
+    expect(go.trace).toEqual([])
+    expect(go.mutable.whenIdle).not.toHaveBeenCalled()
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(switches).toHaveLength(1)
+    expect(work.mutable.whenIdle).toHaveBeenCalledOnce()
+    expect(go.mutable.whenIdle).not.toHaveBeenCalled()
+  })
+
+  it('B. does not reconcile a same-lane pending focus for an already-idle agent', async () => {
+    const { ctx, work, go, owner } = fixture()
+    owner.submitFocusIntent(intent('work', 'user_command'))
+    const onSwitch = vi.fn()
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value }, {
+      onLaneSwitch: onSwitch,
+    })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(work.mutable.whenIdle).not.toHaveBeenCalled()
+    expect(go.mutable.whenIdle).not.toHaveBeenCalled()
+    expect(onSwitch).not.toHaveBeenCalled()
+    expect(owner.state.activeLane).toBe('work')
+    expect(owner.state).not.toHaveProperty('pausedLane')
+  })
+
+  it('C. is a no-op for an already-idle agent without a pending focus', async () => {
+    const { ctx, work, go, owner } = fixture()
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(work.mutable.whenIdle).not.toHaveBeenCalled()
+    expect(go.mutable.whenIdle).not.toHaveBeenCalled()
+    expect(owner.state).toEqual({ activeLane: 'work', llmRunning: false })
+  })
+
+  it('D. switches with the reread winning intent after the async settle confirmation', async () => {
+    const { ctx, work, go, owner } = fixture()
+    const winning = intent('go', 'user_command')
+    owner.submitFocusIntent(intent('go', 'self_initiated'))
+    let switchedIntent: PendingFocusIntent | undefined
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value }, {
+      onLaneSwitch: transition => { switchedIntent = transition.intent },
+    })
+    work.mutable.whenIdle.mockImplementationOnce(async () => {
+      expect(owner.submitFocusIntent(winning).disposition).toBe('replaced')
+    })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(switchedIntent).toBe(winning)
+    expect(owner.state.pendingFocus).toBe(winning)
+    expect(owner.state.activeLane).toBe('go')
+  })
+
+  it('E. does not perform a stale switch when the active lane changed during the await', async () => {
+    const { ctx, work, go, owner } = fixture()
+    owner.submitFocusIntent(intent('go'))
+    const onSettle = vi.fn()
+    const onSwitch = vi.fn()
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value }, {
+      onSettleConfirmed: onSettle,
+      onLaneSwitch: onSwitch,
+    })
+    work.mutable.whenIdle.mockImplementationOnce(async () => {
+      expect(owner.switchAfterConfirmedSettle('work', 'natural')).toBeDefined()
+    })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(onSettle).not.toHaveBeenCalled()
+    expect(onSwitch).not.toHaveBeenCalled()
+    expect(owner.state.activeLane).toBe('go')
+  })
+
+  it('leaves a running active agent to the observed idle transition', async () => {
+    const { ctx, work, go, owner } = fixture()
+    owner.submitFocusIntent(intent('go'))
+    work.mutable.status = 'running'
+    const onSwitch = vi.fn()
+    const binding = bindPinnedDshCooperativeYield(ctx, owner, { work: work.value, go: go.value }, {
+      onLaneSwitch: onSwitch,
+    })
+
+    await binding.reconcileCurrentEligibility()
+
+    expect(work.mutable.whenIdle).not.toHaveBeenCalled()
+    expect(onSwitch).not.toHaveBeenCalled()
+    expect(owner.state.activeLane).toBe('work')
   })
 })
