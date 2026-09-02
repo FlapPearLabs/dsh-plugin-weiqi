@@ -8,11 +8,13 @@ Baseline ID: BL-GR-03 (`NEEDS_SPIKE` → `VERIFIED_FACT_NOT_INTEGRATED`)
 
 Pinned candidate: `tenuki@0.3.1`
 
-Integrity (tarball, from the npm registry):
-`sha512-4obVv+CHn0QXrtHEZOYXE69xweUAae/iHfEz6oqM+dKTcdL8b0G44knfjLtepu4UHdwW0OzxurXDXoZKzKOIIQ==` /
-shasum `8b53cae9641ad83c7d817b1fe8277181d3d742c0`
+Integrity (tarball, npm-integrity representation, **verified by the runner
+before any install or test**):
+`sha512-4obVv+CHn0QXrtHEZOYXE69xweUAae/iHfEz6oqM+dKTcdL8b0G44knfjLtepu4UHdwW0OzxurXDXoZKzKOIIQ==`
+(registry shasum `8b53cae9641ad83c7d817b1fe8277181d3d742c0`)
 
-Integrity (file, asserted by the runner):
+Integrity (installed file, **re-asserted by the runner after install** to
+content-bind the executed tree to the verified archive):
 `package.json` sha1 `d0cd7c688ccbfed6284df287267241179dae3525`
 
 Source of truth: `https://github.com/aprescott/tenuki` (MIT); npm tarball
@@ -67,10 +69,15 @@ the real package via the retained spec `tests/upgrade-gates/tenuki-conformance/`
 The retained spec (`tests/upgrade-gates/tenuki-conformance/tenuki-conformance.spec.ts`)
 is run by the runner
 (`tests/upgrade-gates/tenuki-conformance/run-tenuki-conformance.sh`), which
-installs the exact pinned version into a scratch directory, asserts the
-installed version, and runs the spec against it. The plugin manifest is not
-modified; `TENUKI_ROOT` points at the scratch install (same convention as
-`DSH_PINNED_ROOT` in the C-S01 / E-S01 runners).
+packs the exact pinned tarball, verifies its SHA-512 (npm-integrity
+representation) against the recorded expected integrity **before** anything is
+installed or executed, then installs and runs the spec against that verified
+archive, re-asserting the installed `package.json` version and sha1 so the
+executed tree is content-bound to the verified archive. The runner fails closed
+on any integrity mismatch and records a terminal PASS/FAIL on every exit path.
+The plugin manifest is not modified; `TENUKI_ROOT` points at the verified
+scratch install (same convention as `DSH_PINNED_ROOT` in the C-S01 / E-S01
+runners).
 
 Run:
 
@@ -81,25 +88,49 @@ bash tests/upgrade-gates/tenuki-conformance/run-tenuki-conformance.sh
 The runner asserts Node `v24.11.1` by default (the repo pin); on a machine
 with a different Node, set `EXPECTED_NODE` to the actual version (e.g.
 `EXPECTED_NODE=v24.19.0`). CI runs the default pin via
-`.github/workflows/tenuki-conformance-gate.yml`.
+`.github/workflows/tenuki-conformance-gate.yml`. To retain the self-contained
+artifact, set `TRACE_LOG` to an output path (the workflow uploads it as the
+`tenuki-conformance-trace` artifact).
 
 Executed result (Node v24.19.0 local run, `EXPECTED_NODE=v24.19.0`; CI runs the
-pinned v24.11.1):
+pinned v24.11.1). The `TRACE_LOG` artifact is self-contained: it records, in
+execution order, the Node preflight, the exact Tenuki version, the actual
+archive-integrity verification result, the installed-package verification, the
+Vitest output, and the final PASS/FAIL:
 
 ```text
-TRACE tenuki pinned=0.3.1 node=v24.19.0
-TRACE installed tenuki@0.3.1 shasum=d0cd7c688ccbfed6284df287267241179dae3525
+TRACE preflight node=v24.19.0 expected=v24.19.0 tenuki=0.3.1
+TRACE packing tenuki@0.3.1
+TRACE archive integrity actual=sha512-4obVv+CHn0QXrtHEZOYXE69xweUAae/iHfEz6oqM+dKTcdL8b0G44knfjLtepu4UHdwW0OzxurXDXoZKzKOIIQ==
+TRACE archive integrity OK (matches recorded sha512)
+TRACE installing verified archive
+TRACE verifying installed package
+TRACE installed tenuki@0.3.1 package.json sha1=d0cd7c688ccbfed6284df287267241179dae3525
+TRACE running conformance spec
  ✓ tests/upgrade-gates/tenuki-conformance/tenuki-conformance.spec.ts (6 tests)
  Test Files  1 passed (1)
       Tests  6 passed (6)
+FINAL RESULT: PASS (tenuki@0.3.1 conformance)
+```
+
+Negative proof (fail-closed): with the expected integrity value corrupted, the
+runner aborts before any install or test with exit 1 and still records a
+terminal result:
+
+```text
+TRACE archive integrity actual=sha512-4obVv+CHn0QXrtHEZOYXE69xweUAae/iHfEz6oqM+dKTcdL8b0G44knfjLtepu4UHdwW0OzxurXDXoZKzKOIIQ==
+FATAL archive integrity mismatch: expected sha512-AAA...-BAD, got sha512-4obVv+...
+FINAL RESULT: FAIL (tenuki@0.3.1 conformance)
 ```
 
 ## Conformance results
 
-1. **Exact package/version under test:** PASS — the runner asserts the
-   installed `package.json` version equals `0.3.1` AND its sha1 equals the
-   pinned `d0cd7c68...` (content pin, not just the semver label); the spec
-   independently reads the version from `TENUKI_ROOT`.
+1. **Exact package/version under test:** PASS — the runner packs
+   `tenuki@0.3.1`, verifies the archive's SHA-512 against the recorded expected
+   integrity (fail-closed before install/test), then asserts the installed
+   `package.json` version AND its sha1 (`d0cd7c68...`) match the verified
+   archive, content-binding the executed tree; the spec independently reads the
+   version from `TENUKI_ROOT`.
 2. **Explicit area/scoring configuration:** PASS — `new Game({ scoring: "area",
    ... })` is accepted, and the same endgame scores differently under `area`
    (black 9 = 8 stones + 1 territory) versus the `territory` default (black ≠ 9),
@@ -127,8 +158,8 @@ TRACE installed tenuki@0.3.1 shasum=d0cd7c688ccbfed6284df287267241179dae3525
 
 ## Consequences for WAVE-B-T02
 
-- Pin `tenuki@0.3.1` exactly (tarball `sha512-4obV+...`, `package.json` sha1
-  `d0cd7c68...`) in the production manifest when `TenukiAdapter` is
+- Pin `tenuki@0.3.1` exactly (npm-integrity `sha512-4obV+...`, registry shasum
+  `8b53cae9...`) in the production manifest when `TenukiAdapter` is
   implemented. No auto-upgrade.
 - At game creation, the Adapter must explicitly pass
   `{ scoring: "area", koRule: "positional-superko", komi: 7.5 }` — defaults are
