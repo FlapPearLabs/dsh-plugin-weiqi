@@ -41,6 +41,12 @@ Deterministic rerun: 3/3 local runs, each `4/4 tests passed` (run logs
 `run4.log`, `rerun1.log`, `rerun2.log` in the probe workspace;
 `DSH_SPIKE_TRACE` lines reproduced identically across reruns).
 
+Pinned-environment gate: GitHub Actions run
+`https://github.com/FlapPearLabs/dsh-plugin-weiqi/actions/runs/33593197443`
+(`Pinned DSH systemPrompt.context seam gate`, conclusion **success**, head
+`14b20c0`); its job log reproduces the same `DSH_SPIKE_TRACE` lines as the
+local runs. Foundation CI on the same head also passed.
+
 ## Exact registration API observed (pinned source, `dsh-system-prompt` types)
 
 ```ts
