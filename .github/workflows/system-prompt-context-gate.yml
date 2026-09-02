@@ -1,4 +1,4 @@
-name: Pinned DSH systemPrompt.context seam gate
+name: Pinned DSH systemPrompt.context behavior gate
 
 on:
   pull_request:
@@ -8,6 +8,8 @@ on:
       - tests/upgrade-gates/system-prompt-context/**
       - docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md
       - .github/workflows/system-prompt-context-gate.yml
+      - package.json
+      - pnpm-lock.yaml
   workflow_dispatch:
 
 permissions:
@@ -15,7 +17,7 @@ permissions:
 
 jobs:
   spike:
-    name: real AgentLoop systemPrompt.context provider seam
+    name: reproduce real AgentLoop systemPrompt.context behavior
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

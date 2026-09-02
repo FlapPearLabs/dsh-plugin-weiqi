@@ -9,15 +9,17 @@ import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { MockAdapter, textResponse } from './mock-adapter.ts'
 
 /**
- * WAVE-D-S01 executable probe: `ctx.systemPrompt.context` provider seam on
+ * WAVE-D-S01 executable probe: `ctx.systemPrompt.context` native behavior on
  * pinned DSH (commit b150a551b8d465e31e418e1b2eaf5e79bbb7d28e, 0.1.1-rc.2).
  *
  * This file is copied unchanged into the pinned upstream DSH tree by the
  * gate workflow, so it exercises the real AgentLoop implementation rather
  * than a reimplementation. It owns NO Bridge, NO GameNotice/WorkSnapshot
- * production code, and NO DSH patch: providers read a plain O(1) holder
- * variable, exactly the shape Spec §9.1 prescribes for Runtime-held
- * latest-value projections.
+ * production code, and NO DSH patch. Providers read a plain O(1) holder
+ * variable. The probe separately records that changed rendered values remain
+ * together in durable model-facing history, which fails Spec §39.6's
+ * latest-only delivery requirement even though the provider callback itself
+ * is an O(1) read.
  */
 
 const SNAPSHOT_SOURCE = '@deepseek-ai/dsh-system-prompt'
@@ -40,6 +42,7 @@ type SnapshotHolder = {
 type ProviderStats = {
   evaluations: number
   assembledForThisAgent: boolean[]
+  disposerIsFunction: boolean
 }
 
 const liveContexts: Context[] = []
@@ -115,7 +118,11 @@ function registerSnapshotProvider(
   lane: 'work' | 'go',
   trace: TraceEntry[],
 ): ProviderStats {
-  const stats: ProviderStats = { evaluations: 0, assembledForThisAgent: [] }
+  const stats: ProviderStats = {
+    evaluations: 0,
+    assembledForThisAgent: [],
+    disposerIsFunction: false,
+  }
   const name = lane === 'work' ? WORK_CONTEXT_NAME : GO_CONTEXT_NAME
   const marker = lane === 'work' ? 'WORK_SNAPSHOT=' : 'GO_SNAPSHOT='
   const value = (): string | undefined => lane === 'work' ? holder.work : holder.go
@@ -134,7 +141,8 @@ function registerSnapshotProvider(
       return current === undefined ? '' : marker + current
     },
   })
-  trace.push({ event: 'provider/registered', detail: { name, disposerIsFunction: typeof disposer === 'function' } })
+  stats.disposerIsFunction = typeof disposer === 'function'
+  trace.push({ event: 'provider/registered', detail: { name, disposerIsFunction: stats.disposerIsFunction } })
   return stats
 }
 
@@ -196,7 +204,7 @@ async function settle(ms = 25): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, ms))
 }
 
-describe('WAVE-D-S01 ctx.systemPrompt.context provider seam', () => {
+describe('WAVE-D-S01 ctx.systemPrompt.context pinned behavior', () => {
   it('A. registers agent-scoped, evaluates per pre-step, and materializes the initial snapshot with the first natural request', async () => {
     const adapter = new MockAdapter([textResponse('ack-1')])
     const ctx = await harness(adapter)
@@ -217,6 +225,7 @@ describe('WAVE-D-S01 ctx.systemPrompt.context provider seam', () => {
 
       // Q2/Q3: registration returned a disposer; the provider is evaluated
       // during the natural request's prompt assembly (before the model call).
+      expect(stats.disposerIsFunction).toBe(true)
       expect(stats.evaluations).toBeGreaterThanOrEqual(1)
       expect(stats.assembledForThisAgent.every(Boolean)).toBe(true)
       expect(adapter.requests).toHaveLength(1)
@@ -242,7 +251,7 @@ describe('WAVE-D-S01 ctx.systemPrompt.context provider seam', () => {
     }
   })
 
-  it('B. Runtime A→B update wakes nothing and is observed by the next natural request', async () => {
+  it('B. Runtime A→B update wakes nothing but accumulates both values in the next model-facing request', async () => {
     const adapter = new MockAdapter([textResponse('ack-1'), textResponse('ack-2')])
     const ctx = await harness(adapter)
     const agent = ctx.agentLoop.create(SessionId('d-s01-latest-value'), { provider: 'mock', model: 'mock' })
@@ -277,21 +286,23 @@ describe('WAVE-D-S01 ctx.systemPrompt.context provider seam', () => {
         .length).toBe(turnCountAfterFirst)
       expect(changes.length).toBe(changeCountAfterRegistration)
 
-      // Q5: the next natural request observes the newest value.
+      // The next natural request observes the newest value, but the pinned
+      // durable path also retains the superseded A0 snapshot on the same
+      // model-facing surface. Fixed supersession prose does not remove A0.
       agent.followup(messageText('next'))
       await agent.whenIdle()
       expect(adapter.requests).toHaveLength(2)
       expect(snapshotValues(agent, 'WORK_SNAPSHOT='))
         .toEqual(['WORK_SNAPSHOT=A0', 'WORK_SNAPSHOT=B1'])
       expect(requestMarkerCount(adapter.requests[1], 'WORK_SNAPSHOT=B1')).toBe(1)
-      // The previous snapshot stays in durable history exactly once: history
-      // grows per CHANGE, not per request.
+      // Exact contradictory evidence for Spec §39.6 latest-only delivery:
+      // request 2 contains both the old and new rendered snapshots.
       expect(requestMarkerCount(adapter.requests[1], 'WORK_SNAPSHOT=A0')).toBe(1)
       expect(requestMarkerCount(adapter.requests[1], 'WORK_SNAPSHOT=B1')).toBe(1)
 
-      report('B-latest-value-no-wake', trace)
+      report('B-changed-value-accumulation', trace)
     } finally {
-      report('B-latest-value-no-wake-final', trace)
+      report('B-changed-value-accumulation-final', trace)
     }
   })
 

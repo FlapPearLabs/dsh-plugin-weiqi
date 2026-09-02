@@ -1,6 +1,6 @@
-# Pinned DSH `ctx.systemPrompt.context` provider seam — verification record
+# Pinned DSH `ctx.systemPrompt.context` behavior record
 
-Status: **PASS — WAVE-D-S01 / BL-BR-03 executable probe**
+Status: **FAIL — WAVE-D-S01 / BL-BR-03 full frozen delivery acceptance**
 
 Issue: WAVE-D-S01 / #28
 
@@ -11,124 +11,149 @@ system-prompt / scope)
 
 Runtime: Node `24.11.1`, pnpm `11.7.0`
 
-## Conclusion
+The historical filename is retained so the existing version-sensitive gate and
+record path remain stable. `VERIFIED` in that filename does not denote a PASS
+verdict.
 
-`ctx.systemPrompt.context` is a viable delivery seam for the Spec §9.1
-Bridge projection. Registering a context provider through an agent's own
-scoped context (`agent.ctx.systemPrompt.context(...)`) makes it
-agent-local; DSH evaluates it during each proposed step's prompt assembly
-(before the model request), renders a durable user-role snapshot, and
-materializes that snapshot only when the rendered text changed. Updating a
-Runtime-held O(1) latest value produces no wake, no event, and no
-re-materialization while the value is unchanged.
+## Corrected conclusion
 
-## Execution basis (transparency note)
+The pinned native path establishes all of the following executable facts:
 
-The fixture below ran locally against the **pinned source tree** of
-deepseek-harness @ `b150a551` using the real `agent-loop` / `agent` /
-`system-prompt` / `session` / `llm` / `scope` implementations compiled on
-the fly by vite-node. The local host cannot complete `pnpm install
---frozen-lockfile` for the full Harness workspace (its file-ops guard kills
-the node_modules linking phase), so this local run bypasses linking by
-aliasing every workspace package to its pinned TS source; it does not
-reimplement or mock any DSH module. The gate workflow
-(`.github/workflows/system-prompt-context-gate.yml`) performs the same
-fixture in the pinned environment (real `pnpm install`, GitHub Actions,
-Node 24.11.1 / pnpm 11.7.0) — its job log is the authoritative
-pinned-environment artifact for this record.
+- registration through `agent.ctx.systemPrompt.context(...)` works;
+- registration and model-facing contributions are agent-scoped;
+- the provider is evaluated for each eligible prompt assembly;
+- changing only the Runtime-held value causes no wake;
+- an unchanged rendered value causes no repeated durable materialization;
+- separate agents do not receive each other's registered contribution;
+- the provider callback can read one already-computed Runtime value without a
+  Session or game-history rescan.
 
-Deterministic rerun: 3/3 local runs, each `4/4 tests passed` (run logs
-`run4.log`, `rerun1.log`, `rerun2.log` in the probe workspace;
-`DSH_SPIKE_TRACE` lines reproduced identically across reruns).
+However, `ctx.systemPrompt.context`, as exercised through the pinned native
+AgentLoop durable snapshot path, is **not sufficient** for the full frozen
+Bridge delivery contract.
 
-Pinned-environment gate: GitHub Actions run
-`https://github.com/FlapPearLabs/dsh-plugin-weiqi/actions/runs/33593197443`
-(`Pinned DSH systemPrompt.context seam gate`, conclusion **success**, head
-`14b20c0`); its job log reproduces the same `DSH_SPIKE_TRACE` lines as the
-local runs. Foundation CI on the same head also passed.
+When the held value changes from `A0` to `B1`, the next natural model request
+contains both:
 
-## Exact registration API observed (pinned source, `dsh-system-prompt` types)
+```text
+WORK_SNAPSHOT=A0
+WORK_SNAPSHOT=B1
+```
+
+The earlier snapshot remains on the durable model-facing surface. The fixed DSH
+prose:
+
+```text
+This snapshot supersedes earlier runtime-context snapshots.
+```
+
+does not remove the earlier message from model-facing history and is not
+equivalent to latest-only delivery.
+
+Frozen Spec §39.6 requires the next natural Work request to see **only** the
+newest relevant snapshot and requires a long update sequence to remain bounded
+enough not to degrade Work context. Because changed values accumulate in
+durable history, this seam is not a viable delivery seam for that acceptance
+and is not O(1)-suitable as an end-to-end model-facing delivery path. The
+provider callback's individual read remains O(1); that narrower fact does not
+cure history growth per changed value.
+
+## Execution basis
+
+The fixture runs against the real pinned `agent-loop`, `agent`,
+`system-prompt`, `session`, `llm`, and `scope` implementations. The workflow
+checks out the pinned source, installs its frozen lockfile with Node `24.11.1`
+and pnpm `11.7.0`, copies the fixture unchanged into the pinned AgentLoop test
+tree, and executes it there.
+
+The original pinned-environment run was GitHub Actions run
+`33593197443` on head `14b20c0`. It succeeded while reproducing the
+contradictory Experiment B behavior. That green result proved the observed
+pinned behavior; it did not prove Spec conformance. The corrected gate keeps
+that distinction explicit: green means the observed behavior is reproducibly
+established, including the latest-only failure.
+
+## Exact registration API observed
 
 ```ts
 ctx.systemPrompt.context(context: PromptContext): () => void
 // PromptContext: { name, order, text: string | ((assembleCtx: AssembleContext) => string) }
 ```
 
-Agent scoping is achieved by registering through the agent's own scoped
-context: `agent.ctx.systemPrompt.context({ name, order, text: (...) => ... })`.
-`Agent.ctx` is documented and observed as agent-local (contributions unwind
-on disposal). Assembly carries `{ agent, scope: agent, signal }`
-(`assembleContextFor`), so a provider registered on `agent.ctx` participates
-only in that agent's assemblies.
+The fixture asserts that registration returns a function. It does not exercise
+calling that disposer or the wider agent-disposal lifecycle. No claim that the
+fixture observed disposal/unwind behavior is made or needed for this FAIL
+verdict.
 
 ## Probe design
 
-`tests/upgrade-gates/system-prompt-context/system-prompt-context.spec.ts`
-(self-contained; copied unchanged into the pinned tree by the gate):
+`tests/upgrade-gates/system-prompt-context/system-prompt-context.spec.ts` is
+self-contained and is copied unchanged into the pinned DSH tree.
 
-- `SnapshotHolder` = two plain O(1) variables (`work`, `go`); `undefined`
-  contributes empty text.
-- Providers return `WORK_SNAPSHOT=<value>` / `GO_SNAPSHOT=<value>` and
-  record `assembleCtx.agent === agent`, evaluation count, and the observed
-  holder value. No Session history, inbox, or rescan surface is touched.
-- Four experiments (A initial materialization; B A→B latest value without
-  wake; C unchanged value no growth; D agent isolation).
+- `SnapshotHolder` is two plain O(1) variables; `undefined` contributes empty
+  text.
+- Providers return `WORK_SNAPSHOT=<value>` / `GO_SNAPSHOT=<value>` and record
+  agent identity, evaluation count, and the directly read holder value.
+- Experiment A proves registration, agent assembly identity, ordering before
+  `agent/request`, and initial durable materialization.
+- Experiment B proves both no wake and the contradiction: request 2 contains
+  durable `A0` and newly materialized `B1` together.
+- Experiment C proves unchanged-value deduplication only.
+- Experiment D proves cross-agent isolation.
 
-## Executed trace (A — initial materialization, abridged)
+## Corrected spike-question answers
 
-```text
-provider/registered {name: companion-go:work-snapshot, disposerIsFunction: true}
-status:running → turn/start 1
-provider/evaluated {isThisAgent: true, holderValue: A0}        ← per-step assembly
-step/start 1 1
-user/message {text: start, source user}
-user/message {source plugin @deepseek-ai/dsh-system-prompt, form snapshot,
-              sections [{name companion-go:work-snapshot, text WORK_SNAPSHOT=A0}]}
-agent/request 1 1
-step/end 1 1 → turn/end completed → status:idle
-```
-
-The durable projection text is prefixed with a fixed DSH header
-("Current runtime context. This snapshot supersedes earlier
-runtime-context snapshots."); the exact value is carried in the message's
-`sections` attribution.
-
-## Spike-question answers (executable evidence)
-
-| Q | Question | Answer |
+| Question | Executable answer | Full-contract consequence |
 |---|---|---|
-| 1 | Agent-scope registration possible? | YES — `agent.ctx.systemPrompt.context(...)`; provider evaluated only in that agent's assemblies (`assembleCtx.agent === agent` asserted true on every evaluation). |
-| 2 | Real registration API & lifecycle | `ctx.systemPrompt.context(PromptContext) -> disposer function`; provider is a function evaluated per assembly; registration emits `system-prompt/change`; disposal unwinds the registration (agent-local). |
-| 3 | When evaluated vs model requests | During each proposed step, inside `pre-step`, after inbox claim and BEFORE `agent/request` — trace order: `provider/evaluated` → `step/start` → snapshot `user/message` → `agent/request`. |
-| 4 | Read Runtime-held value w/o rescan | YES — provider is a closure over the holder; no transcript/session surface involved; trace shows holder value read directly at each assembly. |
-| 5 | A→B update observed by next natural request | YES — holder `A0`→`B1` (plain assignment); next natural followup's request carries `WORK_SNAPSHOT=B1`; durable history = exactly `[A0, B1]`. |
-| 6 | Unchanged state avoids re-materialization | YES — 3 natural requests with unchanged `A0`: provider evaluated 3× (per assembly), durable snapshot materialized exactly once; later requests append no prompt material. |
-| 7 | Holder update causes wake? | NO — between turns, after `A0`→`B1`, agent stays `idle`, request count unchanged, no `turn/start`, no `system-prompt/change` (asserted). Only the explicit natural followup opens turn 2. |
-| 8 | Constant-size latest projection compatible | YES — materialization is per-change (durable snapshot count = distinct rendered values, not request count); unchanged values add zero material; per-change history growth is inherent to the durable design. |
-| 9 | Hidden global/shared leak across agents? | NO — work agent sees only `WORK_SNAPSHOT=W0`, go agent only `GO_SNAPSHOT=G0`, an unregistered third agent sees no snapshot; model-facing requests confirm the same isolation (asserted 0 cross-marker occurrences). |
+| Registration API | Verified | Narrow fact only |
+| Agent scoping | Verified | Narrow fact only |
+| Per-assembly evaluation | Verified | Narrow fact only |
+| Direct Runtime-held read / no rescan | Verified | Provider read is O(1) |
+| Holder update causes wake | No | Satisfies no-Bridge-only-wake fact |
+| Unchanged value rematerializes | No | Satisfies unchanged-value dedup fact |
+| Cross-agent leak | None observed | Isolation verified |
+| Changed value delivery | Old and new snapshots both remain model-facing | Violates §39.6 latest-only |
+| Full frozen Bridge delivery acceptance | **FAIL** | Seam is insufficient |
 
-## Request / materialization counts observed
+## `agent.inject()` fallback status
 
-Experiment B (two natural requests): adapter.requests = 2; durable
-snapshots = 2 (`A0`, `B1`); wake events from the holder update = 0.
+Issue #28 and frozen Spec §7.3 / §9.1 predeclare `agent.inject()` as the fallback
+candidate for one-shot sourced passive factual context. Pinned source inspection
+establishes these relevant semantics:
 
-Experiment C (three natural requests, unchanged value): adapter.requests =
-3; provider evaluations >= 3; durable snapshots = 1; requests 2 and 3
-contain the snapshot exactly once each (no growth).
+- `Agent.inject(input)` calls `send(input, "next-step", false)` in
+  `packages/core/agent-loop/src/agent.ts`;
+- it appends to the `next-step` inbox without waking the driver;
+- an idle Agent leaves it pending until a later `followup()` or `steer()` wakes
+  the driver;
+- a running driver claims it at a later pre-step boundary, and it may miss a
+  request whose pre-step already claimed its batch;
+- once accepted, the injected `UserMessage` is durably represented with its
+  source.
 
-## Changed files
+This remediation does not implement D-T03, add a queue, invent wake behavior,
+or claim that `agent.inject()` satisfies §39.6. No executable proof currently
+establishes a latest-only, bounded model-facing fallback path.
 
-- `.github/workflows/system-prompt-context-gate.yml`
-- `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md` (this file)
-- `tests/upgrade-gates/system-prompt-context/system-prompt-context.spec.ts`
-- `tests/upgrade-gates/system-prompt-context/run-system-prompt-context.sh`
-
-## Stage transition (proposed)
+## Baseline and dependency consequence
 
 ```text
-BL-BR-03: NEEDS_SPIKE -> VERIFIED_FACT_NOT_INTEGRATED
-Predeclared downstream consumer: WAVE-D-T03 (per Ticket Graph V1.2.1 / Rule 8,
-Ticket Decomposition Contract) — consumes this verified seam at production
-integration time. No Bridge, no GameNotice/WorkSnapshot production code, and
-no DSH core patch were introduced by this Spike.
+BL-BR-03 remains NEEDS_SPIKE.
+WAVE-D-S01 does not advance to VERIFIED_FACT_NOT_INTEGRATED.
+WAVE-D-T03 remains BLOCKED.
 ```
+
+Ticket Decomposition Contract Rule 6 forbids dependent implementation until
+its Spike has PASSED. The frozen Ticket Graph makes D-T03 depend on D-S01 and
+describes D-T03 as consuming a verified `ctx.systemPrompt.context` seam. This
+Spike FAILs, while the predeclared `agent.inject()` candidate has no executable
+Spec-conformance proof or defined PASS transition in the frozen authority.
+
+Therefore the existing frozen authority does not authorize D-T03 to proceed:
+
+```text
+ESCALATION_REQUIRED
+```
+
+No Ticket Graph topology, frozen Spec, DSH source, Bridge production code, or
+new mechanism is changed by this remediation.
