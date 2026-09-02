@@ -12,6 +12,46 @@ if [[ -z "${DSH_PINNED_ROOT:-}" ]]; then
 fi
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# P2 fail-closed pin binding: the DSH line adopted by THIS plugin repository
+# must equal the line this gate probes (PLUGIN REPOSITORY PIN <-> EXPECTED
+# PROBE VERSION <-> PINNED DSH CHECKOUT). A future repository DSH pin upgrade
+# (package.json / pnpm-lock.yaml) must turn this gate RED until the probe
+# fixture / commit / version authority is intentionally updated -- never probe
+# an older pinned DSH behind a newer repository adoption.
+plugin_root=$(cd "$script_dir/../../.." && pwd)
+# Read the plugin manifest relative to the resolved root so the preflight works
+# on both Linux CI (POSIX) and Windows hosts (physical cwd) without MSYS path
+# translation leaking into node.
+(cd "$plugin_root" && node --input-type=module - "$expected_dsh_version" <<'NODE'
+import { readFileSync } from 'node:fs'
+
+const [expected] = process.argv.slice(2)
+const manifest = JSON.parse(readFileSync('package.json', 'utf8'))
+const packages = ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session']
+const sections = ['peerDependencies', 'devDependencies']
+const mismatches = []
+for (const section of sections) {
+  for (const pkg of packages) {
+    const actual = manifest[section]?.[pkg]
+    if (actual !== expected) {
+      mismatches.push(`${section}.${pkg}: expected ${expected}, received ${actual ?? '<missing>'}`)
+    }
+  }
+}
+if (mismatches.length > 0) {
+  console.error('PLUGIN_REPO_DSH_PIN_MISMATCH: repository DSH pins diverge from the probe expected package line')
+  for (const line of mismatches) console.error(`  ${line}`)
+  process.exit(1)
+}
+for (const section of sections) {
+  for (const pkg of packages) {
+    console.log(`plugin ${section}.${pkg}: ${manifest[section][pkg]}`)
+  }
+}
+NODE
+)
+
 dsh_root=$(cd "$DSH_PINNED_ROOT" && pwd)
 fixture="$script_dir/system-prompt-context.spec.ts"
 target="$dsh_root/packages/core/agent-loop/tests/system-prompt-context.spike.spec.ts"

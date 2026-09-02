@@ -157,3 +157,43 @@ ESCALATION_REQUIRED
 
 No Ticket Graph topology, frozen Spec, DSH source, Bridge production code, or
 new mechanism is changed by this remediation.
+
+## P2 gate hardening: repository pin binding (added 2026-09-02)
+
+The gate workflow triggers on `package.json` / `pnpm-lock.yaml` changes, so a
+future repository DSH pin upgrade would run the gate while it still probed the
+older pinned DSH. The runner is now fail-closed against that:
+
+- `run-system-prompt-context.sh` reads the plugin repository `package.json`
+  before any probe work;
+- it requires `peerDependencies` **and** `devDependencies` for
+  `@deepseek-ai/dsh-agent`, `@deepseek-ai/dsh-llm`, and
+  `@deepseek-ai/dsh-session` to equal the probe expected package line
+  (`0.1.1-rc.2`);
+- any divergence exits non-zero with `PLUGIN_REPO_DSH_PIN_MISMATCH` before the
+  fixture is copied or vitest runs.
+
+The checked chain is therefore:
+
+```text
+PLUGIN REPOSITORY PIN (peer + dev, three dsh packages)
+        <-> EXPECTED PROBE VERSION (0.1.1-rc.2)
+        <-> PINNED DSH CHECKOUT (commit b150a551... + internal manifest line)
+```
+
+A forgotten future DSH upgrade makes the gate RED until the probe fixture /
+commit / version authority is intentionally updated. No dynamic GitHub commit
+lookup was added; this is the minimal fail-closed equality check.
+
+`control-pin-binding.sh` (in `tests/upgrade-gates/system-prompt-context/`)
+provides the controls:
+
+- NEGATIVE: a mirror repository whose pins are rewritten to `0.1.2-rc.1`
+  exits `1` with `PLUGIN_REPO_DSH_PIN_MISMATCH` before any probe output;
+- POSITIVE: the current `0.1.1-rc.2` pins pass the preflight and the gate
+  advances past it to the pinned-checkout checks.
+
+The corrected FAIL verdict, BL-BR-03 (`NEEDS_SPIKE`), D-T03 (`BLOCKED`), the
+`agent.inject()` `PREDECLARED CANDIDATE / NOT VERIFIED` status, and the
+`ESCALATION_REQUIRED` consequence are unchanged. Green still means only that
+the observed pinned behavior is reproducibly established.
