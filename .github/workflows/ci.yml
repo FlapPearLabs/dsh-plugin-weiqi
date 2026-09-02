@@ -3,8 +3,10 @@ name: Foundation CI
 on:
   push:
     branches:
-      - work/bootstrap-foundation-v1
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
