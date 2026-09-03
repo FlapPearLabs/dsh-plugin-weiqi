@@ -428,7 +428,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Scope:** Probe agent scope/registration/rendering/materialization/O(1) delivery on pinned DSH.
 - **Explicit Non-Goals:** No Bridge implementation; no DSH core patch.
 - **Dependencies / blocked_by:** none
-- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the verified `ctx.systemPrompt.context` seam ("per D-S01 findings", pinned DSH context seam). On PASS: BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
+- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the D-S01-verified pinned agent-scoped passive Bridge-delivery seam ("per D-S01 findings"; `ctx.systemPrompt.context` FAILed §39.6 latest-only delivery per the merged record `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`, and `agent.ctx.systemPrompt.section` is the verified fallback per `docs/validation/DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`). On PASS: BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
 - **Acceptance Criteria (PASS):** provider registers agent-scoped; reads only Runtime-held snapshot (no rescan); materializes only on change; O(1)-suitable. **FAIL:** record; fallback `agent.inject`; note D-T03 impact.
 - **Required Review Evidence:** probe trace; assertions.
 - **Stop / Escalation Condition:** new mechanism / DSH patch → `ESCALATION_REQUIRED`.
@@ -466,7 +466,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Scope:** Deliver latest snapshots per D-S01 findings; Bridge changes never create evaluation-only wakes; unchanged snapshots add no repeated prompt material.
 - **Explicit Non-Goals:** No attention policy (D-T06); no focus scheduling (D-T07).
 - **Dependencies / blocked_by:** WAVE-D-T01, WAVE-D-S01, WAVE-A-T02
-- **Expected Surfaces:** `src/bridge/delivery.ts`, pinned DSH context seam
+- **Expected Surfaces:** `src/bridge/delivery.ts`, pinned DSH D-S01-verified Bridge-delivery seam
 - **Acceptance Criteria:** §39.6 smoke: 20 rapid GameNotice updates → zero attention-evaluation requests (request-count trace); idle Manual lane not woken; next natural request sees newest snapshot.
 - **Required Review Evidence:** request-count trace; assertions.
 - **Stop / Escalation Condition:** cooldown/new mechanism → `ESCALATION_REQUIRED`.
