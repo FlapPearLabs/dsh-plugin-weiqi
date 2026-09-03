@@ -69,7 +69,7 @@ baseline exists or should be created.
 |---|---|---|---|---|---|---|---|
 | BL-BR-01 | WorkSnapshot / GameNotice / CompanionBridge contracts | Spec §9-11 exact shapes | `src/contracts/bridge.ts` matches Spec; type-level tests | FOUNDATION_ONLY | Behavior, not shape | D | IMPLEMENTATION_TICKET |
 | BL-BR-02 | Latest-value semantics | Spec §9 awareness only, never a queue | No runtime holder/updater | NOT_IMPLEMENTED | State ownership + updates | D | IMPLEMENTATION_TICKET |
-| BL-BR-03 | ctx.systemPrompt.context provider delivery | Spec §9.1 DSH-native agent-scoped context | No evidence: provider registration/render/dedup behavior on pinned DSH unverified | NEEDS_SPIKE | Unknown DSH provider seam semantics | D (gate) | SPIKE |
+| BL-BR-03 | Pinned DSH agent-scoped passive Bridge-delivery provider | Spec §9.1 DSH-native agent-scoped context | `ctx.systemPrompt.context` FAILS §39.6 latest-only (merged record `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`); fallback seam `agent.ctx.systemPrompt.section` formal gate 13/13 PASS (`docs/validation/DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`, PR #64 pending merge) | NEEDS_SPIKE | Post-merge transition to `VERIFIED_FACT_NOT_INTEGRATED` proposed in the section record | D (gate) | SPIKE |
 | BL-BR-04 | Cross-lane awareness / no raw transcript injection | Spec §12/§35 | Contract only; AGENTS frozen constraint | FOUNDATION_ONLY | Behavior | D | IMPLEMENTATION_TICKET |
 | BL-BR-05 | Bridge-only changes do not trigger evaluation wakes | Spec §9.1 | No code | NOT_IMPLEMENTED | Needs Attention linkage | D | IMPLEMENTATION_TICKET |
 
@@ -225,7 +225,7 @@ feasibility Spike.
 |---|---|---|---|---|
 | BL-PKG-06 | GitHub source install (`dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`) | `github:` spec resolution/clone/build/activate path is unverified | Installation docs, Wave F installation acceptance | Smoke covers local tarball only; no `github:` path code or CI evidence |
 | BL-GR-03 | Tenuki version satisfying area + positional-superko + komi 7.5 explicit config, passing §31 fixture | Spec §27 forbids defaults, silent downgrade, dual rules authority | GoRulesPort / TenukiAdapter version pin and implementation | No Tenuki dependency, no fixtures, no candidate evaluation record |
-| BL-BR-03 | `ctx.systemPrompt.context` agent-scoped runtime-context provider semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | No provider code or DSH-internal probe |
+| BL-BR-03 | Pinned DSH agent-scoped passive Bridge-delivery seam semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | D-S01 probes exist: context seam FAIL (merged record) and section seam formal gate PASS (PR #64 pending merge); resolution recorded in `docs/validation/DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md` |
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
 (frozen), crash/resume mechanism (conservative V0.1 strategy, implementation
