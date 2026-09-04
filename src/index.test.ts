@@ -37,6 +37,7 @@ describe('Companion Go Cordis entry', () => {
       'llm/stream',
       'agent/pre-step',
       'agent/status',
+      'focus/lane-switched',
     ])
   })
 

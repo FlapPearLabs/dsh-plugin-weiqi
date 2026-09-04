@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { UserMessage } from '@deepseek-ai/dsh-session'
 import type { PendingFocusIntent } from '../contracts/focus.js'
 import { RuntimeFocusOwner } from './focus-boundary.js'
 
@@ -154,6 +155,60 @@ describe('RuntimeFocusOwner safe DSH boundary', () => {
     expect(owner.state.llmRunning).toBe(true)
     owner.modelRequestSettled('go')
     expect(owner.state.llmRunning).toBe(false)
+  })
+
+  it('consumes the winning intent at the resume admission and leaves no stale lock', () => {
+    const owner = new RuntimeFocusOwner('work')
+    owner.submitFocusIntent(intent('go'))
+    const away = owner.switchAfterConfirmedSettle('work', 'cooperative-yield')
+
+    // The away switch retains the winning away intent (accepted A-T04 contract).
+    expect(away?.resumedLane).toBeUndefined()
+    expect(owner.state.pendingFocus).toEqual(intent('go'))
+    expect(owner.state.pausedLane).toBe('work')
+
+    const returnIntent = intent('work', 'user_command')
+    expect(owner.submitFocusIntent(returnIntent).disposition).toBe('replaced')
+    const back = owner.switchAfterConfirmedSettle('go', 'natural')
+
+    // The resume admission consumed pausedLane AND the winning intent (P1-3).
+    expect(back?.resumedLane).toBe('work')
+    expect(back?.intent).toBe(returnIntent)
+    expect(owner.state.activeLane).toBe('work')
+    expect(owner.state).not.toHaveProperty('pausedLane')
+    expect(owner.state).not.toHaveProperty('pendingFocus')
+
+    // No stale user_command lock: later requests are admitted normally.
+    expect(owner.submitFocusIntent(intent('go', 'self_initiated')).disposition).toBe('admitted')
+    expect(owner.submitFocusIntent(intent('work', 'user_command')).disposition).toBe('replaced')
+  })
+
+  it('keeps the immutable sourceMessage reachable through the transition after consumption', () => {
+    const owner = new RuntimeFocusOwner('work')
+    const userWake = {
+      id: 'U' as UserMessage['id'],
+      role: 'user',
+      content: [{ type: 'text', text: 'user says continue' }],
+      source: { kind: 'user' },
+    } as UserMessage
+    owner.submitFocusIntent(intent('go'))
+    owner.switchAfterConfirmedSettle('work', 'cooperative-yield')
+
+    const returnIntent = {
+      target: 'work' as const,
+      origin: 'user_command' as const,
+      sourceMessage: { sourceSessionId: 'ui-session', message: userWake },
+    }
+    owner.submitFocusIntent(returnIntent)
+    const back = owner.switchAfterConfirmedSettle('go', 'natural')
+
+    expect(back?.resumedLane).toBe('work')
+    // Consuming the owner slot does not discard the source message: the
+    // returned transition retains the immutable winning intent for the
+    // delivery path owned by later Tickets.
+    expect(back?.intent).toBe(returnIntent)
+    expect(back?.intent.sourceMessage?.message).toBe(userWake)
+    expect(owner.state).not.toHaveProperty('pendingFocus')
   })
 
   it('refuses to treat step/end as safe while the model is still running', () => {
