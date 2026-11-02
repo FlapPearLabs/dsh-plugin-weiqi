@@ -5,7 +5,8 @@
 - 基线 `main`：`2a2e5b4`
 - 分支：`work/a-t05-source-message-handoff`
 - 代码 HEAD：`5450f36`
-- 状态：实现完成，本地验证通过；**未推送、未开 PR、未合并**
+- PR：`#65`（`https://github.com/FlapPearLabs/dsh-plugin-weiqi/pull/65`）
+- 状态：实现完成，本地验证与 PR CI 通过；**已开 PR，未合并**
 
 ## 做了什么
 
@@ -38,7 +39,7 @@
 
 - 真实 DSH inbox 投递、inactive lane wake：属于 **A-T06**，本票未做。
 - 未在 Node `24.11.1` 下复跑；本机是 Node `26.10.0`，只有 `Unsupported engine` 警告，测试与构建均通过。
-- 未推送、未开 PR、未合并；未更新 `CURRENT_IMPLEMENTATION_BASELINE.md` / ticket 状态（按仓库规则，合并后由 docs sync 处理）。
+- 已推送并开 PR `#65`，尚未合并；未更新 `CURRENT_IMPLEMENTATION_BASELINE.md` / ticket 状态（按仓库规则，合并后由 docs sync 处理）。
 
 ## 已知问题 / 需决定
 
