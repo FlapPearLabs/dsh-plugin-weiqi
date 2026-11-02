@@ -56,7 +56,7 @@ describe('Companion source-message handoff', () => {
   it('preserves non-text blocks verbatim and keeps the actual target lane', () => {
     const intent = intentWithSource('work')
     intent.sourceMessage = {
-      sourceSessionId: SOURCE_SESSION_ID,
+      sourceSessionId: 'source-session-nontext',
       message: userMessage('source-message-nontext', [
         { type: 'text', text: '看这张图' },
         { type: 'reasoning', text: 'thinking' },
@@ -66,6 +66,7 @@ describe('Companion source-message handoff', () => {
     const handoff = createCompanionHandoff(intent)
 
     expect(handoff?.target).toBe('work')
+    expect(handoff?.message.source.sourceSessionId).toBe('source-session-nontext')
     expect(handoff?.message.content).toEqual(intent.sourceMessage.message.content)
   })
 
