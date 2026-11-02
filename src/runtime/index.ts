@@ -35,3 +35,9 @@ export {
   type FocusYieldBinding,
   type FocusYieldBindingOptions,
 } from './focus-yield.js'
+
+export {
+  COMPANION_HANDOFF_PLUGIN,
+  createCompanionHandoff,
+  type CompanionHandoff,
+} from './handoff.js'
