@@ -137,18 +137,24 @@ describe('cross-lane awareness', () => {
     )
   })
 
-  it('keeps the Work awareness size constant while the game keeps moving', () => {
-    const runtime = new BridgeRuntime()
-    const awareness = new CrossLaneAwareness(runtime)
+  it('adds nothing to the Work awareness as the game keeps moving', () => {
+    const longGameRuntime = new BridgeRuntime()
+    const longGame = new CrossLaneAwareness(longGameRuntime)
 
-    runtime.updateGame(notice(1), 1)
-    const firstLength = JSON.stringify(awareness.forWorkLane()).length
+    expect(longGame.forWorkLane()).toEqual({})
 
-    for (let moveNumber = 2; moveNumber <= 400; moveNumber += 1) {
-      runtime.updateGame(notice(moveNumber), moveNumber)
+    for (let moveNumber = 1; moveNumber <= 400; moveNumber += 1) {
+      longGameRuntime.updateGame(notice(moveNumber), moveNumber)
     }
 
-    expect(JSON.stringify(awareness.forWorkLane()).length).toBe(firstLength)
+    const longView = longGame.forWorkLane()
+
+    expect(JSON.stringify(longView).length).toBe(
+      JSON.stringify({ latestGameNotice: notice(400) }).length,
+    )
+    expect(JSON.stringify(longView).length).toBeLessThan(500)
+    expect(longView).toEqual({ latestGameNotice: notice(400) })
+    expect(longGame.forWorkLane()).toBe(longView)
   })
 
   it('gives the Go lane only WorkSnapshot facts and no Work transcript', () => {
