@@ -2,13 +2,14 @@
   "recordKind": "cognition-benchmark",
   "specSection": "§38",
   "ticket": "WAVE-C-T10",
-  "generatedAt": "2026-11-04T10:39:52.892Z",
+  "generatedAt": "2026-11-04T11:55:24.841Z",
   "model": {
     "kind": "scripted-deterministic",
     "id": "scripted-legal-move-adapter-v1",
     "provider": "benchmark-scripted",
     "requestPath": "dsh-llm-runtime",
     "isDeepSeek": false,
+    "providerMode": "scripted",
     "reportedModel": "scripted-legal-move-adapter-v1",
     "reportedModels": [
       "scripted-legal-move-adapter-v1"
@@ -86,7 +87,8 @@
       "maxRequests": 120,
       "maxInputTokensPerRequest": 8000,
       "maxOutputTokensPerRequest": 4000,
-      "maxEstimatedCostUsd": 1,
+      "maxEstimatedCostCny": 6.66,
+      "usdToCnyRate": 7.1,
       "allowRetries": false,
       "allowSearchFetch": false
     },
@@ -104,7 +106,11 @@
     "cacheReadTokens": 0,
     "cacheWriteTokens": 0,
     "estimatedCostUsd": 0.039681,
+    "estimatedCostCny": 0.2817351,
     "reservedCostUsd": 0,
+    "reservedCostCny": 0,
+    "maxEstimatedCostCny": 6.66,
+    "usdToCnyRate": 7.1,
     "ledgerPath": null,
     "stops": []
   },
@@ -123,10 +129,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 1.9962500000000034,
+              "latencyMs": 2.5267079999999993,
               "stepLatenciesMs": [
-                1.3413330000000059,
-                0.33383399999999597
+                1.6494160000000022,
+                0.5320840000000118
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -200,10 +206,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.5478329999999971,
+              "latencyMs": 0.9059170000000023,
               "stepLatenciesMs": [
-                0.23016599999999698,
-                0.2221669999999989
+                0.3579589999999939,
+                0.4276669999999996
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -277,10 +283,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.4767089999999996,
+              "latencyMs": 0.7159590000000122,
               "stepLatenciesMs": [
-                0.18095900000000142,
-                0.20524999999999238
+                0.28820900000000904,
+                0.3318749999999966
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -370,10 +376,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.4767089999999996,
-              "max": 1.9962500000000034,
-              "mean": 1.0069306666666666,
-              "range": 1.5195410000000038
+              "min": 0.7159590000000122,
+              "max": 2.5267079999999993,
+              "mean": 1.382861333333338,
+              "range": 1.810748999999987
             },
             "inputTokens": {
               "min": 887,
@@ -440,10 +446,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.44516699999999787,
+              "latencyMs": 0.5511670000000066,
               "stepLatenciesMs": [
-                0.19887500000000102,
-                0.1729999999999876
+                0.2482909999999805,
+                0.2236249999999984
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -517,10 +523,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.34454100000000665,
+              "latencyMs": 0.9078329999999823,
               "stepLatenciesMs": [
-                0.14045899999999278,
-                0.13433299999999804
+                0.19787500000001046,
+                0.6032500000000027
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -594,10 +600,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.31058400000000574,
+              "latencyMs": 0.4284590000000037,
               "stepLatenciesMs": [
-                0.11741700000000321,
-                0.11787499999999795
+                0.1787080000000003,
+                0.18129099999998743
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -687,10 +693,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.31058400000000574,
-              "max": 0.44516699999999787,
-              "mean": 0.3667640000000034,
-              "range": 0.13458299999999213
+              "min": 0.4284590000000037,
+              "max": 0.9078329999999823,
+              "mean": 0.6291529999999975,
+              "range": 0.47937399999997865
             },
             "inputTokens": {
               "min": 839,
@@ -757,10 +763,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.25858399999999904,
+              "latencyMs": 0.3567090000000235,
               "stepLatenciesMs": [
-                0.10962499999999409,
-                0.0853750000000133
+                0.16270899999997823,
+                0.13220799999999144
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -834,10 +840,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.3029159999999962,
+              "latencyMs": 0.3504169999999931,
               "stepLatenciesMs": [
-                0.13649999999999807,
-                0.09687499999999716
+                0.15604200000001356,
+                0.13166599999999562
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -911,10 +917,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.24150000000000205,
+              "latencyMs": 0.3257499999999993,
               "stepLatenciesMs": [
-                0.10099999999999909,
-                0.07854199999999878
+                0.1424169999999947,
+                0.11879100000001586
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1004,10 +1010,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.24150000000000205,
-              "max": 0.3029159999999962,
-              "mean": 0.2676666666666658,
-              "range": 0.06141599999999414
+              "min": 0.3257499999999993,
+              "max": 0.3567090000000235,
+              "mean": 0.3442920000000053,
+              "range": 0.03095900000002416
             },
             "inputTokens": {
               "min": 791,
@@ -1074,10 +1080,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.31033299999999997,
+              "latencyMs": 0.3812910000000045,
               "stepLatenciesMs": [
-                0.15320800000000645,
-                0.08720800000000395
+                0.16425000000000978,
+                0.14825000000001864
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1151,10 +1157,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.24433300000001168,
+              "latencyMs": 0.3183750000000032,
               "stepLatenciesMs": [
-                0.10670799999999758,
-                0.07925000000000182
+                0.13900000000001,
+                0.1269580000000019
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1228,10 +1234,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.25516700000000014,
+              "latencyMs": 0.3085829999999987,
               "stepLatenciesMs": [
-                0.11725000000001273,
-                0.08691699999999969
+                0.12833300000002623,
+                0.1307079999999985
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1321,10 +1327,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.24433300000001168,
-              "max": 0.31033299999999997,
-              "mean": 0.2699443333333373,
-              "range": 0.06599999999998829
+              "min": 0.3085829999999987,
+              "max": 0.3812910000000045,
+              "mean": 0.33608300000000213,
+              "range": 0.07270800000000577
             },
             "inputTokens": {
               "min": 839,
@@ -1391,10 +1397,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.31825000000000614,
+              "latencyMs": 0.38724999999999454,
               "stepLatenciesMs": [
-                0.09512500000001012,
-                0.1681249999999892
+                0.12404200000000287,
+                0.20808300000001623
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1470,10 +1476,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.24412500000001103,
+              "latencyMs": 0.39699999999999136,
               "stepLatenciesMs": [
-                0.07991699999999469,
-                0.11554099999999323
+                0.15195900000000506,
+                0.1830839999999796
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1549,10 +1555,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.8383749999999992,
+              "latencyMs": 0.35841700000000287,
               "stepLatenciesMs": [
-                0.5732500000000016,
-                0.19550000000000978
+                0.12870899999998642,
+                0.17608300000000554
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1644,10 +1650,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.24412500000001103,
-              "max": 0.8383749999999992,
-              "mean": 0.46691666666667214,
-              "range": 0.5942499999999882
+              "min": 0.35841700000000287,
+              "max": 0.39699999999999136,
+              "mean": 0.38088899999999626,
+              "range": 0.03858299999998849
             },
             "inputTokens": {
               "min": 839,
@@ -1714,12 +1720,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.4087920000000054,
+              "latencyMs": 0.6651669999999967,
               "stepLatenciesMs": [
-                0.12812500000001137,
-                0.09808299999998837,
-                0.06420899999999108,
-                0.07262500000000216
+                0.16499999999999204,
+                0.15954199999998764,
+                0.13591700000000628,
+                0.15858299999999304
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -1807,12 +1813,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.37975000000000136,
+              "latencyMs": 0.5811249999999859,
               "stepLatenciesMs": [
-                0.08658300000000452,
-                0.08358400000000188,
-                0.07729199999999992,
-                0.09049999999999159
+                0.11391700000001492,
+                0.13529099999999517,
+                0.12545900000000643,
+                0.16079099999998903
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -1900,12 +1906,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.32808399999998983,
+              "latencyMs": 0.546750000000003,
               "stepLatenciesMs": [
-                0.0815419999999989,
-                0.08345900000000483,
-                0.05779199999999207,
-                0.06608399999998937
+                0.11129199999999173,
+                0.1323330000000169,
+                0.12266700000000696,
+                0.1392500000000041
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -2009,10 +2015,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.32808399999998983,
-              "max": 0.4087920000000054,
-              "mean": 0.3722086666666655,
-              "range": 0.08070800000001555
+              "min": 0.546750000000003,
+              "max": 0.6651669999999967,
+              "mean": 0.5976806666666619,
+              "range": 0.11841699999999378
             },
             "inputTokens": {
               "min": 1658,
@@ -2079,10 +2085,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.22195899999999824,
+              "latencyMs": 0.3206249999999784,
               "stepLatenciesMs": [
-                0.09166700000000105,
-                0.0917919999999981
+                0.1250840000000153,
+                0.15537499999999227
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -2156,10 +2162,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.19737499999999386,
+              "latencyMs": 0.27579100000002654,
               "stepLatenciesMs": [
-                0.07004200000000083,
-                0.0762500000000017
+                0.11329200000000128,
+                0.11920799999998621
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -2233,10 +2239,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.1877500000000083,
+              "latencyMs": 0.2736250000000098,
               "stepLatenciesMs": [
-                0.08108399999998994,
-                0.06683300000000258
+                0.11129199999999173,
+                0.11854200000001924
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -2326,10 +2332,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.1877500000000083,
-              "max": 0.22195899999999824,
-              "mean": 0.20236133333333348,
-              "range": 0.03420899999998994
+              "min": 0.2736250000000098,
+              "max": 0.3206249999999784,
+              "mean": 0.29001366666667155,
+              "range": 0.04699999999996862
             },
             "inputTokens": {
               "min": 791,
@@ -2396,10 +2402,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2442920000000015,
+              "latencyMs": 0.3552500000000123,
               "stepLatenciesMs": [
-                0.09995800000000088,
-                0.10650000000001114
+                0.13262500000001864,
+                0.17783299999999258
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -2473,10 +2479,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.26258299999999224,
+              "latencyMs": 0.4829589999999939,
               "stepLatenciesMs": [
-                0.09074999999999989,
-                0.12600000000000477
+                0.19120799999998894,
+                0.23116699999999923
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -2550,10 +2556,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.22462500000000318,
+              "latencyMs": 0.3793749999999818,
               "stepLatenciesMs": [
-                0.08625000000000682,
-                0.10258299999999565
+                0.13862499999999045,
+                0.1888749999999959
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -2643,10 +2649,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.22462500000000318,
-              "max": 0.26258299999999224,
-              "mean": 0.24383333333333232,
-              "range": 0.037957999999989056
+              "min": 0.3552500000000123,
+              "max": 0.4829589999999939,
+              "mean": 0.40586133333332935,
+              "range": 0.12770899999998164
             },
             "inputTokens": {
               "min": 887,

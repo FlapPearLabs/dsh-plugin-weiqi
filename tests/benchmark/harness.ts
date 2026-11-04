@@ -1,4 +1,4 @@
-import type { LlmCallConfig, Message } from '@deepseek-ai/dsh-llm'
+import type { LlmAdapter, LlmCallConfig, Message } from '@deepseek-ai/dsh-llm'
 import { createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GoTurnBudget } from '../../src/contracts/budget.js'
 import type { GameState, GoRulesPort, Point } from '../../src/contracts/rules.js'
@@ -23,6 +23,16 @@ import {
   BENCHMARK_PROVIDER_ID,
   ScriptedLlmProvider,
 } from './fake-provider.js'
+import {
+  BENCHMARK_LIVE_PROVIDER_ID,
+  LiveBenchmarkProvider,
+  benchmarkProviderMode,
+  loadLiveBenchmarkConfig,
+  type BenchmarkEnv,
+  type BenchmarkProviderMode,
+  type LiveBenchmarkConfig,
+  type LiveBenchmarkFetch,
+} from './live-provider.js'
 import {
   BENCHMARK_GATE_DEFAULTS,
   BENCHMARK_PLACEHOLDER_PRICES,
@@ -104,6 +114,17 @@ export type BenchmarkRunMetrics = {
   readonly requestPath: BenchmarkRequestPathStats
 }
 
+/**
+ * Provider abstraction the harness drives. Both the local scripted adapter and
+ * the HTTP live adapter implement `LlmAdapter`; only the scripted one knows its
+ * step count up front. A provider that cannot declare `stepCount` is driven by
+ * the turn budget instead, until it commits or the step cap refuses another
+ * step.
+ */
+export type BenchmarkLlmProvider = LlmAdapter & {
+  readonly stepCount?: number
+}
+
 export type RunFixtureOptions = {
   readonly budget?: Partial<GoTurnBudget>
   readonly clock?: () => number
@@ -115,7 +136,17 @@ export type RunFixtureOptions = {
   readonly pricing?: BenchmarkPriceSchedule
   /** `'live'` spends real money and therefore requires an explicit price schedule. */
   readonly gateMode?: 'scripted' | 'live'
-  readonly createProvider?: (fixture: BenchmarkFixture, gameId: string) => ScriptedLlmProvider
+  readonly createProvider?: (fixture: BenchmarkFixture, gameId: string) => BenchmarkLlmProvider
+  /** Registered provider route; the scripted route unless a live run overrides it. */
+  readonly providerId?: string
+  /** Configured model id the adapter must report; the scripted model unless overridden. */
+  readonly model?: string
+  /**
+   * Live runs are driven by the model's own responses and cannot be checked
+   * against the fixture's scripted plan. Only the universal invariants remain:
+   * the turn ends with exactly one committed action on the real port.
+   */
+  readonly live?: boolean
 }
 
 type RecordingPort = {
@@ -277,8 +308,10 @@ export async function runFixture(
   const gate = options.gate
     ?? new BenchmarkBudgetGate(options.gates, options.pricing, options.gateMode ?? 'scripted')
   gate.beginTurn()
+  const providerId = options.providerId ?? BENCHMARK_PROVIDER_ID
+  const model = options.model ?? SCRIPTED_MODEL_ID
   const provider = (options.createProvider ?? defaultProvider)(fixture, gameId)
-  const path = await openBenchmarkRequestPath(provider, gate)
+  const path = await openBenchmarkRequestPath(provider, gate, { providerId, model })
   const clock = options.clock ?? (() => performance.now())
   const tools = toolSchemas()
   const messages: Message[] = [
@@ -299,16 +332,19 @@ export async function runFixture(
   let committed = false
   let stop: BenchmarkBudgetStop | null = null
   let requestPathStats: BenchmarkRequestPathStats
+  // A scripted provider declares its exact plan length. A live provider cannot,
+  // so the turn budget bounds the loop: `maxModelSteps` plus the one §23 boost.
+  const stepLimit = provider.stepCount ?? budget.maxModelSteps + 1
 
   try {
-    for (let index = 0; index < provider.stepCount; index += 1) {
+    for (let index = 0; index < stepLimit; index += 1) {
       const stepStart = clock()
       const modelStep = enforcement.beginModelStep()
       const resolvedRequest: LlmCallConfig = await enforcement.requestTokenCap(
         { turn: 1, step: modelStep.index },
         async () => ({
-          provider: BENCHMARK_PROVIDER_ID,
-          model: SCRIPTED_MODEL_ID,
+          provider: providerId,
+          model,
           maxTokens: SCRIPTED_PROPOSED_MAX_TOKENS,
         }),
       )
@@ -367,7 +403,7 @@ export async function runFixture(
           name: call.name,
           arguments: call.rawArguments,
         })),
-        source: { provider: BENCHMARK_PROVIDER_ID, model: SCRIPTED_MODEL_ID },
+        source: { provider: providerId, model },
       }))
       for (const entry of toolResults) {
         messages.push(createToolResultMessage({
@@ -402,59 +438,76 @@ export async function runFixture(
   if (stop === null) {
     const expectedCommitted = fixture.expectedFinalAction.kind === 'play' ? 'play' : 'pass'
 
-    if (!committed || snapshot.committedAction !== expectedCommitted) {
-      throw new Error(
-        `Benchmark fixture ${fixture.name} did not commit ${expectedCommitted}; committedAction=${String(snapshot.committedAction)}`,
-      )
-    }
-    if (finalMove !== finalMoveOf(fixture.expectedFinalAction)) {
-      throw new Error(
-        `Benchmark fixture ${fixture.name} final move ${finalMove} != expected ${finalMoveOf(fixture.expectedFinalAction)}`,
-      )
-    }
-    if (committedMutations.length !== 1 || committedMutations[0] !== expectedCommitted) {
-      throw new Error(
-        `Benchmark fixture ${fixture.name} mutated the port ${JSON.stringify(committedMutations)}; expected exactly one ${expectedCommitted}`,
-      )
-    }
+    if (options.live === true) {
+      // A live model chooses its own move, so the fixture's expected move and
+      // scripted call counts do not apply. What must still hold: the turn ended
+      // with exactly one committed authoritative action on the real port.
+      const committedAction = snapshot.committedAction
+      if (!committed || committedAction === undefined) {
+        throw new Error(
+          `Live benchmark fixture ${fixture.name} did not commit a legal move within ${stepLimit} model steps`,
+        )
+      }
+      if (committedMutations.length !== 1 || committedMutations[0] !== committedAction) {
+        throw new Error(
+          `Live benchmark fixture ${fixture.name} mutated the port ${JSON.stringify(committedMutations)}; expected exactly one ${committedAction}`,
+        )
+      }
+    } else {
+      if (!committed || snapshot.committedAction !== expectedCommitted) {
+        throw new Error(
+          `Benchmark fixture ${fixture.name} did not commit ${expectedCommitted}; committedAction=${String(snapshot.committedAction)}`,
+        )
+      }
+      if (finalMove !== finalMoveOf(fixture.expectedFinalAction)) {
+        throw new Error(
+          `Benchmark fixture ${fixture.name} final move ${finalMove} != expected ${finalMoveOf(fixture.expectedFinalAction)}`,
+        )
+      }
+      if (committedMutations.length !== 1 || committedMutations[0] !== expectedCommitted) {
+        throw new Error(
+          `Benchmark fixture ${fixture.name} mutated the port ${JSON.stringify(committedMutations)}; expected exactly one ${expectedCommitted}`,
+        )
+      }
 
-    const declaredInspects = fixture.steps.flatMap(step => step.calls).filter(
-      call => call.tool === 'go.inspect_group' || call.tool === 'go.inspect_region',
-    ).length
-    const declaredTryMoves = fixture.steps.flatMap(step => step.calls).filter(
-      call => call.tool === 'go.try_move',
-    ).length
-    const declaredDeepThink = fixture.steps.flatMap(step => step.calls).filter(
-      call => call.tool === 'go.request_deep_think',
-    ).length
-    if (snapshot.inspectCalls !== declaredInspects) {
-      throw new CognitionBenchmarkBypassError(
-        'go.inspect_*',
-        `enforcement counted ${snapshot.inspectCalls}, script issued ${declaredInspects}`,
-      )
-    }
-    if (snapshot.tryMoves !== declaredTryMoves) {
-      throw new CognitionBenchmarkBypassError(
-        'go.try_move',
-        `enforcement counted ${snapshot.tryMoves}, script issued ${declaredTryMoves}`,
-      )
-    }
-    if (snapshot.deepThinkRequests !== declaredDeepThink) {
-      throw new CognitionBenchmarkBypassError(
-        'go.request_deep_think',
-        `enforcement counted ${snapshot.deepThinkRequests}, script issued ${declaredDeepThink}`,
-      )
-    }
-    if (snapshot.modelSteps !== provider.stepCount) {
-      throw new CognitionBenchmarkBypassError(
-        'model_step',
-        `enforcement counted ${snapshot.modelSteps}, provider issued ${provider.stepCount}`,
-      )
-    }
-    if (illegalAttemptReasons.length !== fixture.expectedIllegalAttempts) {
-      throw new Error(
-        `Benchmark fixture ${fixture.name} recorded ${illegalAttemptReasons.length} illegal attempts, expected ${fixture.expectedIllegalAttempts}`,
-      )
+      const declaredInspects = fixture.steps.flatMap(step => step.calls).filter(
+        call => call.tool === 'go.inspect_group' || call.tool === 'go.inspect_region',
+      ).length
+      const declaredTryMoves = fixture.steps.flatMap(step => step.calls).filter(
+        call => call.tool === 'go.try_move',
+      ).length
+      const declaredDeepThink = fixture.steps.flatMap(step => step.calls).filter(
+        call => call.tool === 'go.request_deep_think',
+      ).length
+      if (snapshot.inspectCalls !== declaredInspects) {
+        throw new CognitionBenchmarkBypassError(
+          'go.inspect_*',
+          `enforcement counted ${snapshot.inspectCalls}, script issued ${declaredInspects}`,
+        )
+      }
+      if (snapshot.tryMoves !== declaredTryMoves) {
+        throw new CognitionBenchmarkBypassError(
+          'go.try_move',
+          `enforcement counted ${snapshot.tryMoves}, script issued ${declaredTryMoves}`,
+        )
+      }
+      if (snapshot.deepThinkRequests !== declaredDeepThink) {
+        throw new CognitionBenchmarkBypassError(
+          'go.request_deep_think',
+          `enforcement counted ${snapshot.deepThinkRequests}, script issued ${declaredDeepThink}`,
+        )
+      }
+      if (snapshot.modelSteps !== provider.stepCount) {
+        throw new CognitionBenchmarkBypassError(
+          'model_step',
+          `enforcement counted ${snapshot.modelSteps}, provider issued ${provider.stepCount}`,
+        )
+      }
+      if (illegalAttemptReasons.length !== fixture.expectedIllegalAttempts) {
+        throw new Error(
+          `Benchmark fixture ${fixture.name} recorded ${illegalAttemptReasons.length} illegal attempts, expected ${fixture.expectedIllegalAttempts}`,
+        )
+      }
     }
   }
 
@@ -580,12 +633,16 @@ export type BenchmarkRecord = {
   readonly ticket: 'WAVE-C-T10'
   readonly generatedAt: string
   readonly model: {
-    readonly kind: 'scripted-deterministic'
-    readonly id: typeof SCRIPTED_MODEL_ID
-    readonly provider: typeof BENCHMARK_PROVIDER_ID
+    /** `scripted-deterministic` for the free local adapter, `live-model` for the HTTP adapter. */
+    readonly kind: 'scripted-deterministic' | 'live-model'
+    readonly id: string
+    readonly provider: string
     /** The seam the runs actually left through, observed from their request-path stats. */
     readonly requestPath: string
-    readonly isDeepSeek: false
+    /** True only for a live run against the configured (DeepSeek) endpoint. */
+    readonly isDeepSeek: boolean
+    /** The provider mode the record was produced in. */
+    readonly providerMode: BenchmarkProviderMode
     /** Model the adapter envelope reported for this round; null when it reported none. */
     readonly reportedModel: string | null
     /** Every distinct reported model seen across runs. */
@@ -616,7 +673,21 @@ export type BuildRecordOptions = {
   readonly gate?: BenchmarkBudgetGate
   readonly gates?: Partial<BenchmarkGateConfig>
   readonly pricing?: BenchmarkPriceSchedule
-  readonly gateMode?: 'scripted' | 'live'
+  /** Explicit provider mode; overrides the mode derived from `env`. */
+  readonly mode?: BenchmarkProviderMode
+  /**
+   * Environment snapshot the provider mode and live config are read from.
+   * Omitted means the deterministic scripted mode, so ordinary tests never
+   * depend on the shell environment. The benchmark run entry passes
+   * `process.env`, which is what makes one set of variables switch a run.
+   */
+  readonly env?: BenchmarkEnv
+  /** Pre-loaded live config (tests); otherwise loaded from `env`. */
+  readonly liveConfig?: LiveBenchmarkConfig
+  /** Transport seam for the live adapter (tests inject a stub; production uses fetch). */
+  readonly liveFetch?: LiveBenchmarkFetch
+  /** Explicit provider factory, overriding the mode-derived one. */
+  readonly createProvider?: (fixture: BenchmarkFixture, gameId: string) => BenchmarkLlmProvider
 }
 
 function observedRequestPathOf(observed: ReadonlySet<string>): string {
@@ -644,8 +715,29 @@ export async function buildBenchmarkRecord(
   const now = options.now ?? (() => new Date())
   const fixtures = options.fixtures ?? BENCHMARK_FIXTURES
   const budget = options.budget ?? CANDIDATE_BUDGET
+  // `env` is the single switch: when the run entry passes `process.env`,
+  // `BENCHMARK_PROVIDER=live` selects the live adapter; everything else stays
+  // scripted. Loading the live config happens before any gate is built, so a
+  // half-configured live run fails with the missing-variable error instead of a
+  // generic pricing error.
+  const mode: BenchmarkProviderMode = options.mode
+    ?? (options.env === undefined ? 'scripted' : benchmarkProviderMode(options.env))
+  const liveConfig = mode === 'live'
+    ? (options.liveConfig ?? loadLiveBenchmarkConfig(options.env ?? process.env))
+    : undefined
+  const pricing = liveConfig?.pricing ?? options.pricing
   const gate = options.gate
-    ?? new BenchmarkBudgetGate(options.gates, options.pricing, options.gateMode ?? 'scripted')
+    ?? new BenchmarkBudgetGate(options.gates, pricing, mode)
+  const providerId = liveConfig === undefined
+    ? BENCHMARK_PROVIDER_ID
+    : BENCHMARK_LIVE_PROVIDER_ID
+  const model = liveConfig?.model ?? SCRIPTED_MODEL_ID
+  const createProvider = options.createProvider
+    ?? (liveConfig === undefined
+      ? undefined
+      : () => new LiveBenchmarkProvider(liveConfig, {
+        ...(options.liveFetch === undefined ? {} : { fetch: options.liveFetch }),
+      }))
 
   const classes: ClassRecord[] = []
   const observedRequestPaths = new Set<string>()
@@ -660,10 +752,14 @@ export async function buildBenchmarkRecord(
         const metrics = await runFixture(fixture, {
           budget,
           gate,
+          providerId,
+          model,
+          live: mode === 'live',
+          ...(createProvider === undefined ? {} : { createProvider }),
           ...(options.clock === undefined ? {} : { clock: options.clock }),
         })
         observedRequestPaths.add(metrics.requestPath.seam)
-        for (const model of metrics.requestPath.reportedModels) reportedModels.add(model)
+        for (const reported of metrics.requestPath.reportedModels) reportedModels.add(reported)
         billingBasis ??= metrics.requestPath.billingBasis
         runs.push(metrics)
       }
@@ -688,11 +784,12 @@ export async function buildBenchmarkRecord(
     ticket: 'WAVE-C-T10',
     generatedAt: now().toISOString(),
     model: {
-      kind: 'scripted-deterministic',
-      id: SCRIPTED_MODEL_ID,
-      provider: BENCHMARK_PROVIDER_ID,
+      kind: mode === 'live' ? 'live-model' : 'scripted-deterministic',
+      id: model,
+      provider: providerId,
       requestPath: observedRequestPathOf(observedRequestPaths),
-      isDeepSeek: false,
+      isDeepSeek: mode === 'live',
+      providerMode: mode,
       reportedModel: reportedModels.size === 1 ? [...reportedModels][0] ?? null : null,
       reportedModels: Object.freeze([...reportedModels]),
       billingBasis,
@@ -700,16 +797,25 @@ export async function buildBenchmarkRecord(
         pattern: PROVIDER_TOOL_NAME_PATTERN.source,
         table: BENCHMARK_TOOL_NAME_TABLE,
       }),
-      disclosure:
-        'Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime '
-        + '(provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, '
-        + 'BlockAssembler), with a local no-network provider standing in for DeepSeek. '
-        + 'The dsh-agent-loop package is not installed in this repository, so the '
-        + 'step/turn driver is a documented stand-in for it. Token counts and moves are '
-        + 'scripted synthetic values, never DeepSeek usage; latency is local harness '
-        + 'wall-clock. The reported model is the local adapter envelope value, not a '
-        + 'live DeepSeek response. These numbers cannot calibrate production token caps; '
-        + 'a real DeepSeek run still needs owner approval, credentials, and a real price schedule.',
+      disclosure: mode === 'live'
+        ? 'Live mode: requests left through the real pinned @deepseek-ai/dsh-llm '
+          + 'LlmRuntime (provider registry, prepareCall, llm/stream waterfall, '
+          + 'LlmAdapter.stream, BlockAssembler) to the configured BENCHMARK_BASE_URL, '
+          + 'using the explicit price schedule from BENCHMARK_PRICING_JSON. Token '
+          + 'counts, latency and moves come from the provider response and the real '
+          + 'go.* registry. The dsh-agent-loop package is not installed in this '
+          + 'repository, so the step/turn driver is a documented stand-in for it. '
+          + 'Costs are reported in USD and capped in CNY at the recorded usdToCnyRate. '
+          + 'No credential or API key is recorded in this file.'
+        : 'Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime '
+          + '(provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, '
+          + 'BlockAssembler), with a local no-network provider standing in for DeepSeek. '
+          + 'The dsh-agent-loop package is not installed in this repository, so the '
+          + 'step/turn driver is a documented stand-in for it. Token counts and moves are '
+          + 'scripted synthetic values, never DeepSeek usage; latency is local harness '
+          + 'wall-clock. The reported model is the local adapter envelope value, not a '
+          + 'live DeepSeek response. These numbers cannot calibrate production token caps; '
+          + 'a real DeepSeek run still needs owner approval, credentials, and a real price schedule.',
     },
     budgetUnderTest: {
       ...budget,

@@ -115,12 +115,12 @@ the session and is recorded as `budget_stop` in the run metrics and in
 | Total provider requests | 120 | checked before dispatch (8 classes x 3 runs x 4 steps = 96, plus headroom) |
 | Input tokens per request | 8000 | pre-flight estimate and reported usage |
 | Output tokens per request | 4000 | request clamped, reported usage re-checked |
-| Estimated session cost | $1.00 | projected before dispatch and accumulated after |
+| Estimated session cost | ¥6.66 at ¥7.1/USD (≈$0.94) | projected in CNY before dispatch and accumulated after; USD estimate and the rate are recorded |
 | Automatic retries | forbidden | adapter policy `maxRetries: 0`; a repeated step request stops |
 | Search / fetch tools | forbidden | request tool list and every streamed tool call |
 
 Observed on the regenerated record (placeholder price schedule, not a DeepSeek
-quote): 54 requests, estimated `$0.039681`, zero stops. The `budget-gate` test
+quote): 54 requests, estimated `$0.039681` (¥0.2817351 at ¥7.1/USD), zero stops. The `budget-gate` test
 file proves each gate trips in isolation (max requests, input, output, cost,
 retry, search/fetch) and that the default path commits all eight classes
 without a false stop. The price schedule is a placeholder; a real run must pass
@@ -166,10 +166,27 @@ Six response/failure paths stop instead of being accepted silently:
 
 The benchmark gate now reserves the worst-case output cost (`maxTokens` plus
 the pre-flight input estimate) before dispatch and settles it against real
-usage. When no usage arrives, the reservation remains counted. Cumulative
+usage. A failed or cancelled request that produced no usage releases its
+reservation; re-entering the same step replaces the stale reservation instead
+of stacking a second one, and completing a step without a reservation is a
+`missing-reservation` budget stop. Cumulative
 requests and spend can be persisted through `BenchmarkSpendLedger` (for example
 `tests/benchmark/.state/spend.json`); a restart reloads them, and a corrupt
 ledger throws instead of resetting to zero.
+
+## Live driver (wired, not exercised)
+
+`buildBenchmarkRecord({ env: process.env })` resolves the provider mode from
+`BENCHMARK_PROVIDER`. `live` loads the five required `BENCHMARK_*` variables,
+constructs `LiveBenchmarkProvider`, registers it under `benchmark-live` with
+the configured model id, builds the gate in `live` mode with the explicit
+schedule from `BENCHMARK_PRICING_JSON`, and drives each fixture until the model
+commits a legal action or the turn step cap refuses another step. The record
+keeps the same shape and adds `model.providerMode`; token counts, latency and
+moves then come from the provider response and the real `go.*` registry.
+`tests/benchmark/run-cognition-benchmark.sh` selects the live record path when
+`BENCHMARK_PROVIDER=live`. **No live call was made in this round**; the driver
+test injects a stub `fetch`.
 
 ## Reported model and billing basis
 
@@ -186,10 +203,10 @@ documented placeholder, so no number in the record is a DeepSeek quote.
 
 1. A real "ask DeepSeek for one move" benchmark run over the same eight
    fixtures, with credentials and spend approved, to replace the synthetic token
-   accounting.
-2. The real model call still needs the published `@deepseek-ai/dsh-llm-deepseek`
-   adapter (or an equivalent `LlmAdapter` implementation) registered for a
-   real provider id, plus an approved price schedule for the cost gate.
+   accounting. The live driver is wired; only the approved variables are needed.
+2. A real run still needs an approved DeepSeek price schedule in
+   `BENCHMARK_PRICING_JSON`; the adapter reads the endpoint from
+   `BENCHMARK_BASE_URL`, and no credential is recorded.
 3. The `@deepseek-ai/dsh-agent-loop` package is not installed here; before a
    real run either add that pinned package (a dependency decision for the owner)
    or keep the documented loop stand-in and record it as such.
