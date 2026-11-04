@@ -123,5 +123,10 @@ ESCALATION_REQUIRED
 ## 偏离记录
 
 - 与模板的偏离：工作树路径用仓库相对名而非本机绝对路径（公共仓库不写本机绝对路径）。
-- 与门禁脚本的偏离：本地执行绕过了 Node 版本相等检查，其余步骤（fixture 复制、pinned 检出
-  校验、vitest 调用）相同；已在记录文档与上方“未验证”中如实说明。
+- 与门禁脚本的偏离：**已闭合**。后续在 Node v24.11.1（官方 darwin-arm64 发行包，非系统 Node 26）
+  下按门禁要求重跑 `run-agent-inject.sh`，含版本相等预检，全部通过：
+  命令 `DSH_PINNED_ROOT=<pinned checkout> PATH=<node-24.11.1>/bin:$PATH bash tests/upgrade-gates/agent-inject/run-agent-inject.sh`
+  → exit 0，`Test Files 1 passed (1)`、`Tests 8 passed (8)`，8 条 `DSH_INJECT_PROBE` 观测与本文档记录一致。
+  原“本地绕过版本检查”的说明仅适用于更早那一次运行，不再是本提交的未验证项。
+- 独立审查：由未参与实现的审查者在 detached worktree 上复跑并逐条核对，结论为该 FAIL 记录可作为
+  D-S01 的正式证据；剩余 P3 为 spec 依赖 pinned 树的 `mock-adapter.ts` 与 workflow 尚未在 CI 跑过。
