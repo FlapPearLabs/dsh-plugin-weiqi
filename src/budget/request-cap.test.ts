@@ -144,3 +144,74 @@ describe('createGoRequestTokenCap', () => {
     }
   })
 })
+
+describe('createGoRequestTokenCap with a live turn budget', () => {
+  it('caps a request at the one remaining turn token', async () => {
+    const capped = await applyCap(createGoRequestTokenCap(FIXTURE_CAP, () => 1), config(FIXTURE_OVERSIZED))
+
+    expect(capped.maxTokens).toBe(1)
+  })
+
+  it('caps a request at the remaining turn budget below the per-request cap', async () => {
+    const capped = await applyCap(
+      createGoRequestTokenCap(FIXTURE_CAP, () => 100),
+      config(FIXTURE_OVERSIZED),
+    )
+
+    expect(capped.maxTokens).toBe(100)
+  })
+
+  it('keeps the per-request cap while the turn budget exceeds it', async () => {
+    const capped = await applyCap(
+      createGoRequestTokenCap(FIXTURE_CAP, () => 400),
+      config(FIXTURE_OVERSIZED),
+    )
+
+    expect(capped.maxTokens).toBe(FIXTURE_CAP)
+  })
+
+  it('returns a zero cap once the turn budget is exhausted', async () => {
+    const capped = await applyCap(
+      createGoRequestTokenCap(FIXTURE_CAP, () => 0),
+      config(FIXTURE_OVERSIZED),
+    )
+
+    expect(capped.maxTokens).toBe(0)
+  })
+
+  it('reads the remaining budget for every request instead of caching the first value', async () => {
+    let remaining = FIXTURE_CAP + 100
+    const listener = createGoRequestTokenCap(FIXTURE_CAP, () => remaining)
+
+    const first = await applyCap(listener, config(FIXTURE_OVERSIZED))
+    remaining = 64
+    const second = await applyCap(listener, config(FIXTURE_OVERSIZED))
+
+    expect(first.maxTokens).toBe(FIXTURE_CAP)
+    expect(second.maxTokens).toBe(64)
+  })
+
+  it('falls back to the effective cap for a NaN or negative upstream maxTokens', async () => {
+    for (const maxTokens of [Number.NaN, -1]) {
+      const absolute = await applyCap(createGoRequestTokenCap(FIXTURE_CAP), config(maxTokens))
+      const budgeted = await applyCap(
+        createGoRequestTokenCap(FIXTURE_CAP, () => 100),
+        config(maxTokens),
+      )
+
+      expect(absolute.maxTokens).toBe(FIXTURE_CAP)
+      expect(budgeted.maxTokens).toBe(100)
+    }
+  })
+
+  it('fails closed when the remaining budget reads as NaN or negative', async () => {
+    for (const remaining of [Number.NaN, -1]) {
+      const capped = await applyCap(
+        createGoRequestTokenCap(FIXTURE_CAP, () => remaining),
+        config(FIXTURE_OVERSIZED),
+      )
+
+      expect(capped.maxTokens).toBe(0)
+    }
+  })
+})

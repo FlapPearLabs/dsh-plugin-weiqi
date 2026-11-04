@@ -81,6 +81,14 @@ async function captureUsage(run: () => unknown): Promise<GoTurnUsageError> {
   throw new Error('expected GoTurnUsageError')
 }
 
+function resolvedRequest(maxTokens: number): {
+  provider: string
+  model: string
+  maxTokens: number
+} {
+  return { provider: 'deepseek-official', model: 'deepseek-v4-flash', maxTokens }
+}
+
 describe('createGoTurnEnforcement per-request cap', () => {
   it('applies the budget per-request cap through the verified request seam', async () => {
     const enforcement = createGoTurnEnforcement(NON_PRODUCTION_BUDGET)
@@ -92,6 +100,60 @@ describe('createGoTurnEnforcement per-request cap', () => {
     }))
 
     expect(capped.maxTokens).toBe(NON_PRODUCTION_BUDGET.perRequestMaxTokens)
+  })
+
+  it('caps a single request at the turn tokens still available', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 10, perRequestMaxTokens: 257, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginModelStep().complete({ tokens: 99 })
+    const capped = await enforcement.requestTokenCap({ turn: 1, step: 2 }, async () =>
+      resolvedRequest(8_192),
+    )
+
+    expect(enforcement.remainingTurnTokens()).toBe(1)
+    expect(capped.maxTokens).toBe(1)
+  })
+
+  it('caps a request at the remaining turn budget when it is below the per-request cap', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 10, perRequestMaxTokens: 257, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginModelStep().complete({ tokens: 30 })
+    const capped = await enforcement.requestTokenCap({ turn: 1, step: 2 }, async () =>
+      resolvedRequest(8_192),
+    )
+
+    expect(capped.maxTokens).toBe(70)
+  })
+
+  it('caps a request at zero once the turn token budget is exhausted', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 10, perRequestMaxTokens: 257, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginModelStep().complete({ tokens: 100 })
+    const capped = await enforcement.requestTokenCap({ turn: 1, step: 2 }, async () =>
+      resolvedRequest(8_192),
+    )
+
+    expect(enforcement.remainingTurnTokens()).toBe(0)
+    expect(capped.maxTokens).toBe(0)
+  })
+
+  it('keeps the per-request cap while more turn budget remains than the request cap', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 10, perRequestMaxTokens: 257, maxTurnTokens: 100 }),
+    )
+
+    const capped = await enforcement.requestTokenCap({ turn: 1, step: 1 }, async () =>
+      resolvedRequest(8_192),
+    )
+
+    expect(enforcement.remainingTurnTokens()).toBe(100)
+    expect(capped.maxTokens).toBe(100)
   })
 })
 
@@ -379,6 +441,42 @@ describe('createGoTurnEnforcement post-move no-analysis-loop', () => {
         gameTerminal: true,
       })
     }
+  })
+})
+
+describe('createGoTurnEnforcement total turn exhaustion', () => {
+  for (const action of ANALYSIS_ACTIONS) {
+    it(`denies ${action} once the turn token budget is exhausted`, async () => {
+      const enforcement = createGoTurnEnforcement(
+        budgetWith({ maxModelSteps: 5, maxInspectCalls: 5, maxTryMoves: 5, maxTurnTokens: 100 }),
+      )
+
+      enforcement.beginModelStep().complete({ tokens: 100 })
+
+      expect(enforcement.remainingTurnTokens()).toBe(0)
+      await expect(captureExhaustion(() => runAction(enforcement, action))).resolves.toMatchObject({
+        counter: 'maxTurnTokens',
+        limit: 100,
+        used: 100,
+      })
+    })
+  }
+
+  it('still admits every analysis action while one turn token remains', () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 5, maxInspectCalls: 5, maxTryMoves: 5, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginModelStep().complete({ tokens: 99 })
+    for (const action of ANALYSIS_ACTIONS) runAction(enforcement, action)
+
+    expect(enforcement.snapshot()).toMatchObject({
+      modelSteps: 2,
+      inspectCalls: 1,
+      tryMoves: 1,
+      deepThinkRequests: 1,
+      turnTokens: 99,
+    })
   })
 })
 
