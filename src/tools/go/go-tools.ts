@@ -15,7 +15,10 @@
  * - `go.request_deep_think` grants exactly one additional model step per turn;
  *   it never raises the per-request token cap or the overall turn ceiling.
  */
-import type { GoTurnEnforcement } from '../../budget/enforcement.js'
+import {
+  GoTurnAnalysisEndedError,
+  type GoTurnEnforcement,
+} from '../../budget/enforcement.js'
 import type { GameNotice } from '../../contracts/bridge.js'
 import type { GameState, GoRulesPort, Player } from '../../contracts/rules.js'
 import type { GoToolPath } from '../../preset/go-preset.js'
@@ -76,6 +79,17 @@ function parameters(
   })
 }
 
+/**
+ * Refuse a second authoritative action before the rules port is touched
+ * (Spec §24). A terminal resignation keeps flowing to the port so a repeated
+ * `go.resign` still reports the port's `game-over` rejection.
+ */
+function assertCommitOpen(enforcement: GoTurnEnforcement): void {
+  const { committedAction, gameTerminal } = enforcement.snapshot()
+  if (committedAction === undefined || gameTerminal) return
+  throw new GoTurnAnalysisEndedError('commit', committedAction, gameTerminal)
+}
+
 function runState(args: unknown, runtime: GoToolRuntime): GoStateResult {
   const toolPath = 'go.state'
   const record = readArguments(toolPath, args, ['gameId'])
@@ -128,6 +142,7 @@ function runPlay(args: unknown, runtime: GoToolRuntime): GoPlayResult {
   const gameId = readGameId(toolPath, record)
   const point = readPoint(toolPath, record.point, 'arguments.point')
 
+  assertCommitOpen(runtime.enforcement)
   const result = runtime.port.play(gameId, GO_LANE_PLAYER, point)
   if (!result.ok) {
     return { ok: false, reason: result.reason, state: result.state }
@@ -147,6 +162,7 @@ function runPass(args: unknown, runtime: GoToolRuntime): GoPassResult {
   const record = readArguments(toolPath, args, ['gameId'])
   const gameId = readGameId(toolPath, record)
 
+  assertCommitOpen(runtime.enforcement)
   const result = runtime.port.pass(gameId, GO_LANE_PLAYER)
   if (!result.ok) {
     return { ok: false, reason: result.reason, state: result.state }
@@ -165,6 +181,7 @@ function runResign(args: unknown, runtime: GoToolRuntime): GoResignResult {
   const record = readArguments(toolPath, args, ['gameId'])
   const gameId = readGameId(toolPath, record)
 
+  assertCommitOpen(runtime.enforcement)
   const result = runtime.port.resign(gameId, GO_LANE_PLAYER)
   if (!result.ok) {
     return { ok: false, reason: result.reason, state: result.state }
