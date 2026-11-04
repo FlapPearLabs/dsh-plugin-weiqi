@@ -12,7 +12,10 @@
 - 送审 HEAD（r2）：`8a2247cb2b0170569db31a12f5bcf45df1e72647`（14 files / 135 tests）
 - 对抗审查 r2 红测试提交：`11f787f502a58ce4267fd04f46258f97252a4f13`
 - 对抗审查 r2 修复提交：`483a1157cf73bd163ed00d9eb25fdc4778192fa5`
-- 状态：r1、r2 的 P1/P2/P3 均已处置，本地 `pnpm verify` 通过（14 files / **140 tests**）；**未推送、未开 PR、未合并**
+- 送审 HEAD（r3）：`51c57023ca5dae509d7b45a40463f5e45da8c4a2`（14 files / 140 tests）
+- 对抗审查 r3 红测试提交：`c0f06ad03b0ad1faf7569ae61a815b96d0d6a347`（12 failed / 135 passed，断言级）
+- 对抗审查 r3 修复提交：`b0f6589cdd6d1bbc394185f6855a29e104e4493f`
+- 状态：r1、r2、r3 的 P0/P1/P2/P3 均已处置，本地 `pnpm verify` 通过（14 files / **148 tests**）；**未推送、未开 PR、未合并**
 
 ## 做了什么
 
@@ -22,7 +25,7 @@
   - `GO_PRESET_ID = 'companion-go-native-only'`，对应 DSH 会话头 `agentPreset` 的持久化身份；
   - `presentation: 'native-only'`，`capabilityKinds: ['model-native']`；
   - 显式禁止 `code-mode` / `bash` / `python` / `web` / `subagent` / `generic-mcp` / `external-solver` / `general-execution`；
-  - 工具路径前缀 `go.` / `companion.`（Spec §20 最终 8 + 2 面；Phase A 只注册 `go.*`）；
+  - 工具路径前缀 `go.` / `companion.`（首轮；r3 P2-1 已改为 Phase A 只放行 `go.`）；
   - preset 及其数组全部 `Object.freeze`。
 - 新增 `src/runtime/go-capability-guard.ts`：执行期能力守卫（首轮版本）。
 - `src/runtime/index.ts` 导出 preset 与 guard 的公开 API。
@@ -66,15 +69,63 @@
 | P2 | `goCapabilityGuard` 无复位，`go.shared-scope` 会污染后续套件 | 已修复：`clearForTest()` + `resetGoCapabilityGuardForTest()`，共享 scope 用例 `afterEach` 复位 | "can be reset for tests so one suite never leaks into the next" |
 | P3 | 路径规则只查前缀，未说明细粒度白名单归属 | 已记录：`GO_TOOL_PATH_PREFIXES` 注释 + 本文件"已知问题"，不替 C-T01 做决定 | 注释与本节 |
 
+### r3 修复（`c0f06ad` + `b0f6589`）
+
+- **P1-1 Go 泳道真正组合作用域**：`src/index.ts` 的 go 泳道现在同时传 `meta.agentPreset` 和 `setup: composeGoLaneScope`；`composeGoLaneScope(agentCtx)` 通过 `Context.provide()` 把执行守卫绑定为该 agent 上下文里的 `goCapabilities` 服务，Go 工具边界执行时经 `GoCapabilityGuard.execute()` 获得授权。`agentPreset` 不再是一个单独写入的字符串。
+- **P1-2 关闭任意路径铸造**：`GO_TOOL_PATHS` 钉死 Spec §20 Phase A 的 8 条 `go.*`；`nativeGoCapability()` 只接受这 8 条（`fs.read`/`companion.handoff` → `tool-path`，`go.arbitrary`/`go.exec` → `not-in-surface`），`register()` 对声明路径同样先过前缀再过硬白名单，`execute()` 也重新判定；`go.exec` 在铸造、注册、执行、直接边界断言、组合作用域五个入口全部被拒。
+- **P2-1 Phase A 只放行 `go.`**：`GO_TOOL_PATH_PREFIXES = ['go.']`，注释写明 Phase B 才加入 `companion.*`。
+- **P2-2 测试缝退出 barrel**：`src/runtime/index.ts` 不再导出 `goCapabilityGuard` / `resetGoCapabilityGuardForTest`；生产组合根用 `resolveGoCapabilityGuard()`。
+- **P2-3 标题改成真实场景**：两条标题改为“注册期拒绝 + 执行期回放同一原因”。
+- **P3 非字符串路径**：铸造、注册、执行三个入口统一抛 `ForbiddenGoCapabilityError`（`invalid-tool-path`）。
+
+## r3 审查发现与处置
+
+| 编号 | 发现 | 处置 | 证据 |
+|---|---|---|---|
+| P1-1 | preset 只有元数据，没有 `setup` 组合，守卫无生产调用点 | 已修复：go 泳道传 `setup: composeGoLaneScope`，把守卫绑成 agent 作用域的 `goCapabilities` 服务 | `c0f06ad` 红（`composeGoLaneScope` 不存在、Go 无 setup、scope 未提供）；`b0f6589` 后通过；变异 M3/M4 分别 3/2 条失败 |
+| P1-2 | 公开铸造入口可把 shell 能力铸成 `go.exec` 并执行 | 已修复：精确 8 条路径白名单，`go.exec` 五个入口全拒 | before/after 探针见下；变异 M1/M2 各 2 条失败 |
+| P2-1 | Phase A 放行 `companion.*` | 已修复：前缀改为 `['go.']`，Phase B 注释 | "declares a native-only capability realm" + 策略纯函数用例 |
+| P2-2 | 测试缝在公开 barrel | 已修复：barrel 移除两个导出 | "keeps the test-only reset seam out of the public barrel"；变异 M5 1 条失败 |
+| P2-3 | 标题声称已注册，实际注册必抛 | 已修复：标题与断言都改为注册期拒绝 | 两条重命名用例 |
+| P3 | 非字符串 `toolPath` 抛 TypeError | 已修复：统一 `invalid-tool-path` | "refuses a non-string tool path with a deterministic reason" |
+
+### r3 before / after 探针
+
+before（detached `51c5702` 临时工作树，重新构建 `lib/`）：
+
+```text
+$ node probe-before.mjs
+EXECUTED: pwned-through-go-scope
+```
+
+after（`b0f6589` 构建的 `lib/`，同一探针 + 组合作用域）：
+
+```text
+$ node probe-after.mjs
+REFUSED: ForbiddenGoCapabilityError | reason=not-in-surface | path=go.exec
+scope preset= companion-go-native-only | paths= 8
+SCOPE REFUSED: ForbiddenGoCapabilityError | reason=not-in-surface
+surface execute: state-ok
+```
+
+## `setup` 到底支持什么（file:line）
+
+- `CreateAgentOptions.setup?: AgentSetup`（`node_modules/@deepseek-ai/dsh-agent/lib/types/index.d.ts:105-118`）：文档原文为 creation-time composition of the agent's scoped world，工厂在发布 session/agent 之前 await 它，可注册 scoped tools、prompt sections、`restrict()`、listener、子插件；抛错即回滚，不发布任一 id。
+- `AgentRegistry.create(options: CreateAgentOptions)`（同文件 `:288`）把 options 原样交给工厂：`node_modules/@deepseek-ai/dsh-agent/lib/index.js:543-547` 的 `Reflect.apply(target.createAgent, receiver, [ownerCtx, options])`。
+- 因此 `setup` 是 pinned 依赖面里真实存在的组合缝；本票在其中用 `Context.provide()`（`node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts:34-43`）把守卫注册成 agent 作用域的服务，实测 `provide`/`get` 在同一 Context 上生效。
+- **做不到的部分（如实说明）**：`restrict()` 只出现在上述文档散文里（`index.d.ts:107`），pinned 包中没有声明（`grep -rn restrict node_modules/@deepseek-ai` 只命中 cordis reflect 里无关的 "restricts notification"）；也没有工具注册/执行服务（`@deepseek-ai/dsh-tools` 未安装，已装的只有 cordis / dsh-agent / dsh-llm / dsh-session），所以**无法**在 `setup` 里挂“每次工具执行前”的钩子。本票组合的是作用域与守卫绑定，八个工具实现与逐工具接线属 C-T02。
+- `@deepseek-ai/dsh-agent-loop`（真实工厂）不在依赖面内，`src/index.test.ts` 的 `laneFactory` 是替身：它在真实 `CordisContext` 上 await `setup`，再构造真实 `Session.create` 头；测试注释已写明这是单元级证据。
+
 ## 真实 DSH API 与仓库自有守卫的原因
 
 在 pinned 依赖面（`@deepseek-ai/cordis@4.0.1`、`dsh-agent@0.1.1-rc.2`、`dsh-llm@0.1.1-rc.2`、`dsh-session@0.1.1-rc.2`）中实际核查：
 
 - 唯一的 preset 相关 API 是 `CreateAgentOptions.meta.agentPreset?: string` 与 `SessionHeader.agentPreset?: string`，语义是"该 session 的 agent 由哪个 preset 组合而来"，是持久化元数据，不是能力策略；
-- 不存在 `dsh-agent-presets` 包、`restrict()`、`scopeOf()`、工具注册/执行服务或任何 pre-execution policy 钩子；
+- 组合缝是 `CreateAgentOptions.setup`（r3 P1-1 之前没有用上，现已接上，见上一节）；
+- 不存在 `dsh-agent-presets` 包、`restrict()` 声明、工具注册/执行服务或任何 pre-execution policy 钩子；
 - 因此按任务要求实现"仓库自有声明 + 守卫"，不 patch DSH core，也不新增依赖。
 
-`GO_PRESET_ID` 现在已由 `apply()` 写入真实 Go session 的 durable header（`meta.agentPreset`）；把守卫接到真实工具执行边界仍属 C-T02。
+`GO_PRESET_ID` 现在与 `setup: composeGoLaneScope` 一起写入 Go 泳道的创建调用：harness 的 `agentPreset` 描述的就是这次真实发生的组合（守卫已绑进 agent 作用域）。八个工具的执行接线仍属 C-T02。
 
 ## 红 / 绿 / 回归
 
@@ -94,6 +145,16 @@
 | 变异检查（r2） | 删除 `assertGoCapabilityAllowed()` 里的 `tool-path` 策略块 | 2 failed / 22 passed | 未提交 |
 | 变异检查（r2） | 删除 `register()` 里隔离表写入 | 3 failed / 21 passed | 未提交 |
 | 变异检查（r2） | 删除 barrel 的 `nativeGoCapability` 再导出 | 2 failed / 22 passed | 未提交 |
+| r3 送审基准 | `pnpm verify`（评审复跑） | 14 files / 140 tests passed | `51c5702` |
+| r3 红 | `pnpm run typecheck`（exit 0）+ `npx vitest run` | 14 files，**12 failed / 135 passed**（147 总计），全部断言级、无模块链接失败 | `c0f06ad` |
+| r3 before 探针 | detached `51c5702` 临时工作树重新 build + `node probe-before.mjs` | `EXECUTED: pwned-through-go-scope` | `51c5702` |
+| r3 after 探针 | `node probe-after.mjs`（`b0f6589` 的 `lib/`） | `REFUSED: …reason=not-in-surface`，组合作用域同样拒绝，`go.state` 仍可执行 | `b0f6589` |
+| r3 绿 | `pnpm verify` | **exit 0**；14 files / **148 tests passed**；typecheck、clean、build 全通过 | `b0f6589` |
+| 变异检查（r3 M1） | 删铸造期的硬白名单 | 2 failed / 29 passed | 未提交，恢复后 `git status` 干净 |
+| 变异检查（r3 M2） | 删 `execute()` 的路径重判 | 2 failed / 29 passed | 未提交 |
+| 变异检查（r3 M3） | `composeGoLaneScope` 不 `provide` | 3 failed / 34 passed（守卫 + index 两个文件） | 未提交 |
+| 变异检查（r3 M4） | `src/index.ts` 不传 `setup` | 2 failed / 4 passed | 未提交 |
+| 变异检查（r3 M5） | 把两个测试缝加回 barrel | 1 failed / 30 passed | 未提交 |
 
 ## 覆盖的验收点
 
@@ -101,39 +162,42 @@
 - 伪造 `kind: 'model-native'` 的普通对象：注册即抛 `ForgedGoCapabilityError`，之后执行该路径仍被 `forged-descriptor` 拒绝（Spec §19"accidentally registered or aliased ... must still fail at execution"）；
 - 8 类禁止能力逐一遍历：注册被拒 + 执行被拒 + `run` 从未调用；
 - 未分类的新 kind 失败关闭；
-- 已铸造的 `fs.read` 描述符在执行期被 `tool-path` 拒绝（执行期策略仍在）；
+- 已铸造的 `fs.read` 描述符在执行期被 `tool-path` 拒绝（执行期策略仍在）；→ r3 后改为：铸造期就拒绝 `fs.read`，执行期对未注册的 `fs.read`/`go.exec` 仍给出策略原因；
 - 未注册路径 `unregistered`；
 - 隔离表语义：伪造路径保持被拒，直到用合法铸造的描述符替换；
 - 铸造描述符冻结，运行期改写 `kind` 抛 `TypeError`；
 - `assertGoCapabilityAllowed()` 与守卫共用同一 provenance 铸造检查和同一 `tool-path` 策略（kind 策略在注册边界执行，不在执行期重复成不可达分支）；
 - 构造函数拒绝加宽 preset，接受冻结 `GO_PRESET`；
 - 单例：两个消费者解析到同一 guard，注册可见；共享 scope 用例 `afterEach` 复位，复位后该路径回到 `unregistered`；
-- 运行时 barrel：9 个 API 全部再导出且与守卫模块是同一绑定，下游只经 barrel 就能铸造、解析并执行；
-- 冻结策略可直接调用并覆盖每个分支：`model-native` 放行、8 类禁止 kind → `forbidden-kind`、未分类 → `unknown-kind`、`go.`/`companion.` 放行、`fs.read`/`gonzo.state` → `tool-path`；
+- 运行时 barrel：10 个 API 全部再导出且与守卫模块是同一绑定，下游只经 barrel 就能铸造、解析并执行；测试缝（`goCapabilityGuard` / `resetGoCapabilityGuardForTest`）不在 barrel 上；
+- 冻结策略可直接调用并覆盖每个分支：`model-native` 放行、8 类禁止 kind → `forbidden-kind`、未分类 → `unknown-kind`、`go.*` 放行、`companion.*`/`fs.read`/`gonzo.state` → `tool-path`；
+- r3：`GO_TOOL_PATHS` 精确等于 Spec §20 的 8 条；`go.exec` 在铸造/注册/执行/`assertGoCapabilityAllowed`/组合作用域五个入口全部被拒，`run` 从未调用；非字符串路径 → `invalid-tool-path`；
+- r3：`composeGoLaneScope(new Context())` 后 `ctx.get('goCapabilities')` 的 `presetId`、`toolPaths` 正确，`go.state` 可执行、`go.exec` 被拒；`apply()` 只给 Go 泳道传 `setup`。
 - 声明禁止/未分类 kind 的注册被策略拒绝（`ForbiddenGoCapabilityError`），隔离路径在执行期回放同一原因；
 - `apply()`：Work 无 meta，Go 带 `meta.agentPreset`，且真实 `SessionHeader.agentPreset` 只在 Go 上出现。
 
 ## 改动文件
 
-- `src/preset/go-preset.ts`（新增）
-- `src/runtime/go-capability-guard.ts`（新增，r1 后重写 provenance 模型）
-- `src/runtime/go-capability-guard.test.ts`（新增；r1 后 20 个测试，r2 后 24 个）
-- `src/runtime/index.ts`（仅导出；r2 P1-1 补齐铸造工厂、单例、`ForgedGoCapabilityError`、重置接缝的再导出）
-- `src/index.ts`（r1 P1-2：go 泳道 `meta.agentPreset`）
-- `src/index.test.ts`（r1 P1-2：严格实参断言 + 真实 session header 断言）
+- `src/preset/go-preset.ts`（新增；r3 增加 `GO_TOOL_PATHS` / `GoToolPath` / `toolPaths`，前缀收窄为 `go.`）
+- `src/runtime/go-capability-guard.ts`（新增，r1 后重写 provenance 模型；r3 精确白名单 + `composeGoLaneScope`）
+- `src/runtime/go-capability-guard.test.ts`（新增；r1 后 20 个测试，r2 后 24 个，r3 后 31 个）
+- `src/runtime/index.ts`（仅导出；r2 P1-1 补齐再导出，r3 移除测试缝并增加组合 API）
+- `src/index.ts`（r1 P1-2：go 泳道 `meta.agentPreset`；r3：与 `setup` 同传）
+- `src/index.test.ts`（r1 P1-2：严格实参断言 + 真实 session header 断言；r3：替身工厂执行 `setup` 并断言作用域）
 - `handoffs/WAVE-C-T04.md`
 
 ## 未验证
 
 - 本机 Node 为 `v26.10.0`，仓库 engines 要求 `>=24.11.1 <25`；`pnpm verify` 只有 `Unsupported engine` 警告。**未在 CI 的 Node `24.11.1` 下复跑**。
-- 守卫尚未接入真实工具执行：pinned 依赖面没有工具注册/执行 API，实际接线属于 C-T02（工具注册）与 C-T05（anti-cheat 套件）。
-- 守卫的公开面（铸造、单例、两个错误类型、策略纯函数）现已从 `src/runtime/index.ts` 再导出（r2 P1-1 已修正上一版交接里"该文件不在改动面内"的错误说法）；组合根应使用 `resolveGoCapabilityGuard()`，不要自己 `new`。
-- `resetGoCapabilityGuardForTest()` 是测试接缝，生产代码不应调用；它挂在公开类方法 `clearForTest()` 上，属于本轮评审建议的最小暴露。
+- 守卫尚未接入单个工具的执行点：pinned 依赖面没有工具注册/执行 API，实际接线属于 C-T02（工具注册）与 C-T05（anti-cheat 套件）。本票提供的是 `goCapabilities` 作用域服务与执行守卫。
+- 守卫的公开面（铸造、单例、两个错误类型、组合 API）从 `src/runtime/index.ts` 再导出；组合根应使用 `resolveGoCapabilityGuard()`，不要自己 `new`。
+- `resetGoCapabilityGuardForTest()` / `goCapabilityGuard` 仍从守卫模块导出（供包内测试），但**不在** `src/runtime/index.ts` barrel 上（r3 P2-2）；生产代码不应调用。
 - 未推送、未开 PR、未合并，无 CI 证据。
 
 ## 已知问题 / 需决定
 
-- **P3-2（保持）**：`GO_TOOL_PATH_PREFIXES` 同时允许 `go.` 与 `companion.`，这是 Spec §20 的最终 8 + 2 面；Phase A 只注册 `go.*`，C-T01 的注册表策略单独限制为 `go.*`。若审查认为 Phase A preset 只应允许 `go.`，需要改 preset 常量与一条测试。
-- **P3（r2，已记录不改行为）**：路径规则只做前缀准入，`go.arbitrary` 能通过；细粒度 8 + 2 工具白名单归 C-T01 注册表。该边界已写进 `GO_TOOL_PATH_PREFIXES` 注释与本文件。
+- **P3-2（r3 已决定）**：Phase A 的 `GO_TOOL_PATH_PREFIXES` 只放行 `go.`；`companion.*` 留在 Phase B 加，这一点写进了 `go-preset.ts` 注释，不再依赖 C-T01 单独限制。
+- **P3（r2，r3 收窄）**：路径规则现在分两层：先前缀（`tool-path`），再 Spec §20 Phase A 精确 8 条白名单（`not-in-surface`）。`go.arbitrary` 已不允许铸造。
+- **残余（需 C-T02 守住）**：白名单约束的是**路径**，不约束 `run` 的语义。一个合法路径（例如 `go.state`）可以配上任意 `run`，守卫只能保证“只有经守卫登记的 8 条路径能执行”，不能证明该函数的实现是 Go 工具。八个工具的实现在 C-T02，C-T05 应把“工具实现内部调用 shell”作为 distrust 用例。
 - 守卫是执行权入口，但 JS 无法阻止调用方绕过 `execute()` 直接调用某个已铸造描述符的 `run`。C-T02 的所有 Go 工具执行必须经 `GoCapabilityGuard.execute()`，或在自己的执行边界先调用 `assertGoCapabilityAllowed()`；C-T05 应以"绕过守卫直接调用"作为反向用例之一。
 - `GoCapabilityGuard` 的构造函数仍然公开（隔离测试需要独立实例）；组合根必须用 `resolveGoCapabilityGuard()`，不要自己 `new`。
