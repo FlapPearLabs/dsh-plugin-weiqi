@@ -5,15 +5,34 @@ import {
   type ContentBlock,
 } from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Lane, PendingFocusIntent, RuntimeFocusState } from '../contracts/focus.js'
 import * as admissionModule from './admission.js'
 import {
   admitInactiveLaneUserMessage,
-  type FocusIntentArbitration,
   type InactiveLaneAdmission,
+  type InactiveLaneAdmissionResult,
 } from './admission.js'
-import { createRuntimeFocusState, submitFocusIntent } from './focus.js'
+import { createRuntimeFocusState, type FocusIntentTransition } from './focus.js'
+
+/**
+ * The public admission API has no arbitration override (r3 P2-1), so the only
+ * way to observe the A-T02 call is to spy on the real `submitFocusIntent`
+ * binding. The spy delegates to the actual implementation, keeping the
+ * arbitration semantics real in every case below.
+ */
+const focusSpy = vi.hoisted(() => ({
+  submitFocusIntent: vi.fn<
+    (state: RuntimeFocusState, incoming: PendingFocusIntent) => FocusIntentTransition
+  >(),
+}))
+
+vi.mock('./focus.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('./focus.js')>()
+  focusSpy.submitFocusIntent.mockImplementation((state, incoming) =>
+    actual.submitFocusIntent(state, incoming))
+  return { ...actual, submitFocusIntent: focusSpy.submitFocusIntent }
+})
 
 function userMessage(id: string, content: ContentBlock[]): UserMessage {
   const message = {
@@ -41,18 +60,44 @@ function admissionFor(
   return { target, sourceSessionId, message }
 }
 
-function spyArbitration(): FocusIntentArbitration & ReturnType<typeof vi.fn> {
-  return vi.fn((state: RuntimeFocusState, incoming: PendingFocusIntent) =>
-    submitFocusIntent(state, incoming))
+function importSpecifiersOf(source: string): string[] {
+  const pattern = /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g
+  return [...source.matchAll(pattern)].map(match => match[1] ?? '')
 }
 
 function submitted(
-  result: ReturnType<typeof admitInactiveLaneUserMessage>,
-): Extract<ReturnType<typeof admitInactiveLaneUserMessage>, { kind: 'submitted' }> {
+  result: InactiveLaneAdmissionResult,
+): Extract<InactiveLaneAdmissionResult, { kind: 'submitted' }> {
   if (result.kind !== 'submitted') {
     throw new Error(`expected a submitted admission, got ${JSON.stringify(result)}`)
   }
   return result
+}
+
+function retained(
+  result: InactiveLaneAdmissionResult,
+): Extract<InactiveLaneAdmissionResult, { kind: 'retained' }> {
+  if (result.kind !== 'retained') {
+    throw new Error(`expected a retained admission, got ${JSON.stringify(result)}`)
+  }
+  return result
+}
+
+/**
+ * Compile-time proof that the public API is exactly `(state, admission)`: a
+ * third arbitration argument must not typecheck (r3 P2-1). The call is never
+ * executed; `pnpm typecheck` reports TS2578 here if the override comes back.
+ */
+function rejectsInjectedArbitration(): void {
+  admitInactiveLaneUserMessage(
+    createRuntimeFocusState('work'),
+    admissionFor(textMessage('注入仲裁')),
+    // @ts-expect-error - the public API exposes no arbitration override.
+    (): FocusIntentTransition => ({
+      state: createRuntimeFocusState('work'),
+      disposition: 'admitted',
+    }),
+  )
 }
 
 function messageWithSource(
@@ -71,21 +116,20 @@ function messageWithSource(
 }
 
 describe('inactive-lane user message admission', () => {
+  beforeEach(() => {
+    focusSpy.submitFocusIntent.mockClear()
+  })
+
   it('creates exactly one user-command intent carrying the exact target and message', () => {
     const message = textMessage('去下一手')
-    const arbitrate = spyArbitration()
     const initial = createRuntimeFocusState('work')
 
     const result = submitted(
-      admitInactiveLaneUserMessage(
-        initial,
-        admissionFor(message, 'go', 'companion-go-go'),
-        arbitrate,
-      ),
+      admitInactiveLaneUserMessage(initial, admissionFor(message, 'go', 'companion-go-go')),
     )
 
-    expect(arbitrate).toHaveBeenCalledTimes(1)
-    const incoming = arbitrate.mock.calls[0]![1]
+    expect(focusSpy.submitFocusIntent).toHaveBeenCalledTimes(1)
+    const incoming = focusSpy.submitFocusIntent.mock.calls[0]![1]
 
     expect(incoming.target).toBe('go')
     expect(incoming.origin).toBe('user_command')
@@ -110,28 +154,52 @@ describe('inactive-lane user message admission', () => {
       admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
     )
 
+    expect(focusSpy.submitFocusIntent).toHaveBeenCalledTimes(1)
+    expect(focusSpy.submitFocusIntent.mock.calls[0]?.[1]).toBe(result.intent)
     expect(result.disposition).toBe('admitted')
     expect(result.state.pendingFocus).toBe(result.intent)
     expect(result.state.activeLane).toBe('work')
     expect(result.state.llmRunning).toBe(false)
   })
 
-  it('keeps the older pending user command and reports retained-existing', () => {
+  it('keeps the older pending user command and reports a distinct retained outcome', () => {
     const older = textMessage('先处理这条', 'older-message')
     const newer = textMessage('再处理这条', 'newer-message')
     const first = submitted(
       admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(older)),
     )
 
-    const second = submitted(
-      admitInactiveLaneUserMessage(first.state, admissionFor(newer)),
-    )
+    const second = retained(admitInactiveLaneUserMessage(first.state, admissionFor(newer)))
 
+    // Not `submitted`: a caller that only applies `result.state` must still see
+    // that the incoming message was not admitted (Spec §5/§44).
+    expect(second.kind).toBe('retained')
     expect(second.disposition).toBe('retained-existing')
     expect(second.state.pendingFocus).toBe(first.intent)
     expect(second.state.pendingFocus?.sourceMessage?.message).toBe(older)
     expect(second.state.pendingFocus).not.toBe(second.intent)
+    // The incoming message stays on the result, so it cannot be lost silently.
     expect(second.intent).not.toBe(first.intent)
+    expect(second.intent.sourceMessage?.message).toBe(newer)
+    expect(Object.keys(second).sort()).toEqual(['disposition', 'intent', 'kind', 'state'])
+    expect(Object.isFrozen(second)).toBe(true)
+  })
+
+  it('never reports a non-admitted intent as submitted', () => {
+    const first = submitted(
+      admitInactiveLaneUserMessage(
+        createRuntimeFocusState('work'),
+        admissionFor(textMessage('第一条', 'first-message')),
+      ),
+    )
+
+    const kinds = ['第二条', '第三条'].map(text =>
+      admitInactiveLaneUserMessage(
+        first.state,
+        admissionFor(textMessage(text, `blocked-${text}`)),
+      ).kind)
+
+    expect(kinds).toEqual(['retained', 'retained'])
   })
 
   it('admits without an Agent handle and leaves the lane and run state untouched', () => {
@@ -153,11 +221,27 @@ describe('inactive-lane user message admission', () => {
     expect(initial.pendingFocus).toBeUndefined()
   })
 
+  it('scans bare, type-only and dynamic imports, not only from-clauses', () => {
+    const fixture = [
+      "import { readFile } from 'node:fs/promises'",
+      "import '@deepseek-ai/dsh-agent'",
+      "import type { Agent } from '@deepseek-ai/dsh-agent'",
+      "const late = () => import('@deepseek-ai/dsh-agent')",
+      "export { x } from './other.js'",
+    ].join('\n')
+
+    expect(importSpecifiersOf(fixture)).toEqual([
+      'node:fs/promises',
+      '@deepseek-ai/dsh-agent',
+      '@deepseek-ai/dsh-agent',
+      '@deepseek-ai/dsh-agent',
+      './other.js',
+    ])
+  })
+
   it('has no Agent dependency: no dsh-agent import and no Agent parameter', async () => {
     const source = await readFile(new URL('./admission.ts', import.meta.url), 'utf8')
-    const importSpecifiers = [...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)].map(
-      match => match[1] ?? '',
-    )
+    const importSpecifiers = importSpecifiersOf(source)
     const exported = source.slice(
       source.indexOf('export function admitInactiveLaneUserMessage'),
     )
@@ -178,12 +262,14 @@ describe('inactive-lane user message admission', () => {
 
     let state = createRuntimeFocusState('work')
     for (let round = 0; round < 3; round += 1) {
-      const result = submitted(
-        admitInactiveLaneUserMessage(
-          state,
-          admissionFor(textMessage(`第 ${round} 条`, `repeated-${round}`)),
-        ),
+      const result = admitInactiveLaneUserMessage(
+        state,
+        admissionFor(textMessage(`第 ${round} 条`, `repeated-${round}`)),
       )
+      if (result.kind === 'rejected') {
+        throw new Error(`unexpected rejection: ${result.reason}`)
+      }
+      if (round > 0) expect(result.kind).toBe('retained')
       state = result.state
       expect(Array.isArray(result.state.pendingFocus)).toBe(false)
       expect(result.state.pendingFocus === undefined ? 0 : 1).toBe(1)
@@ -196,32 +282,27 @@ describe('inactive-lane user message admission', () => {
   })
 
   it('rejects an empty message without creating or submitting an intent', () => {
-    const arbitrate = spyArbitration()
     const initial = createRuntimeFocusState('work')
 
     const result = admitInactiveLaneUserMessage(
       initial,
       admissionFor(userMessage('empty-message', [])),
-      arbitrate,
     )
 
     expect(result).toEqual({ kind: 'rejected', reason: 'empty-message' })
     expect(result).not.toHaveProperty('intent')
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
     expect(initial).toEqual(createRuntimeFocusState('work'))
   })
 
   it('rejects whitespace-only text without creating or submitting an intent', () => {
-    const arbitrate = spyArbitration()
-
     const result = admitInactiveLaneUserMessage(
       createRuntimeFocusState('work'),
       admissionFor(textMessage('   \n\t ')),
-      arbitrate,
     )
 
     expect(result).toEqual({ kind: 'rejected', reason: 'empty-message' })
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -266,17 +347,11 @@ describe('inactive-lane user message admission', () => {
       reason: 'not-user-message',
     },
   ] as const)('rejects $name without an intent', ({ request, reason }) => {
-    const arbitrate = spyArbitration()
-
-    const result = admitInactiveLaneUserMessage(
-      createRuntimeFocusState('work'),
-      request,
-      arbitrate,
-    )
+    const result = admitInactiveLaneUserMessage(createRuntimeFocusState('work'), request)
 
     expect(result).toEqual({ kind: 'rejected', reason })
     expect(result).not.toHaveProperty('intent')
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -285,18 +360,16 @@ describe('inactive-lane user message admission', () => {
   ])(
     'rejects a $target message while $activeLane is the active lane',
     ({ activeLane, target }) => {
-      const arbitrate = spyArbitration()
       const initial = createRuntimeFocusState(activeLane)
 
       const result = admitInactiveLaneUserMessage(
         initial,
         admissionFor(textMessage('当前泳道上的消息'), target),
-        arbitrate,
       )
 
       expect(result).toEqual({ kind: 'rejected', reason: 'already-active-lane' })
       expect(result).not.toHaveProperty('intent')
-      expect(arbitrate).not.toHaveBeenCalled()
+      expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
       expect(initial).toEqual(createRuntimeFocusState(activeLane))
       expect(initial.pendingFocus).toBeUndefined()
     },
@@ -310,14 +383,16 @@ describe('inactive-lane user message admission', () => {
       admissionFor(textMessage('本该在当前泳道处理', 'same-lane'), 'work'),
     )
 
-    const stateAfterSameLane = sameLane.kind === 'submitted' ? sameLane.state : initial
-    const crossLane = admitInactiveLaneUserMessage(
-      stateAfterSameLane,
-      admissionFor(textMessage('去 Go 那边', 'cross-lane'), 'go'),
+    const stateAfterSameLane = sameLane.kind === 'rejected' ? initial : sameLane.state
+    const crossLane = submitted(
+      admitInactiveLaneUserMessage(
+        stateAfterSameLane,
+        admissionFor(textMessage('去 Go 那边', 'cross-lane'), 'go'),
+      ),
     )
 
-    expect(crossLane.kind === 'submitted' ? crossLane.disposition : crossLane).toBe('admitted')
-    expect(crossLane.kind === 'submitted' ? crossLane.intent.target : undefined).toBe('go')
+    expect(crossLane.disposition).toBe('admitted')
+    expect(crossLane.intent.target).toBe('go')
     expect(sameLane).toEqual({ kind: 'rejected', reason: 'already-active-lane' })
     expect(stateAfterSameLane.pendingFocus).toBeUndefined()
   })
@@ -363,13 +438,12 @@ describe('inactive-lane user message admission', () => {
       content: [{ type: 'text', text: '尚未冻结' }],
       source: { kind: 'user' },
     } as unknown as UserMessage
-    const arbitrate = spyArbitration()
     const initial = createRuntimeFocusState('work')
 
-    const result = admitInactiveLaneUserMessage(initial, admissionFor(message), arbitrate)
+    const result = admitInactiveLaneUserMessage(initial, admissionFor(message))
 
     expect(result).toEqual({ kind: 'rejected', reason: 'mutable-message' })
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
     expect(initial.pendingFocus).toBeUndefined()
   })
 
@@ -451,17 +525,14 @@ describe('inactive-lane user message admission', () => {
       source as UserMessage['source'],
       `non-user-${source.kind}`,
     )
-    const arbitrate = spyArbitration()
-
     const result = admitInactiveLaneUserMessage(
       createRuntimeFocusState('work'),
       admissionFor(message),
-      arbitrate,
     )
 
     expect(result).toEqual({ kind: 'rejected', reason: 'not-user-message' })
     expect(result).not.toHaveProperty('intent')
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
   })
 
   it('rejects a real DSH tool-result message instead of admitting it as user intent', () => {
@@ -470,16 +541,14 @@ describe('inactive-lane user message admission', () => {
       content: [{ type: 'text', text: 'ok' }],
       isError: false,
     })
-    const arbitrate = spyArbitration()
 
     const result = admitInactiveLaneUserMessage(
       createRuntimeFocusState('work'),
       admissionFor(message),
-      arbitrate,
     )
 
     expect(result).toEqual({ kind: 'rejected', reason: 'not-user-message' })
-    expect(arbitrate).not.toHaveBeenCalled()
+    expect(focusSpy.submitFocusIntent).not.toHaveBeenCalled()
   })
 
   it('admits non-text message content that still carries user intent', () => {
