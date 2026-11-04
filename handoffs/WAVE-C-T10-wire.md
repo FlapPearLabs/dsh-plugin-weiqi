@@ -1,9 +1,12 @@
 # Handoff · WAVE-C-T10（免费部分）— benchmark 接真实 LLM 请求路径 + 费用/请求闸门
 
-- 状态：READY_FOR_REVIEW（零费用部分完成；真实 DeepSeek 标定仍待主人批准）
+- 状态：READY_FOR_REVIEW（零费用部分完成；live 驱动已接线，真实 DeepSeek 标定仍待主人批准）
 - 仓库：`FlapPearLabs/dsh-plugin-weiqi`
 - 工作树：`~/Documents/ChatGPT/dsh-plugin-weiqi-wt/task-c-t10`
 - 分支：`task/c-t10`
+- 本轮 BASE_SHA：`9652fc8`（本轮开工时的 HEAD）
+- 本轮 fix commit：`e46f4ec`（`fix(test): make the benchmark gate conservative, releasable and CNY-denominated`）
+- 本轮 feat commit：`f571c30`（`feat(test): drive the live benchmark record from an env-selected provider`）
 - 基线 BASE_SHA：`1b1e612836fd3a8528c92764701767a0f54bcf34`（`origin/main`）
 - 红测试 commit：`6bc6764`（`test: pin the DSH request path and spend/request gates`）
 - 绿实现 commit：`cbfcc38`（`feat: route the §38 benchmark through the DSH LLM request path and gate spend`）
@@ -11,6 +14,37 @@
 - 工具名映射/fail-closed commit：`e7588f0`（`fix(test): map provider-safe tool names and fail closed on bad responses`）
 - 本 handoff 与记录/摘要以 `docs:` 单独提交
 - 未 push、未开 PR
+
+## 本轮（live 驱动 + 四个残留，2026-11-04，仍零花费）
+
+对抗审查在同一 SHA 上实测后列出 1 个阻塞项和 4 个残留；本轮全部修完，仍然
+没有发起任何真实模型请求（live 测试注入 stub `fetch`）。
+
+| 项 | 修法 | 验收测试（`tests/benchmark`） |
+|---|---|---|
+| live 驱动未接 | `BenchmarkLlmProvider` 抽象；`buildBenchmarkRecord` 从 env 快照读 mode，live 时用 `LiveBenchmarkProvider` + 显式价目表，按 model 响应跑到 commit 或步数上限 | `runs all eight §38 classes through the live adapter selected by env alone` |
+| 流式工具名分片 | delta 先累积，名字完整（在映射表内）后再映射；分片 delta 不发 name，block-end 兜底 | `waits for the complete streamed tool name before mapping it` |
+| 估算低估 | CJK 1.25/单位、ASCII 0.4/单位、JSON 标点 0.5，另加 chat template 固定开销 | `estimates Chinese, mixed and dense-JSON input at or above the fixed reference usage`；`charges CJK, ASCII and JSON punctuation at or above the measured floors` |
+| 预留泄漏 | 失败/取消/无 usage 时 `releaseRequest(step)`；重复 step 替换旧预留；无预留完成 → `missing-reservation` budget_stop | `releases a failed request reservation and never counts the same step twice`；`stops with a budget_stop when a request completes without a reservation` |
+| 币种 | cap 改 **CNY 6.66**，汇率默认 **7.1**；快照同时记录 USD 估算、CNY 估算与汇率；分发前按最坏情况换算预检 | `caps spend in CNY using the recorded USD/CNY rate, before dispatch`；`records the USD estimate, the CNY cap and the rate used for the comparison` |
+
+**只改环境变量能否跑 3 局 live：能。** 设 `BENCHMARK_PROVIDER=live` 和
+`BENCHMARK_BASE_URL` / `BENCHMARK_API_KEY` / `BENCHMARK_MODEL` /
+`BENCHMARK_PRICING_JSON` 五个变量后，`tests/benchmark/run-cognition-benchmark.sh`
+直接跑 emitter（默认写 `docs/validation/COGNITION_BENCHMARK_LIVE_RECORD.json`）；
+缺任一变量 exit 2，绝不回退 scripted。本轮没有用真实变量执行过。
+
+证据：
+
+```text
+pnpm exec vitest run tests/benchmark -> 9 files, 74 tests passed
+pnpm verify -> 45 files, 542 tests passed, build exit 0
+fix commit e46f4ec 单独 stash 后 pnpm verify -> exit 0
+```
+
+六处活体变异（每处只改一处、跑对应测试、按字节复原）：流式名字立即映射、
+缺 usage 不释放预留、ASCII 权重回 0.25、CNY 预检不做换算、live 模式强制 scripted、
+重复 step 不去重——对应测试全部变红，复原后 SHA-256 与改前一致。
 
 ## 闸门加固（独立审查 4 个缺口，2026-11-04）
 
@@ -32,7 +66,7 @@
   价目表时构造即抛 `RangeError`；快照记录 `pricingSource`
   （`placeholder` | `explicit`）。scripted 模式仍可用占位价，并如实标注。
 - `maxRequests` 96 → 120（8 类 × 3 局 × 最多 4 步 = 96，加余量）；总花费仍由
-  `maxEstimatedCostUsd` 与单请求 token 上限约束。
+  `maxEstimatedCostCny`（汇率 `usdToCnyRate`）与单请求 token 上限约束。
 
 变异验证（每次只改一处、跑对应测试、随后复原）：
 
@@ -109,13 +143,16 @@ harness 已改成只调 `path.request`，自己不再持有闸门调用。`src/*
 | 未知入站工具名 | `fails closed when the model returns an unknown tool name` |
 
 行为：全部 `throw`，并把失败类型写进 `path.stats().failures`；有 `usage` 的失败
-先按真实 usage 结算再抛（花费不能因为失败而丢），无 `usage` 时保留最坏情况预留。
+先按真实 usage 结算再抛（花费不能因为失败而丢），无 `usage` 的失败释放最坏情况
+预留（本轮从“保留”改为“释放”，避免泄漏到后续 step）。
 
 ### 预留与落盘
 
-- `beginRequest` 按 `maxTokens` + 预检输入估算预留最坏费用；`costUsd + reservedCostUsd
-  + reservation > maxEstimatedCostUsd` 时在分发前停。`completeRequest` 先释放预留、
-  再按真实 usage 结算，最后复查上限。
+- `beginRequest` 按 `maxTokens` + 预检输入估算预留最坏费用，换算成 CNY 后在分发前
+  预检；重复 step 先替换旧预留，不双记。`completeRequest` 先释放预留、再按真实
+  usage 结算，最后复查上限；无预留直接记 `missing-reservation` budget_stop。
+- 失败/取消且没有 usage 时由请求路径显式 `releaseRequest(step)`；带 usage 的失败
+  仍先结算。
 - `BenchmarkSpendLedger` 在 `beginRequest`（含预留）和 `completeRequest` 后原子写盘；
   进程重启从同一文件恢复请求数/token/花费/未释放预留；损坏或负值文件直接抛错，
   不重置为 0。测试用临时目录 + 两个子进程验证跨进程累加。
@@ -181,8 +218,9 @@ fake provider。8 类 §38 场景全部在真实 provider 绑定、`llm/stream` 
 `prepareCall` 和 `BlockAssembler` 上跑通，计数与记录一致。
 
 benchmark 侧新增会话级费用/请求闸门：总请求 120、单请求输入 8000 / 输出 4000、
-预估总费用 $1.00、禁自动重试、禁 search/fetch。任一触发即停止并记录
-`budget_stop`。每个闸门都有可单独触发的测试（见“红/绿与有牙证据”）。
+预估总费用 ¥6.66（默认汇率 7.1 USD/CNY，≈$0.94）、禁自动重试、禁 search/fetch。
+任一触发即停止并记录 `budget_stop`。每个闸门都有可单独触发的测试（见“红/绿与
+有牙证据”）。
 
 `src/` 零改动；生产 `GoTurnBudget` 默认值与 `src/budget/` 语义未动；冻结物
 （TICKET_GRAPH_V1.2.1、CURRENT_IMPLEMENTATION_BASELINE、docs/spec）未动；无新增依赖。
@@ -241,7 +279,7 @@ fixture 脚本
 | `maxRequests` | 120 | 每次请求分发前（8×3×4=96 + 余量） |
 | `maxInputTokensPerRequest` | 8000 | 分发前估算 + 上报 usage 复查 |
 | `maxOutputTokensPerRequest` | 4000 | 请求 `maxTokens` clamp + 上报 usage 复查 |
-| `maxEstimatedCostUsd` | 1.00 | 分发前最坏情况预估 + 上报后累计 |
+| `maxEstimatedCostCny` | ¥6.66（汇率 `usdToCnyRate` 7.1） | 分发前最坏情况换算预检 + 上报后累计 |
 | 自动重试 | 禁止 | adapter `maxRetries: 0`；同一步重复请求记 `retries-forbidden` |
 | search/fetch | 禁止 | 请求 tools 列表 + 每条流出的 tool call |
 
@@ -324,10 +362,12 @@ requests=54  estimatedCostUsd=0.039681  stops=0
 
 ## 未验证 / 需决定
 
-1. **真实 DeepSeek run 未执行**（无凭据、未批准花费）。真实 latency、真实
-   input/output token、真实 model steps 仍缺；本记录不能作为标定结果。
-2. 真实 provider adapter `@deepseek-ai/dsh-llm-deepseek` 未安装；真实跑要么加该
-   pinned 包，要么提供等价 `LlmAdapter`。
+1. **真实 DeepSeek run 未执行**（无凭据、未批准花费）。live 驱动已接线并通过
+   stub `fetch` 验证；真实 latency、真实 input/output token、真实 model steps 仍缺，
+   本记录不能作为标定结果。
+2. 真实跑使用本仓库的 `LiveBenchmarkProvider`（等价 `LlmAdapter`），没有安装
+   `@deepseek-ai/dsh-llm-deepseek`；真实 API 的 usage 字段映射、SSE 分片和超时
+   归一化仍未在真实响应上验证。
 3. `@deepseek-ai/dsh-agent-loop` 未安装。真实跑前需主人决定：加 pinned 依赖，
    或接受当前文档化的 loop 替身。加依赖属于主人的决定（也涉及安装/联网）。
 4. 价格表是占位值；真实跑必须给出批准的 DeepSeek 价目表，并让 gate 以
