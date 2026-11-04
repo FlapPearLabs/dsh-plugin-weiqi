@@ -133,12 +133,10 @@ describe('Go execution-time capability guard', () => {
     expect(() => assertGoCapabilityAllowed({
       toolPath: 'go.play',
       kind: 'model-native',
-      run: () => undefined,
     })).not.toThrow()
     expect(() => assertGoCapabilityAllowed({
       toolPath: 'go.play',
       kind: 'python',
-      run: () => undefined,
     })).toThrow(ForbiddenGoCapabilityError)
   })
 })

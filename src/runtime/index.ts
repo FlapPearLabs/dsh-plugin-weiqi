@@ -35,3 +35,23 @@ export {
   type FocusYieldBinding,
   type FocusYieldBindingOptions,
 } from './focus-yield.js'
+
+export {
+  ForbiddenGoCapabilityError,
+  GoCapabilityGuard,
+  assertGoCapabilityAllowed,
+  type GoCapability,
+  type GoCapabilityRejectionReason,
+} from './go-capability-guard.js'
+
+export {
+  GO_FORBIDDEN_CAPABILITY_KINDS,
+  GO_NATIVE_CAPABILITY_KINDS,
+  GO_PRESET,
+  GO_PRESET_ID,
+  GO_TOOL_PATH_PREFIXES,
+  type GoForbiddenCapabilityKind,
+  type GoNativeCapabilityKind,
+  type GoPresetDeclaration,
+  type GoToolPathPrefix,
+} from '../preset/go-preset.js'
