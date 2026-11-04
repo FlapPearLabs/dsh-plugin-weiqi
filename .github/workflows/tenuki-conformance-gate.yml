@@ -45,10 +45,22 @@ jobs:
           TRACE_LOG: ${{ runner.temp }}/tenuki-conformance-trace.log
         run: bash tests/upgrade-gates/tenuki-conformance/run-tenuki-conformance.sh
 
+      - name: Assert terminal PASS marker in trace
+        shell: bash
+        run: |
+          set -euo pipefail
+          trace="${{ runner.temp }}/tenuki-conformance-trace.log"
+          test -s "$trace"
+          grep -q 'FINAL RESULT: PASS (tenuki@0.3.1 conformance)' "$trace"
+          # The marker must be the trace's LAST line: a run that returns from
+          # main() without firing its EXIT trap leaves the trace truncated at
+          # the Vitest summary and would still satisfy the grep above.
+          test "$(tail -n 1 "$trace")" = 'FINAL RESULT: PASS (tenuki@0.3.1 conformance)'
+
       - name: Upload executed trace
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: tenuki-conformance-trace
           path: ${{ runner.temp }}/tenuki-conformance-trace.log
-          if-no-files-found: warn
+          if-no-files-found: error
