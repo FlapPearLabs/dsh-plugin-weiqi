@@ -1,4 +1,9 @@
-import { createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
+import { readFile } from 'node:fs/promises'
+import {
+  createToolResultMessage,
+  createUserMessage,
+  type ContentBlock,
+} from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 import { describe, expect, it, vi } from 'vitest'
 import type { Lane, PendingFocusIntent, RuntimeFocusState } from '../contracts/focus.js'
@@ -15,9 +20,10 @@ function userMessage(id: string, content: ContentBlock[]): UserMessage {
     id: id as UserMessage['id'],
     role: 'user',
     content,
-    source: { kind: 'user' },
+    source: { kind: 'user' as const },
   } satisfies UserMessage
 
+  Object.freeze(message.source)
   for (const block of message.content) Object.freeze(block)
   Object.freeze(message.content)
   return Object.freeze(message)
@@ -49,19 +55,19 @@ function submitted(
   return result
 }
 
-function simulatedInactiveView(message: UserMessage) {
-  const reads: string[] = []
-  const agent = {
-    steer: vi.fn(),
-    run: vi.fn(),
-    cancel: vi.fn(),
-    get status(): string {
-      reads.push('status')
-      return 'idle'
-    },
-  }
-
-  return { lane: 'go' as Lane, agent, message, reads }
+function messageWithSource(
+  source: UserMessage['source'],
+  id: string,
+): UserMessage {
+  const content = [{ type: 'text' as const, text: '带来源的占位内容' }]
+  for (const block of content) Object.freeze(block)
+  Object.freeze(content)
+  return Object.freeze({
+    id: id as UserMessage['id'],
+    role: 'user',
+    content,
+    source: Object.freeze(source),
+  } satisfies UserMessage)
 }
 
 describe('inactive-lane user message admission', () => {
@@ -128,25 +134,40 @@ describe('inactive-lane user message admission', () => {
     expect(second.intent).not.toBe(first.intent)
   })
 
-  it('never runs or consults the inactive Agent before admission', () => {
-    const view = simulatedInactiveView(textMessage('Go 这边看一手'))
-    const arbitrate = spyArbitration()
+  it('admits without an Agent handle and leaves the lane and run state untouched', () => {
+    const message = textMessage('Go 这边看一手')
+    const initial = createRuntimeFocusState('work')
 
     const result = submitted(
       admitInactiveLaneUserMessage(
-        createRuntimeFocusState('work'),
-        { target: view.lane, sourceSessionId: 'companion-go-go', message: view.message },
-        arbitrate,
+        initial,
+        admissionFor(message, 'go', 'companion-go-go'),
       ),
     )
 
-    expect(result.intent.sourceMessage?.message).toBe(view.message)
-    expect(arbitrate).toHaveBeenCalledTimes(1)
-    expect(view.agent.run).not.toHaveBeenCalled()
-    expect(view.agent.steer).not.toHaveBeenCalled()
-    expect(view.agent.cancel).not.toHaveBeenCalled()
-    expect(view.reads).toEqual([])
-    expect(Object.keys(view.agent)).not.toContain('admitInactiveLaneUserMessage')
+    expect(result.intent.sourceMessage?.message).toBe(message)
+    expect(result.state.activeLane).toBe('work')
+    expect(result.state.llmRunning).toBe(false)
+    expect(initial.activeLane).toBe('work')
+    expect(initial.llmRunning).toBe(false)
+    expect(initial.pendingFocus).toBeUndefined()
+  })
+
+  it('has no Agent dependency: no dsh-agent import and no Agent parameter', async () => {
+    const source = await readFile(new URL('./admission.ts', import.meta.url), 'utf8')
+    const importSpecifiers = [...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)].map(
+      match => match[1] ?? '',
+    )
+    const exported = source.slice(
+      source.indexOf('export function admitInactiveLaneUserMessage'),
+    )
+
+    expect(importSpecifiers.length).toBeGreaterThan(0)
+    expect(
+      importSpecifiers.filter(specifier => /(^|\/)dsh-agent(\/|$)/.test(specifier)),
+    ).toEqual([])
+    expect(exported).not.toMatch(/\bAgent\b/)
+    expect(exported).not.toMatch(/\bagent\b/)
   })
 
   it('exposes no queue, mailbox, or router surface', () => {
@@ -373,6 +394,92 @@ describe('inactive-lane user message admission', () => {
     expect(
       admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
     ).toEqual({ kind: 'rejected', reason: 'empty-message' })
+  })
+
+  it('rejects a malformed block without a string type as empty', () => {
+    const message = userMessage('untyped-block', [{} as unknown as ContentBlock])
+
+    expect(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    ).toEqual({ kind: 'rejected', reason: 'empty-message' })
+  })
+
+  it('rejects a message whose frozen shell, content and block still hold a mutable source', () => {
+    const message = {
+      ...textMessage('占位', 'mutable-source'),
+      source: { kind: 'user' as const },
+    } as UserMessage
+    Object.freeze(message)
+
+    expect(Object.isFrozen(message)).toBe(true)
+    expect(Object.isFrozen(message.content)).toBe(true)
+    expect(Object.isFrozen(message.content[0])).toBe(true)
+    expect(Object.isFrozen(message.source)).toBe(false)
+
+    expect(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    ).toEqual({ kind: 'rejected', reason: 'mutable-message' })
+  })
+
+  it('rejects a frozen source that still holds mutable nested provenance', () => {
+    const source = Object.freeze({
+      kind: 'user' as const,
+      sections: [{ name: 'snapshot', text: 'mutable section' }],
+    }) as unknown as UserMessage['source']
+    const message = {
+      ...textMessage('占位', 'mutable-provenance'),
+      source,
+    } as UserMessage
+    Object.freeze(message)
+
+    expect(Object.isFrozen(source)).toBe(true)
+    expect(
+      Object.isFrozen((source as unknown as { sections: unknown[] }).sections),
+    ).toBe(false)
+
+    expect(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    ).toEqual({ kind: 'rejected', reason: 'mutable-message' })
+  })
+
+  it.each([
+    { name: 'tool', source: { kind: 'tool', callId: 'call-1' } },
+    { name: 'plugin', source: { kind: 'plugin', plugin: 'dsh-test' } },
+    { name: 'model', source: { kind: 'model', provider: 'deepseek', model: 'test-model' } },
+  ] as const)('rejects a $name source as a non-user message', ({ source }) => {
+    const message = messageWithSource(
+      source as UserMessage['source'],
+      `non-user-${source.kind}`,
+    )
+    const arbitrate = spyArbitration()
+
+    const result = admitInactiveLaneUserMessage(
+      createRuntimeFocusState('work'),
+      admissionFor(message),
+      arbitrate,
+    )
+
+    expect(result).toEqual({ kind: 'rejected', reason: 'not-user-message' })
+    expect(result).not.toHaveProperty('intent')
+    expect(arbitrate).not.toHaveBeenCalled()
+  })
+
+  it('rejects a real DSH tool-result message instead of admitting it as user intent', () => {
+    const message = createToolResultMessage({
+      callId: 'call-1' as never,
+      content: [{ type: 'text', text: 'ok' }],
+      isError: false,
+    })
+    const arbitrate = spyArbitration()
+
+    const result = admitInactiveLaneUserMessage(
+      createRuntimeFocusState('work'),
+      admissionFor(message),
+      arbitrate,
+    )
+
+    expect(result).toEqual({ kind: 'rejected', reason: 'not-user-message' })
+    expect(arbitrate).not.toHaveBeenCalled()
   })
 
   it('admits non-text message content that still carries user intent', () => {
