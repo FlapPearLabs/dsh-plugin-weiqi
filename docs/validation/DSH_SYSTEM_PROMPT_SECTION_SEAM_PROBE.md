@@ -129,7 +129,8 @@ under the rest, so the assertions are not self-fulfilling.
 
 ## Existing suites (Q6)
 
-Executed against the same pinned checkout with the same Node/pnpm:
+From the earlier recorded run against the same pinned checkout (the re-run
+covered only the first two rows; see Q6 above):
 
 | Suite | Command target | Result |
 |---|---|---|
@@ -163,13 +164,14 @@ What is measured exactly (trace 6):
 - system slot: 64 chars before and after the change; the two strings share a
   62-char prefix, so the change is a 2-char substitution at offset 62;
 - the section sits before all tool schemas and before every message
-  (message payload of request 2: 423 chars of JSON), so the longest common prefix
-  between the two requests ends inside the system slot; how much of either request
-  the provider actually serves from cache is not observed here;
+  (message payload of request 2: 423 chars of JSON). The fixture compared only the
+  two `system` strings, and their common prefix ends at offset 62; it did not
+  compare whole requests or provider serialization, and how much the provider
+  actually serves from cache is not observed here;
 - `request/header` gains exactly one `reason: "change"` event for that
   request, so the epoch change is recorded, not inferred.
 
-Why a changed request cannot reuse the previous request's prefix: DeepSeek
+Why a changed request cannot fully match the previous request's prefix unit: DeepSeek
 persists a cache prefix unit at the end of each request's user input and at the
 end of the model output, and a later request hits only by fully matching one of
 those units (official cache guide, fetched 2026-11-04). Request 1's unit ends
@@ -255,9 +257,10 @@ is **not measured** in this environment (Q7), and the official guide describes
 hits as best-effort with independent prefix units rather than a strict
 longest-common-prefix rule, so this document claims no precise per-change cost and
 no acceptability verdict. Coalescing means many updates between two requests cost
-at most one changed request. A core-added ephemeral tail would avoid rewriting the
-prefix, but the in-run review notes it is not identical to append-only replay and
-needs its own spike; it remains a candidate, not a proven win. Recommendation:
+at most one changed request. A core-added ephemeral tail might reduce how much of
+the prefix changes, but that is unverified: the in-run review shows it is not
+identical to append-only replay, so it needs its own spike and remains a candidate,
+not a proven win. Recommendation:
 treat the section approach as viable pending a with-key measurement of Q7.
 
 **C. Minimal change if adopted.** Plugin-side only, no DSH patch:
