@@ -1,4 +1,5 @@
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig, Message } from '@deepseek-ai/dsh-llm'
+import { createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GoTurnBudget } from '../../src/contracts/budget.js'
 import type { GameState, GoRulesPort, Point } from '../../src/contracts/rules.js'
 import {
@@ -7,6 +8,7 @@ import {
 } from '../../src/budget/enforcement.js'
 import { GoCapabilityGuard } from '../../src/runtime/go-capability-guard.js'
 import { createTenukiGoRulesPort } from '../../src/rules/tenuki-adapter.js'
+import { GO_TOOL_DEFINITIONS } from '../../src/tools/go/go-tools.js'
 import { registerGoTools } from '../../src/tools/go/go-tool-registry.js'
 import {
   BENCHMARK_FIXTURES,
@@ -18,28 +20,50 @@ import {
   type Spec38FixtureClass,
 } from './fixtures.js'
 import {
-  SCRIPTED_MODEL_ID,
-  SCRIPTED_PROPOSED_MAX_TOKENS,
-  createScriptedModelAdapter,
-} from './scripted-model.js'
+  BENCHMARK_PROVIDER_ID,
+  ScriptedLlmProvider,
+} from './fake-provider.js'
+import {
+  BENCHMARK_GATE_DEFAULTS,
+  BENCHMARK_PLACEHOLDER_PRICES,
+  BenchmarkBudgetGate,
+  BenchmarkBudgetStopError,
+  estimateRequestInputTokens,
+  type BenchmarkBudgetGateSnapshot,
+  type BenchmarkBudgetStop,
+  type BenchmarkGateConfig,
+  type BenchmarkPriceSchedule,
+} from './budget-gate.js'
+import {
+  openBenchmarkRequestPath,
+  type BenchmarkRequestPathStats,
+} from './llm-request-path.js'
+import { SCRIPTED_MODEL_ID, SCRIPTED_PROPOSED_MAX_TOKENS } from './scripted-model.js'
 
 /**
  * WAVE-C-T10 §38 harness.
  *
  * One run composes the production surfaces that already exist and never
- * re-implements them: the real Tenuki `GoRulesPort` (C-T02 contract, B-S01
- * adapter), the real `go.*` registry behind `GoCapabilityGuard` (C-T01/C-T02),
- * per-turn enforcement (C-T07) with the bounded boost (C-T08), and the
- * `agent/request` token cap (C-S01). The scripted adapter only decides which
- * tool to call; every call goes through the same executable registry the Go
- * lane uses.
+ * re-implements them: the real Tenuki `GoRulesPort` (B-S01), the real `go.*`
+ * registry behind `GoCapabilityGuard` (C-T01/C-T02), per-turn enforcement
+ * (C-T07) with the bounded boost (C-T08), and the `agent/request` token cap
+ * (C-S01). Model requests now leave through the real pinned `LlmRuntime`
+ * (`prepareCall` → `llm/stream` → registered `LlmAdapter`), with a local
+ * no-network provider standing in for DeepSeek.
  *
- * A run is rejected as a bypass when a tool execution is not accounted for by
- * the enforcement counters. That check is what makes "the harness fails if
- * enforcement is bypassed" true rather than asserted.
+ * The AgentLoop step/turn lifecycle is the one stand-in: the concrete
+ * `@deepseek-ai/dsh-agent-loop` package is not in this package's dependency
+ * surface, so this harness assembles the same request contract itself. Every
+ * benchmark-session spend/request gate is applied here, never in `src/`.
  */
 
-export const REQUESTED_MODEL = 'scripted-benchmark-adapter'
+export const REQUESTED_MODEL = SCRIPTED_MODEL_ID
+
+const BENCHMARK_SYSTEM_PROMPT = [
+  'You are the DeepSeek Go lane of a companion Go game.',
+  'Read the position with go.inspect_*, probe with go.try_move, and commit exactly',
+  'one authoritative go.play / go.pass / go.resign. Never search the web.',
+].join(' ')
 
 export class CognitionBenchmarkBypassError extends Error {
   readonly toolPath: string
@@ -56,6 +80,8 @@ export class CognitionBenchmarkBypassError extends Error {
 export type BenchmarkRunMetrics = {
   readonly fixture: string
   readonly class: Spec38FixtureClass
+  readonly outcome: 'completed' | 'budget_stop'
+  readonly budgetStop: BenchmarkBudgetStop | null
   readonly latencyMs: number
   readonly stepLatenciesMs: readonly number[]
   readonly inputTokens: number
@@ -74,6 +100,7 @@ export type BenchmarkRunMetrics = {
   readonly oversizedProposalsClamped: number
   readonly turnTokens: number
   readonly remainingTurnTokens: number
+  readonly requestPath: BenchmarkRequestPathStats
 }
 
 export type RunFixtureOptions = {
@@ -81,6 +108,11 @@ export type RunFixtureOptions = {
   readonly clock?: () => number
   /** Test-only seam used to prove that a bypass is detected. */
   readonly createEnforcement?: (budget: GoTurnBudget) => GoTurnEnforcement
+  /** Shared benchmark-session gate; a fresh default gate is created when omitted. */
+  readonly gate?: BenchmarkBudgetGate
+  readonly gates?: Partial<BenchmarkGateConfig>
+  readonly pricing?: BenchmarkPriceSchedule
+  readonly createProvider?: (fixture: BenchmarkFixture, gameId: string) => ScriptedLlmProvider
 }
 
 type RecordingPort = {
@@ -132,48 +164,34 @@ function finalMoveOf(action: BenchmarkFixture['expectedFinalAction']): string {
   return action.kind === 'pass' ? 'pass' : `play ${formattedPoint(action.point)}`
 }
 
-function toolArguments(gameId: string, call: ScriptedToolCall): unknown {
-  switch (call.tool) {
-    case 'go.state':
-    case 'go.pass':
-    case 'go.resign':
-    case 'go.request_deep_think':
-      return call.tool === 'go.request_deep_think' ? {} : { gameId }
-    case 'go.inspect_group':
-    case 'go.try_move':
-    case 'go.play':
-      return { gameId, point: call.point }
-    case 'go.inspect_region':
-      return call.radius === undefined
-        ? { gameId, point: call.point }
-        : { gameId, point: call.point, radius: call.radius }
-  }
+function isCommittedTool(tool: string): boolean {
+  return tool === 'go.play' || tool === 'go.pass' || tool === 'go.resign'
 }
 
 type Snapshot = ReturnType<GoTurnEnforcement['snapshot']>
 
 function assertAccounted(
-  call: ScriptedToolCall,
+  tool: string,
   before: Snapshot,
   after: Snapshot,
   result: unknown,
 ): void {
-  switch (call.tool) {
+  switch (tool) {
     case 'go.inspect_group':
     case 'go.inspect_region':
       if (after.inspectCalls !== before.inspectCalls + 1) {
-        throw new CognitionBenchmarkBypassError(call.tool, 'inspectCalls did not advance by one')
+        throw new CognitionBenchmarkBypassError(tool, 'inspectCalls did not advance by one')
       }
       return
     case 'go.try_move':
       if (after.tryMoves !== before.tryMoves + 1) {
-        throw new CognitionBenchmarkBypassError(call.tool, 'tryMoves did not advance by one')
+        throw new CognitionBenchmarkBypassError(tool, 'tryMoves did not advance by one')
       }
       return
     case 'go.request_deep_think':
       if (after.deepThinkRequests !== before.deepThinkRequests + 1) {
         throw new CognitionBenchmarkBypassError(
-          call.tool,
+          tool,
           'deepThinkRequests did not advance by one',
         )
       }
@@ -184,31 +202,53 @@ function assertAccounted(
         || after.tryMoves !== before.tryMoves
         || after.committedAction !== before.committedAction
       ) {
-        throw new CognitionBenchmarkBypassError(call.tool, 'a read changed a gated counter')
+        throw new CognitionBenchmarkBypassError(tool, 'a read changed a gated counter')
       }
       return
-    case 'go.play':
-    case 'go.pass':
-    case 'go.resign': {
+    default: {
+      if (!isCommittedTool(tool)) {
+        throw new CognitionBenchmarkBypassError(tool, 'unknown tool reached the benchmark registry')
+      }
       const accepted = typeof result === 'object'
         && result !== null
         && (result as { ok?: unknown }).ok === true
       if (!accepted) {
         if (after.committedAction !== before.committedAction) {
-          throw new CognitionBenchmarkBypassError(call.tool, 'a rejected action committed the turn')
+          throw new CognitionBenchmarkBypassError(tool, 'a rejected action committed the turn')
         }
         return
       }
-      const expected = call.tool.slice('go.'.length)
+      const expected = tool.slice('go.'.length)
       if (after.committedAction !== expected) {
         throw new CognitionBenchmarkBypassError(
-          call.tool,
+          tool,
           `committedAction is ${String(after.committedAction)}, expected ${expected}`,
         )
       }
       return
     }
   }
+}
+
+function parseCallArguments(tool: string, rawArguments: string): Record<string, unknown> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawArguments)
+  } catch {
+    throw new Error(`Benchmark tool call ${tool} carried non-JSON arguments: ${rawArguments}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`Benchmark tool call ${tool} arguments must be a JSON object: ${rawArguments}`)
+  }
+  return parsed as Record<string, unknown>
+}
+
+function toolSchemas(): readonly { name: string; description: string; parameters: Record<string, unknown> }[] {
+  return GO_TOOL_DEFINITIONS.map(definition => ({
+    name: definition.name,
+    description: definition.description,
+    parameters: { ...definition.parameters },
+  }))
 }
 
 export async function runFixture(
@@ -231,8 +271,18 @@ export async function runFixture(
   const budget: GoTurnBudget = { ...CANDIDATE_BUDGET, ...options.budget }
   const enforcement = (options.createEnforcement ?? createGoTurnEnforcement)(budget)
   const registry = registerGoTools({ port, enforcement, guard: new GoCapabilityGuard() })
-  const adapter = createScriptedModelAdapter(fixture)
+  const gate = options.gate ?? new BenchmarkBudgetGate(options.gates, options.pricing)
+  gate.beginTurn()
+  const provider = (options.createProvider ?? defaultProvider)(fixture, gameId)
+  const path = await openBenchmarkRequestPath(provider)
   const clock = options.clock ?? (() => performance.now())
+  const tools = toolSchemas()
+  const messages: Message[] = [
+    createUserMessage({
+      content: [{ type: 'text', text: fixture.position }],
+      source: { kind: 'user' },
+    }),
+  ]
 
   const startedAt = clock()
   const stepLatenciesMs: number[] = []
@@ -243,124 +293,176 @@ export async function runFixture(
   let oversizedProposalsClamped = 0
   let finalMove = 'none'
   let committed = false
+  let stop: BenchmarkBudgetStop | null = null
+  let requestPathStats: BenchmarkRequestPathStats
 
-  for (let index = 0; index < adapter.stepCount; index += 1) {
-    const stepStart = clock()
-    const modelStep = enforcement.beginModelStep()
-    const plan = adapter.next()
-
-    const resolvedRequest: LlmCallConfig = {
-      provider: 'deepseek-official',
-      model: REQUESTED_MODEL,
-      maxTokens: plan.proposedMaxTokens,
-    }
-    const capped = await enforcement.requestTokenCap(
-      { turn: 1, step: modelStep.index },
-      async () => resolvedRequest,
-    )
-    const effectiveMaxTokens = capped.maxTokens ?? 0
-    requestCaps.push(effectiveMaxTokens)
-    if (effectiveMaxTokens < plan.proposedMaxTokens) oversizedProposalsClamped += 1
-    if (effectiveMaxTokens > budget.perRequestMaxTokens) {
-      throw new CognitionBenchmarkBypassError(
-        'agent/request',
-        `token cap ${effectiveMaxTokens} exceeds perRequestMaxTokens ${budget.perRequestMaxTokens}`,
+  try {
+    for (let index = 0; index < provider.stepCount; index += 1) {
+      const stepStart = clock()
+      const modelStep = enforcement.beginModelStep()
+      const resolvedRequest: LlmCallConfig = await enforcement.requestTokenCap(
+        { turn: 1, step: modelStep.index },
+        async () => ({
+          provider: BENCHMARK_PROVIDER_ID,
+          model: SCRIPTED_MODEL_ID,
+          maxTokens: SCRIPTED_PROPOSED_MAX_TOKENS,
+        }),
       )
-    }
-
-    modelStep.complete({ tokens: plan.inputTokens + plan.outputTokens })
-    inputTokens += plan.inputTokens
-    outputTokens += plan.outputTokens
-
-    for (const call of plan.calls) {
-      const before = enforcement.snapshot()
-      const result = registry.invoke(call.tool, toolArguments(gameId, call))
-      const after = enforcement.snapshot()
-      assertAccounted(call, before, after, result)
-
-      const rejected = (
-        call.tool === 'go.play' || call.tool === 'go.pass' || call.tool === 'go.resign'
-      ) && (typeof result !== 'object' || result === null || (result as { ok?: unknown }).ok !== true)
-      if (rejected) {
-        const reason = (result as { reason?: unknown }).reason
-        illegalAttemptReasons.push(`${call.tool} ${String(reason)}`)
+      const proposedMaxTokens = resolvedRequest.maxTokens ?? 0
+      const decision = gate.beginRequest({
+        step: modelStep.index,
+        estimatedInputTokens: estimateRequestInputTokens({
+          system: BENCHMARK_SYSTEM_PROMPT,
+          messages,
+          tools,
+        }),
+        proposedMaxTokens,
+        toolNames: tools.map(tool => tool.name),
+      })
+      requestCaps.push(decision.maxTokens)
+      if (decision.maxTokens < SCRIPTED_PROPOSED_MAX_TOKENS) oversizedProposalsClamped += 1
+      if (decision.maxTokens > budget.perRequestMaxTokens) {
+        throw new CognitionBenchmarkBypassError(
+          'agent/request',
+          `token cap ${decision.maxTokens} exceeds perRequestMaxTokens ${budget.perRequestMaxTokens}`,
+        )
       }
 
-      if (after.committedAction !== before.committedAction) {
-        committed = true
-        finalMove = call.tool === 'go.play'
-          ? `play ${formattedPoint((call as { point: Point }).point)}`
-          : call.tool.slice('go.'.length)
-        break
-      }
-    }
+      const response = await path.request({
+        fixture: fixture.name,
+        step: modelStep.index,
+        maxTokens: decision.maxTokens,
+        system: BENCHMARK_SYSTEM_PROMPT,
+        messages,
+        tools,
+      })
+      inputTokens += response.usage.inputTokens
+      outputTokens += response.usage.outputTokens
+      modelStep.complete({ tokens: response.usage.inputTokens + response.usage.outputTokens })
+      gate.completeRequest({ step: modelStep.index, usage: response.usage })
 
-    stepLatenciesMs.push(clock() - stepStart)
-    if (committed) break
+      const toolResults: { callId: (typeof response.toolCalls)[number]['id']; result: unknown; rejected: boolean }[] = []
+
+      for (const call of response.toolCalls) {
+        gate.assertToolCallAllowed(call.name, modelStep.index)
+        const before = enforcement.snapshot()
+        const args = parseCallArguments(call.name, call.rawArguments)
+        const result = registry.invoke(call.name, args)
+        const after = enforcement.snapshot()
+        assertAccounted(call.name, before, after, result)
+
+        const rejected = isCommittedTool(call.name)
+          && (typeof result !== 'object' || result === null || (result as { ok?: unknown }).ok !== true)
+        if (rejected) {
+          const reason = (result as { reason?: unknown }).reason
+          illegalAttemptReasons.push(`${call.name} ${String(reason)}`)
+        }
+        toolResults.push({ callId: call.id, result, rejected })
+
+        if (after.committedAction !== before.committedAction) {
+          committed = true
+          finalMove = call.name === 'go.play'
+            ? `play ${formattedPoint(args.point as Point)}`
+            : call.name.slice('go.'.length)
+          break
+        }
+      }
+
+      messages.push(createAssistantMessage({
+        content: response.toolCalls.map(call => ({
+          type: 'tool-call' as const,
+          id: call.id,
+          name: call.name,
+          arguments: call.rawArguments,
+        })),
+        source: { provider: BENCHMARK_PROVIDER_ID, model: SCRIPTED_MODEL_ID },
+      }))
+      for (const entry of toolResults) {
+        messages.push(createToolResultMessage({
+          callId: entry.callId,
+          content: [{ type: 'text', text: JSON.stringify(entry.result) }],
+          isError: entry.rejected,
+        }))
+      }
+
+      stepLatenciesMs.push(clock() - stepStart)
+      if (committed) break
+    }
+  } catch (error) {
+    if (!(error instanceof BenchmarkBudgetStopError)) throw error
+    stop = error.stop
+  } finally {
+    requestPathStats = path.stats()
+    await path.dispose()
   }
 
   const latencyMs = clock() - startedAt
   const snapshot = enforcement.snapshot()
-  const expectedCommitted = fixture.expectedFinalAction.kind === 'play' ? 'play' : 'pass'
 
-  if (!committed || snapshot.committedAction !== expectedCommitted) {
-    throw new Error(
-      `Benchmark fixture ${fixture.name} did not commit ${expectedCommitted}; committedAction=${String(snapshot.committedAction)}`,
-    )
-  }
-  if (finalMove !== finalMoveOf(fixture.expectedFinalAction)) {
-    throw new Error(
-      `Benchmark fixture ${fixture.name} final move ${finalMove} != expected ${finalMoveOf(fixture.expectedFinalAction)}`,
-    )
-  }
-  if (committedMutations.length !== 1 || committedMutations[0] !== expectedCommitted) {
-    throw new Error(
-      `Benchmark fixture ${fixture.name} mutated the port ${JSON.stringify(committedMutations)}; expected exactly one ${expectedCommitted}`,
-    )
-  }
+  if (stop === null) {
+    const expectedCommitted = fixture.expectedFinalAction.kind === 'play' ? 'play' : 'pass'
 
-  const declaredInspects = fixture.steps.flatMap(step => step.calls).filter(
-    call => call.tool === 'go.inspect_group' || call.tool === 'go.inspect_region',
-  ).length
-  const declaredTryMoves = fixture.steps.flatMap(step => step.calls).filter(
-    call => call.tool === 'go.try_move',
-  ).length
-  const declaredDeepThink = fixture.steps.flatMap(step => step.calls).filter(
-    call => call.tool === 'go.request_deep_think',
-  ).length
-  if (snapshot.inspectCalls !== declaredInspects) {
-    throw new CognitionBenchmarkBypassError(
-      'go.inspect_*',
-      `enforcement counted ${snapshot.inspectCalls}, script issued ${declaredInspects}`,
-    )
-  }
-  if (snapshot.tryMoves !== declaredTryMoves) {
-    throw new CognitionBenchmarkBypassError(
-      'go.try_move',
-      `enforcement counted ${snapshot.tryMoves}, script issued ${declaredTryMoves}`,
-    )
-  }
-  if (snapshot.deepThinkRequests !== declaredDeepThink) {
-    throw new CognitionBenchmarkBypassError(
-      'go.request_deep_think',
-      `enforcement counted ${snapshot.deepThinkRequests}, script issued ${declaredDeepThink}`,
-    )
-  }
-  if (snapshot.modelSteps !== adapter.stepCount) {
-    throw new CognitionBenchmarkBypassError(
-      'model_step',
-      `enforcement counted ${snapshot.modelSteps}, adapter issued ${adapter.stepCount}`,
-    )
-  }
-  if (illegalAttemptReasons.length !== fixture.expectedIllegalAttempts) {
-    throw new Error(
-      `Benchmark fixture ${fixture.name} recorded ${illegalAttemptReasons.length} illegal attempts, expected ${fixture.expectedIllegalAttempts}`,
-    )
+    if (!committed || snapshot.committedAction !== expectedCommitted) {
+      throw new Error(
+        `Benchmark fixture ${fixture.name} did not commit ${expectedCommitted}; committedAction=${String(snapshot.committedAction)}`,
+      )
+    }
+    if (finalMove !== finalMoveOf(fixture.expectedFinalAction)) {
+      throw new Error(
+        `Benchmark fixture ${fixture.name} final move ${finalMove} != expected ${finalMoveOf(fixture.expectedFinalAction)}`,
+      )
+    }
+    if (committedMutations.length !== 1 || committedMutations[0] !== expectedCommitted) {
+      throw new Error(
+        `Benchmark fixture ${fixture.name} mutated the port ${JSON.stringify(committedMutations)}; expected exactly one ${expectedCommitted}`,
+      )
+    }
+
+    const declaredInspects = fixture.steps.flatMap(step => step.calls).filter(
+      call => call.tool === 'go.inspect_group' || call.tool === 'go.inspect_region',
+    ).length
+    const declaredTryMoves = fixture.steps.flatMap(step => step.calls).filter(
+      call => call.tool === 'go.try_move',
+    ).length
+    const declaredDeepThink = fixture.steps.flatMap(step => step.calls).filter(
+      call => call.tool === 'go.request_deep_think',
+    ).length
+    if (snapshot.inspectCalls !== declaredInspects) {
+      throw new CognitionBenchmarkBypassError(
+        'go.inspect_*',
+        `enforcement counted ${snapshot.inspectCalls}, script issued ${declaredInspects}`,
+      )
+    }
+    if (snapshot.tryMoves !== declaredTryMoves) {
+      throw new CognitionBenchmarkBypassError(
+        'go.try_move',
+        `enforcement counted ${snapshot.tryMoves}, script issued ${declaredTryMoves}`,
+      )
+    }
+    if (snapshot.deepThinkRequests !== declaredDeepThink) {
+      throw new CognitionBenchmarkBypassError(
+        'go.request_deep_think',
+        `enforcement counted ${snapshot.deepThinkRequests}, script issued ${declaredDeepThink}`,
+      )
+    }
+    if (snapshot.modelSteps !== provider.stepCount) {
+      throw new CognitionBenchmarkBypassError(
+        'model_step',
+        `enforcement counted ${snapshot.modelSteps}, provider issued ${provider.stepCount}`,
+      )
+    }
+    if (illegalAttemptReasons.length !== fixture.expectedIllegalAttempts) {
+      throw new Error(
+        `Benchmark fixture ${fixture.name} recorded ${illegalAttemptReasons.length} illegal attempts, expected ${fixture.expectedIllegalAttempts}`,
+      )
+    }
   }
 
   return Object.freeze({
     fixture: fixture.name,
     class: fixture.class,
+    outcome: stop === null ? 'completed' : 'budget_stop',
+    budgetStop: stop,
     latencyMs,
     stepLatenciesMs: Object.freeze(stepLatenciesMs),
     inputTokens,
@@ -379,7 +481,12 @@ export async function runFixture(
     oversizedProposalsClamped,
     turnTokens: snapshot.turnTokens,
     remainingTurnTokens: enforcement.remainingTurnTokens(),
+    requestPath: requestPathStats,
   })
+}
+
+function defaultProvider(fixture: BenchmarkFixture, gameId: string): ScriptedLlmProvider {
+  return new ScriptedLlmProvider(fixture, gameId)
 }
 
 export type NumericVariation = {
@@ -404,6 +511,7 @@ export type FixtureVariation = {
 }
 
 const COMPARED_FIELDS = [
+  'outcome',
   'inputTokens',
   'outputTokens',
   'totalTokens',
@@ -417,6 +525,7 @@ const COMPARED_FIELDS = [
   'requestCaps',
   'turnTokens',
   'remainingTurnTokens',
+  'requestPath',
 ] as const
 
 function variationOf(values: readonly number[]): NumericVariation {
@@ -473,6 +582,8 @@ export type BenchmarkRecord = {
   readonly model: {
     readonly kind: 'scripted-deterministic'
     readonly id: typeof SCRIPTED_MODEL_ID
+    readonly provider: typeof BENCHMARK_PROVIDER_ID
+    readonly requestPath: 'dsh-llm-runtime'
     readonly isDeepSeek: false
     readonly disclosure: string
   }
@@ -481,6 +592,7 @@ export type BenchmarkRecord = {
     readonly hardCaps: readonly string[]
     readonly note: string
   }
+  readonly budgetGate: BenchmarkBudgetGateSnapshot
   readonly runsPerFixture: number
   readonly classes: readonly ClassRecord[]
 }
@@ -491,6 +603,9 @@ export type BuildRecordOptions = {
   readonly now?: () => Date
   readonly budget?: GoTurnBudget
   readonly fixtures?: readonly BenchmarkFixture[]
+  readonly gate?: BenchmarkBudgetGate
+  readonly gates?: Partial<BenchmarkGateConfig>
+  readonly pricing?: BenchmarkPriceSchedule
 }
 
 const HARD_CAPS = Object.freeze([
@@ -508,6 +623,7 @@ export async function buildBenchmarkRecord(
   const now = options.now ?? (() => new Date())
   const fixtures = options.fixtures ?? BENCHMARK_FIXTURES
   const budget = options.budget ?? CANDIDATE_BUDGET
+  const gate = options.gate ?? new BenchmarkBudgetGate(options.gates, options.pricing)
 
   const classes: ClassRecord[] = []
   for (const fixtureClass of SPEC_38_CLASSES) {
@@ -518,6 +634,7 @@ export async function buildBenchmarkRecord(
       for (let run = 0; run < runsPerFixture; run += 1) {
         runs.push(await runFixture(fixture, {
           budget,
+          gate,
           ...(options.clock === undefined ? {} : { clock: options.clock }),
         }))
       }
@@ -540,9 +657,18 @@ export async function buildBenchmarkRecord(
     model: {
       kind: 'scripted-deterministic',
       id: SCRIPTED_MODEL_ID,
+      provider: BENCHMARK_PROVIDER_ID,
+      requestPath: 'dsh-llm-runtime',
       isDeepSeek: false,
       disclosure:
-        'All token counts and moves come from a deterministic scripted adapter. No DeepSeek request was made. Latency is local harness wall-clock, not model latency. These numbers cannot calibrate production token caps; a real DeepSeek run awaits owner approval.',
+        'Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime '
+        + '(provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, '
+        + 'BlockAssembler), with a local no-network provider standing in for DeepSeek. '
+        + 'The dsh-agent-loop package is not installed in this repository, so the '
+        + 'step/turn driver is a documented stand-in for it. Token counts and moves are '
+        + 'scripted synthetic values, never DeepSeek usage; latency is local harness '
+        + 'wall-clock. These numbers cannot calibrate production token caps; a real '
+        + 'DeepSeek run still needs owner approval, credentials, and a real price schedule.',
     },
     budgetUnderTest: {
       ...budget,
@@ -551,7 +677,10 @@ export async function buildBenchmarkRecord(
       note:
         'Candidate values only. src/budget/ production defaults were not changed by this ticket; no production GoTurnBudget config exists yet.',
     },
+    budgetGate: gate.snapshot(),
     runsPerFixture,
     classes,
   }
 }
+
+export { BENCHMARK_GATE_DEFAULTS, BENCHMARK_PLACEHOLDER_PRICES }

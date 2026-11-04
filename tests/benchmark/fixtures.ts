@@ -44,6 +44,8 @@ export type ScriptedToolCall =
   | { readonly tool: 'go.play'; readonly point: Point }
   | { readonly tool: 'go.pass' }
   | { readonly tool: 'go.resign' }
+  /** Only gate tests emit this; it must stop before execution. */
+  | { readonly tool: 'web_search'; readonly query: string }
 
 export type ScriptedModelStepPlan = {
   readonly label: string
