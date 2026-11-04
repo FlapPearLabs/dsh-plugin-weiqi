@@ -34,15 +34,37 @@ export type GoNativeCapabilityKind = (typeof GO_NATIVE_CAPABILITY_KINDS)[number]
 export type GoForbiddenCapabilityKind = (typeof GO_FORBIDDEN_CAPABILITY_KINDS)[number]
 
 /**
- * Model-facing tool path prefixes the Go lane may own (Spec §20 final surface:
- * eight `go.*` plus two `companion.*`). Phase A registers only `go.*`.
+ * Model-facing tool paths Spec §20 admits in Phase A.
  *
- * This is a coarse prefix admission check on purpose, not a tool allowlist:
- * `GoCapabilityGuard` only keeps the Go scope inside the lane's own path space
- * (`go.arbitrary` passes here). The fine-grained 8 + 2 tool allowlist is the
- * C-T01 registry, which decides which concrete tool paths may be minted at all.
+ * This is the exact 8-tool `go.*` half of the Spec §20 surface (the remaining
+ * two `companion.*` tools arrive in Phase B), and it is the only set of paths
+ * the guard's factory will mint. A path is never taken from the caller's word
+ * alone: `nativeGoCapability()` refuses anything outside this list, so a
+ * forbidden capability cannot be aliased into the Go scope under a
+ * `go.`-looking name such as `go.exec`.
  */
-export const GO_TOOL_PATH_PREFIXES = ['go.', 'companion.'] as const
+export const GO_TOOL_PATHS = [
+  'go.state',
+  'go.inspect_group',
+  'go.inspect_region',
+  'go.try_move',
+  'go.play',
+  'go.pass',
+  'go.resign',
+  'go.request_deep_think',
+] as const
+
+export type GoToolPath = (typeof GO_TOOL_PATHS)[number]
+
+/**
+ * Path prefixes the Go lane admits.
+ *
+ * Phase A admits `go.` only: C-T01's Phase A acceptance forbids any
+ * `companion.*` path in the Phase A registry, and the guard must not hand out
+ * Phase B execution authority early. Phase B adds `companion.` here together
+ * with the two `companion.*` paths of the Spec §20 surface.
+ */
+export const GO_TOOL_PATH_PREFIXES = ['go.'] as const
 
 export type GoToolPathPrefix = (typeof GO_TOOL_PATH_PREFIXES)[number]
 
@@ -52,6 +74,7 @@ export type GoPresetDeclaration = {
   readonly lane: Extract<Lane, 'go'>
   readonly presentation: 'native-only'
   readonly capabilityKinds: readonly GoNativeCapabilityKind[]
+  readonly toolPaths: readonly GoToolPath[]
   readonly toolPathPrefixes: readonly GoToolPathPrefix[]
   readonly forbiddenCapabilities: readonly GoForbiddenCapabilityKind[]
 }
@@ -62,6 +85,7 @@ export const GO_PRESET: GoPresetDeclaration = Object.freeze({
   lane: 'go',
   presentation: 'native-only',
   capabilityKinds: Object.freeze([...GO_NATIVE_CAPABILITY_KINDS]),
+  toolPaths: Object.freeze([...GO_TOOL_PATHS]),
   toolPathPrefixes: Object.freeze([...GO_TOOL_PATH_PREFIXES]),
   forbiddenCapabilities: Object.freeze([...GO_FORBIDDEN_CAPABILITY_KINDS]),
 })

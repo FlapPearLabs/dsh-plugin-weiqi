@@ -39,15 +39,17 @@ export {
 export {
   ForbiddenGoCapabilityError,
   ForgedGoCapabilityError,
+  GO_CAPABILITY_SERVICE,
   GoCapabilityGuard,
   assertGoCapabilityAllowed,
-  goCapabilityGuard,
+  composeGoLaneScope,
+  createGoCapabilityScope,
   isNativeGoCapability,
   nativeGoCapability,
-  resetGoCapabilityGuardForTest,
   resolveGoCapabilityGuard,
   type GoCapability,
   type GoCapabilityRejectionReason,
+  type GoCapabilityScope,
 } from './go-capability-guard.js'
 
 export {
@@ -56,9 +58,11 @@ export {
   GO_PRESET,
   GO_PRESET_ID,
   GO_TOOL_PATH_PREFIXES,
+  GO_TOOL_PATHS,
   type GoForbiddenCapabilityKind,
   type GoNativeCapabilityKind,
   type GoPresetDeclaration,
+  type GoToolPath,
   type GoToolPathPrefix,
 } from '../preset/go-preset.js'
 

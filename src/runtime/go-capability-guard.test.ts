@@ -50,8 +50,8 @@ describe('Go preset declaration', () => {
       'go.resign',
       'go.request_deep_think',
     ])
-    expect(exportedFrom<readonly string[]>(GO_PRESET, 'toolPaths')).toEqual(toolPaths)
-    expect(Object.isFrozen(exportedFrom<readonly string[]>(GO_PRESET, 'toolPaths'))).toBe(true)
+    expect(GO_PRESET.toolPaths).toEqual(toolPaths)
+    expect(Object.isFrozen(GO_PRESET.toolPaths)).toBe(true)
   })
 
   it('names every forbidden general-execution capability explicitly', () => {
@@ -177,13 +177,18 @@ describe('Go execution-time capability guard', () => {
   it('refuses to mint a capability outside the exact Go tool surface', () => {
     const run = vi.fn(() => 'filesystem')
 
-    for (const toolPath of ['fs.read', 'go.arbitrary', 'companion.handoff']) {
+    for (const [toolPath, reason] of [
+      ['fs.read', 'tool-path'],
+      ['companion.handoff', 'tool-path'],
+      ['go.arbitrary', 'not-in-surface'],
+      ['go.exec', 'not-in-surface'],
+    ] as const) {
       try {
         nativeGoCapability(toolPath, run)
         expect.fail(`minting ${toolPath} must be refused`)
       } catch (error) {
         expect(error).toBeInstanceOf(ForbiddenGoCapabilityError)
-        expect((error as ForbiddenGoCapabilityError).reason).toBe('not-in-surface')
+        expect((error as ForbiddenGoCapabilityError).reason).toBe(reason)
       }
     }
 
@@ -213,13 +218,12 @@ describe('Go execution-time capability guard', () => {
     expect(forgedRun).not.toHaveBeenCalled()
   })
 
-  it('exposes the same provenance and policy check for direct tool boundaries', () => {
+  it('exposes the same provenance check for direct tool boundaries', () => {
+    // A minted surface tool passes; the kind and surface rules were already
+    // enforced at mint time, so this boundary only re-asserts provenance.
     expect(() => assertGoCapabilityAllowed(
       nativeGoCapability('go.play', () => 'played'),
     )).not.toThrow()
-    expect(() => assertGoCapabilityAllowed(
-      nativeGoCapability('fs.read', () => 'filesystem'),
-    )).toThrow(ForbiddenGoCapabilityError)
     expect(() => assertGoCapabilityAllowed({
       toolPath: 'go.play',
       kind: 'model-native',
@@ -232,7 +236,7 @@ describe('Unforgeable native capability provenance', () => {
   it('rejects a capability that self-reports kind: model-native without module minting', () => {
     const guard = new GoCapabilityGuard()
     const run = vi.fn(() => 'shell output')
-    const forged: GoCapability = { toolPath: 'go.helpers.run', kind: 'model-native', run }
+    const forged: GoCapability = { toolPath: 'go.state', kind: 'model-native', run }
 
     expect(() => guard.register(forged)).toThrow(ForgedGoCapabilityError)
     expect(run).not.toHaveBeenCalled()
@@ -241,7 +245,7 @@ describe('Unforgeable native capability provenance', () => {
   it('still denies execution after a forged alias is refused at registration', () => {
     const guard = new GoCapabilityGuard()
     const run = vi.fn(() => 'shell output')
-    const forged: GoCapability = { toolPath: 'go.helpers.run', kind: 'model-native', run }
+    const forged: GoCapability = { toolPath: 'go.state', kind: 'model-native', run }
 
     try {
       guard.register(forged)
@@ -249,7 +253,7 @@ describe('Unforgeable native capability provenance', () => {
       // Rejected at registration on purpose: the scope must still deny the path.
     }
 
-    expect(() => guard.execute('go.helpers.run', { command: 'ls' }))
+    expect(() => guard.execute('go.state', { command: 'ls' }))
       .toThrow(ForbiddenGoCapabilityError)
     expect(run).not.toHaveBeenCalled()
   })
@@ -361,7 +365,7 @@ describe('Go preset policy evaluation', () => {
     expect(typeof pathViolation, 'go-capability-guard must expose goToolPathViolation')
       .toBe('function')
 
-    for (const toolPath of exportedFrom<readonly string[]>(GO_PRESET, 'toolPaths') ?? []) {
+    for (const toolPath of GO_PRESET.toolPaths) {
       expect(pathViolation?.(toolPath)).toBeUndefined()
     }
     expect(pathViolation?.('companion.handoff')).toBe('tool-path')
@@ -410,6 +414,24 @@ describe('Exact Spec §20 tool surface', () => {
       expect((error as ForbiddenGoCapabilityError).reason).toBe('not-in-surface')
     }
     expect(run).not.toHaveBeenCalled()
+  })
+
+  it('refuses an off-surface path at execution even when it was never registered', () => {
+    const guard = new GoCapabilityGuard()
+
+    try {
+      guard.execute('go.exec')
+      expect.fail('go.exec must never execute')
+    } catch (error) {
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('not-in-surface')
+    }
+
+    try {
+      guard.execute('fs.read')
+      expect.fail('fs.read must never execute')
+    } catch (error) {
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('tool-path')
+    }
   })
 
   it('cannot run go.exec through any public entry point', () => {
@@ -465,9 +487,14 @@ describe('Go lane scope composition', () => {
     const scope = agentCtx.get('goCapabilities') as GoComposedScope | undefined
     expect(scope).toBeDefined()
     expect(scope?.presetId).toBe(GO_PRESET_ID)
-    expect(scope?.toolPaths).toEqual(exportedFrom<readonly string[]>(GO_PRESET, 'toolPaths'))
+    expect(scope?.toolPaths).toEqual(GO_PRESET.toolPaths)
     expect(scope?.execute('go.state')).toBe('state')
-    expect(() => scope?.execute('go.exec')).toThrow(ForbiddenGoCapabilityError)
+    try {
+      scope?.execute('go.exec')
+      expect.fail('go.exec must not execute through the composed scope')
+    } catch (error) {
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('not-in-surface')
+    }
   })
 })
 
