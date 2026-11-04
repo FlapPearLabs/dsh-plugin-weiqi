@@ -111,7 +111,9 @@ describe('createGoTurnEnforcement model steps', () => {
   })
 
   it('denies a new model step once turn tokens are exactly exhausted', () => {
-    const enforcement = createGoTurnEnforcement(budgetWith({ maxTurnTokens: 100 }))
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 10, maxTurnTokens: 100 }),
+    )
 
     enforcement.beginModelStep().complete({ tokens: 60 })
     enforcement.beginModelStep().complete({ tokens: 39 })
