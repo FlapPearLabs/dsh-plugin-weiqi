@@ -43,3 +43,11 @@ export {
   type FocusResumeBinding,
   type FocusResumeBindingOptions,
 } from './focus-resume.js'
+
+export {
+  COMPANION_HANDOFF_PLUGIN,
+  createCompanionHandoff,
+  type CompanionHandoff,
+  type CompanionHandoffMessage,
+  type CompanionHandoffSource,
+} from './handoff.js'
