@@ -6,6 +6,8 @@ import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
 import { RuntimeFocusOwner, bindPinnedDshFocusBoundary } from './runtime/focus-boundary.js'
 import { bindPinnedDshCooperativeYield } from './runtime/focus-yield.js'
 import { bindPinnedDshLaneResume, emitLaneSwitched } from './runtime/focus-resume.js'
+import { composeGoLaneScope } from './runtime/go-capability-guard.js'
+import { GO_PRESET_ID } from './preset/go-preset.js'
 
 export * from './contracts/index.js'
 
@@ -27,7 +29,21 @@ export interface Config {}
 export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
   const agents = {} as Record<Lane, Agent>
   for (const lane of COMPANION_LANES) {
-    agents[lane] = (await ctx.agents.create({ sessionId: laneSessionId(lane) })).agent
+    agents[lane] = (
+      await ctx.agents.create({
+        sessionId: laneSessionId(lane),
+        // Only the isolated Go lane is composed from the native-only preset.
+        // The durable `agentPreset` header is written together with the setup
+        // that actually composes the scoped world (the guard bound as the
+        // agent's `goCapabilities` service), never as a bare label.
+        ...(lane === 'go'
+          ? {
+              meta: { agentPreset: GO_PRESET_ID },
+              setup: composeGoLaneScope,
+            }
+          : {}),
+      })
+    ).agent
   }
 
   const focusOwner = new RuntimeFocusOwner('work')

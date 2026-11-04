@@ -37,6 +37,36 @@ export {
 } from './focus-yield.js'
 
 export {
+  ForbiddenGoCapabilityError,
+  ForgedGoCapabilityError,
+  GO_CAPABILITY_SERVICE,
+  GoCapabilityGuard,
+  assertGoCapabilityAllowed,
+  composeGoLaneScope,
+  createGoCapabilityScope,
+  isNativeGoCapability,
+  nativeGoCapability,
+  resolveGoCapabilityGuard,
+  type GoCapability,
+  type GoCapabilityRejectionReason,
+  type GoCapabilityScope,
+} from './go-capability-guard.js'
+
+export {
+  GO_FORBIDDEN_CAPABILITY_KINDS,
+  GO_NATIVE_CAPABILITY_KINDS,
+  GO_PRESET,
+  GO_PRESET_ID,
+  GO_TOOL_PATH_PREFIXES,
+  GO_TOOL_PATHS,
+  type GoForbiddenCapabilityKind,
+  type GoNativeCapabilityKind,
+  type GoPresetDeclaration,
+  type GoToolPath,
+  type GoToolPathPrefix,
+} from '../preset/go-preset.js'
+
+export {
   bindPinnedDshLaneResume,
   COMPANION_RESUME_PLUGIN,
   emitLaneSwitched,
