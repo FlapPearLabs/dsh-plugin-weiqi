@@ -173,7 +173,9 @@ describe('CanonicalGameRecord rejects non-canonical or unsafe payloads', () => {
       ...record(),
       settlement: { deadStones: [{ x: 0, y: 0, color: 'black' }], agreed: true },
     })
-    expect(() => parseCanonicalGameRecord(wire)).toThrow(/settlement: point unknown key color/)
+    expect(() => parseCanonicalGameRecord(wire)).toThrow(
+      /canonical settlement: point 1 unknown key color/,
+    )
   })
 
   it('rejects invalid JSON', () => {

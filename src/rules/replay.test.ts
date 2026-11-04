@@ -107,8 +107,8 @@ const LONG_SEQUENCE: readonly GameAction[] = [
 
 describe('replayCanonicalGame restores the authoritative state (Spec §28)', () => {
   it('reproduces a long play/pass sequence: board, turn, move number, passes and captures', () => {
-    const live = liveState(LONG_SEQUENCE, 'live-long')
-    const { state } = replay(LONG_SEQUENCE, 'replayed-long')
+    const live = liveState(LONG_SEQUENCE, 'canonical-long')
+    const { state } = replay(LONG_SEQUENCE, 'canonical-long')
 
     expect(state).toEqual(live)
     expect(state.stones).toHaveLength(6)
@@ -119,8 +119,8 @@ describe('replayCanonicalGame restores the authoritative state (Spec §28)', () 
   })
 
   it('is deterministic across independent replays', () => {
-    const first = replay(LONG_SEQUENCE, 'replayed-deterministic-a').state
-    const second = replay(LONG_SEQUENCE, 'replayed-deterministic-b').state
+    const first = replay(LONG_SEQUENCE, 'canonical-deterministic').state
+    const second = replay(LONG_SEQUENCE, 'canonical-deterministic').state
 
     expect(first).toEqual(second)
   })
@@ -132,8 +132,8 @@ describe('replayCanonicalGame restores the authoritative state (Spec §28)', () 
       { type: 'play', by: 'deepseek', point: { x: 0, y: 1 } },
       { type: 'pass', by: 'user' },
     ]
-    const live = liveState(swapped, 'live-swapped', USER_WHITE)
-    const { state } = replay(swapped, 'replayed-swapped', USER_WHITE)
+    const live = liveState(swapped, 'canonical-swapped', USER_WHITE)
+    const { state } = replay(swapped, 'canonical-swapped', USER_WHITE)
 
     expect(state).toEqual(live)
     expect(state.captures.deepseek).toBe(1)
@@ -142,8 +142,8 @@ describe('replayCanonicalGame restores the authoritative state (Spec §28)', () 
 
   it('restores the initial state for an empty action log', () => {
     const initialPort = createTenukiGoRulesPort()
-    const initial = initialPort.createGame(gameConfig('live-empty'))
-    const { state } = replay([], 'replayed-empty')
+    const initial = initialPort.createGame(gameConfig('canonical-empty'))
+    const { state } = replay([], 'canonical-empty')
 
     expect(state).toEqual(initial)
   })
@@ -160,9 +160,9 @@ describe('replayCanonicalGame treats resign as terminal, not as a board move (Sp
     ['deepseek', 'user'],
     ['user', 'deepseek'],
   ] as const)('derives winner = opponent when %s resigns', (resigner, winner) => {
-    const before = liveState(BEFORE_RESIGN, `live-resign-${resigner}`)
+    const before = liveState(BEFORE_RESIGN, `canonical-resign-${resigner}`)
     const actions: readonly GameAction[] = [...BEFORE_RESIGN, { type: 'resign', by: resigner }]
-    const { state } = replay(actions, `replayed-resign-${resigner}`)
+    const { state } = replay(actions, `canonical-resign-${resigner}`)
 
     expect(state.status).toBe('over')
     expect(state.outcome).toEqual({ winner, loser: resigner, reason: 'resignation' })
@@ -174,32 +174,32 @@ describe('replayCanonicalGame treats resign as terminal, not as a board move (Sp
   })
 
   it('keeps the terminal state after replay and rejects every later play, pass and resign', () => {
-    const before = liveState(BEFORE_RESIGN, 'live-terminal')
+    const before = liveState(BEFORE_RESIGN, 'canonical-terminal')
     const actions: readonly GameAction[] = [
       ...BEFORE_RESIGN,
       { type: 'resign', by: 'deepseek' },
     ]
-    const { port, state } = replay(actions, 'replayed-terminal')
+    const { port, state } = replay(actions, 'canonical-terminal')
 
     expect(state.status).toBe('over')
     expect(state.stones).toEqual(before.stones)
 
-    const laterPlay = port.play('replayed-terminal', 'user', { x: 5, y: 5 })
+    const laterPlay = port.play('canonical-terminal', 'user', { x: 5, y: 5 })
     expect(laterPlay.ok).toBe(false)
     if (laterPlay.ok) throw new Error('play was accepted after a replayed resignation')
     expect(laterPlay.reason).toBe('game-over')
 
-    const laterPass = port.pass('replayed-terminal', 'user')
+    const laterPass = port.pass('canonical-terminal', 'user')
     expect(laterPass.ok).toBe(false)
     if (laterPass.ok) throw new Error('pass was accepted after a replayed resignation')
     expect(laterPass.reason).toBe('game-over')
 
-    const laterResign = port.resign('replayed-terminal', 'user')
+    const laterResign = port.resign('canonical-terminal', 'user')
     expect(laterResign.ok).toBe(false)
     if (laterResign.ok) throw new Error('resign was accepted after a replayed resignation')
     expect(laterResign.reason).toBe('game-over')
 
-    expect(port.getState('replayed-terminal')).toEqual(state)
+    expect(port.getState('canonical-terminal')).toEqual(state)
   })
 
   it('marks resignation on an empty board terminal without adding a stone', () => {
@@ -231,8 +231,8 @@ describe('replayCanonicalGame settlement and rejected actions', () => {
       { type: 'pass', by: 'deepseek' },
     ]
     const settlement: SettlementRecord = { deadStones: [], agreed: true }
-    const live = liveSettledState(actions, settlement, 'live-settled')
-    const { state } = replay(actions, 'replayed-settled', USER_BLACK, settlement)
+    const live = liveSettledState(actions, settlement, 'canonical-settled')
+    const { state } = replay(actions, 'canonical-settled', USER_BLACK, settlement)
 
     expect(state).toEqual(live)
     expect(state.status).toBe('over')
