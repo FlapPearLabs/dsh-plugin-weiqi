@@ -113,6 +113,13 @@ NODE
     ./node_modules/vitest/vitest.mjs run --no-file-parallelism --config \
     tests/upgrade-gates/tenuki-conformance/tenuki-conformance.vitest.config.ts
   final_result=PASS
+  # Explicit exit, not a bare return: when TRACE_LOG is set the whole main()
+  # runs inside a pipeline subshell (`main 2>&1 | tee "$TRACE_LOG"`), and a
+  # function that merely returns does not fire its EXIT trap in that subshell.
+  # Exiting here fires finish() on the SUCCESS path too, so the retained trace
+  # always ends with the terminal PASS marker and cleanup() removes the
+  # scratch install.
+  exit 0
 }
 
 if [[ -n "${TRACE_LOG:-}" ]]; then

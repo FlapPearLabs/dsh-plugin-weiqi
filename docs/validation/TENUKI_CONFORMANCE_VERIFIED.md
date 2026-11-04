@@ -90,7 +90,10 @@ with a different Node, set `EXPECTED_NODE` to the actual version (e.g.
 `EXPECTED_NODE=v24.19.0`). CI runs the default pin via
 `.github/workflows/tenuki-conformance-gate.yml`. To retain the self-contained
 artifact, set `TRACE_LOG` to an output path (the workflow uploads it as the
-`tenuki-conformance-trace` artifact).
+`tenuki-conformance-trace` artifact). The gate asserts that the trace's final
+line is the terminal PASS marker and fails when the artifact is missing
+(`if-no-files-found: error`), so a trace truncated before the terminal result
+cannot pass CI.
 
 Executed result (Node v24.19.0 local run, `EXPECTED_NODE=v24.19.0`; CI runs the
 pinned v24.11.1). The `TRACE_LOG` artifact is self-contained: it records, in
