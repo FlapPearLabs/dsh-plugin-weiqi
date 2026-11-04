@@ -37,7 +37,7 @@ baseline exists or should be created.
 | BL-PKG-04 | build / package | Reproducible build + pack | `pnpm verify` (tsc build → lib/); smoke runs `pnpm pack` and asserts tarball contents | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-05 | profile install (packed tarball) | `dsh plugin --profile add <tgz>` + bundle reconciliation + mount | `tests/profile-install/run-profile-install-smoke.sh` + `profile-mount-smoke.mjs`; CI pass | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-06 | GitHub source install | `dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi` builds and activates | No evidence: smoke covers local tarball only; no `github:` spec path tested | NEEDS_SPIKE | Unknown CLI resolution/build/activation path for `github:` spec | — | SPIKE |
-| BL-PKG-07 | Foundation CI | typecheck + tests + build automated | `.github/workflows/ci.yml` (Node 24.11.1 / pnpm 11.7.0 pins); pass on foundation HEAD | IMPLEMENTED_VERIFIED | Trigger policy is bootstrap-era (see BL-CI-01) | — | NO_ACTION |
+| BL-PKG-07 | Foundation CI | typecheck + tests + build automated | `.github/workflows/ci.yml` (Node 24.11.1 / pnpm 11.7.0 pins); pass on foundation HEAD | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-08 | DSH version pin | Exact pinned DSH commit/packages | DSH `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`; packages `0.1.1-rc.2` (peerDeps + gate assertions) | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-09 | cooperative-yield upgrade gate | Any DSH change reruns the fixture | `.github/workflows/cooperative-yield-upgrade-gate.yml` (copies fixture into pinned DSH tree, real AgentLoop); pass | IMPLEMENTED_VERIFIED | None | — | KEEP_AS_UPGRADE_GATE |
 
@@ -45,7 +45,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-CI-01 | Post-bootstrap CI trigger policy | CI runs on current default branch / normal PR flow | All three workflows still trigger push on `work/bootstrap-foundation-v1`; only `ci.yml` has a generic `pull_request`; cooperative-yield gate and profile-install smoke have no regular PR trigger | NOT_IMPLEMENTED | No policy for main-based development; CI would not run on normal PRs against `main` | — | SMALL_INFRA_TICKET |
+| BL-CI-01 | Post-bootstrap CI trigger policy | CI runs on current default branch / normal PR flow | `.github/workflows/{ci.yml, cooperative-yield-upgrade-gate.yml, profile-install-smoke.yml}` trigger on `main` push and on PRs targeting `main`, with existing path filters preserved; trigger-only diff merged as PR #63 (`e988992`), adversarial review r1 APPROVE; all 3 PR checks passed | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 
 ## Runtime / Focus
 
@@ -55,20 +55,20 @@ baseline exists or should be created.
 | BL-RT-02 | One foreground cognition lane | At most one active lane invariant | `src/runtime/focus.ts` owns deterministic `activeLane` transitions; `src/runtime/focus.test.ts` verifies exactly one `work`/`go` lane remains active across transition sequences (merged PR #54, `a7fe3b7`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-03 | Lane / PendingFocusIntent / RuntimeFocusState contracts | Spec §5 exact shapes | `src/contracts/focus.ts` remains the sole unchanged contract; `src/runtime/focus.ts` implements its state transitions and `src/runtime/focus.test.ts` verifies the contract behavior (merged PR #54, `a7fe3b7`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-04 | user_command > self_initiated arbitration | Spec §5 precedence | `submitFocusIntent` implements the frozen six-case single-slot matrix; table-driven tests verify user-over-self precedence and retain-existing user/user semantics without consuming the incoming input (merged PR #54, `a7fe3b7`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
-| BL-RT-05 | Immutable UserMessage handoff | Spec §5/§7 exact source message | Contract references DSH `UserMessage`; no runtime handling | FOUNDATION_ONLY | Handoff behavior | A | IMPLEMENTATION_TICKET |
+| BL-RT-05 | Immutable UserMessage handoff | Spec §5/§7 exact source message | `src/runtime/handoff.ts` `createCompanionHandoff` reads only `pendingFocus.sourceMessage` and copies the exact stored content blocks into a freshly identified target-lane message with Companion-handoff provenance; no session-surface lookup, no `capturedText`, no second buffer; 10-case test suite + mutation audit; merged PR #65 (`33ad025`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-06 | Safe-boundary eligibility detection | Detect the first safe cognition handoff boundary only after the current DSH step fully commits; do not suppress continuation or switch lanes | `RuntimeFocusOwner` integrates committed `session/event` plus actual `llm/stream` observation; the real pinned DSH trace verifies multi-tool result commitment, post-`step/end` eligibility, unchanged `activeLane`, and explicit `no-step` semantics (merged PR #56, `bfd56d3`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
-| BL-RT-07 | Cooperative-yield production integration + post-settle lane switch | Spec §7.1.2 continuation yield / natural settle handling; perform the actual `activeLane` switch only after confirmed settle | Spike 3/3 pass; verified continuation seam = batch splice + reject + blocked→idle; natural settle or `whenIdle()` must precede the actual switch | VERIFIED_FACT_NOT_INTEGRATED | Yield/settle integration + post-settle actual lane switch; gate already verified | A | INTEGRATION_TICKET |
+| BL-RT-07 | Cooperative-yield production integration + post-settle lane switch | Spec §7.1.2 continuation yield / natural settle handling; perform the actual `activeLane` switch only after confirmed settle | `src/runtime/focus-yield.ts` implements the verified seam (batch splice + reject + blocked→idle) and switches `activeLane` exactly once only after confirmed settle; production gate `cooperative-yield-production-gate.yml` runs the real pinned-DSH AgentLoop fixture; merged PR #58 (`41a4b04`); 48-test package verification PASS | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-08 | pausedLane contract / state field | Spec §5/§7.1.2 | `markLanePaused` preserves a single optional lane and `admitPausedLaneResume` clears it atomically while reactivating that lane; deterministic tests verify no stack/list accumulation (merged PR #54, `a7fe3b7`) | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 | BL-RT-09 | Inactive-lane natural-language admission | Spec §7.2 | No code (concept only) | NOT_IMPLEMENTED | Runtime + UI admission path | A | IMPLEMENTATION_TICKET |
 | BL-RT-10 | Board click direct route | Spec §7.2/§32 | No code | NOT_IMPLEMENTED | User interaction: board click → UI → GoRulesPort → resulting state/GameNotice → UI. Depends on BL-GR-01 (GoRulesPort behavior) and BL-UI-02 (production UI); not part of Go Agent tools | E | IMPLEMENTATION_TICKET |
-| BL-RT-11 | Resume sequencing / cooperative external resume integration | Spec §5/§7.1.2 | Verified cooperative-yield spike resume ordering (A→B→C→companion-resume) and external resume seam against pinned DSH `b150a551...`; not integrated into production Runtime | VERIFIED_FACT_NOT_INTEGRATED | Production Runtime integration | A | INTEGRATION_TICKET |
+| BL-RT-11 | Resume sequencing / cooperative external resume integration | Spec §5/§7.1.2 | `src/runtime/focus-resume.ts` binds the single resumed switch to exactly one plugin-sourced `companion-resume`; `pausedLane` consumed at admission, `pendingFocus` preserved; resignated synthetic resume suppressed under a real user wake; real pinned-DSH resume gate PASS (A,B,C,resume; 4 unique MessageIds, no loss/duplicate); merged PR #60 (`063fee1`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | A | NO_ACTION |
 
 ## Bridge / Context
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-BR-01 | WorkSnapshot / GameNotice / CompanionBridge contracts | Spec §9-11 exact shapes | `src/contracts/bridge.ts` matches Spec; type-level tests | FOUNDATION_ONLY | Behavior, not shape | D | IMPLEMENTATION_TICKET |
-| BL-BR-02 | Latest-value semantics | Spec §9 awareness only, never a queue | No runtime holder/updater | NOT_IMPLEMENTED | State ownership + updates | D | IMPLEMENTATION_TICKET |
+| BL-BR-01 | WorkSnapshot / GameNotice / CompanionBridge contracts | Spec §9-11 exact shapes | `src/contracts/bridge.ts` matches Spec; `src/bridge/schema.ts` validates the exact field sets and rejects forbidden strategic/command fields (incl. nested `AffectedGroupDelta`); `src/bridge/runtime.ts` owns independent Work/Game slots without recursive projection; PR #67 (`6348a0f`), adversarial review r1 APPROVE, 84 tests | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
+| BL-BR-02 | Latest-value semantics | Spec §9 awareness only, never a queue | `src/bridge/latest-value.ts` keeps one latest value with a monotonic sequence; stale/duplicate updates are rejected without resurrecting old values; no history/queue/drain/subscription surface; PR #67 (`6348a0f`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
 | BL-BR-03 | ctx.systemPrompt.context provider delivery | Spec §9.1 DSH-native agent-scoped context | No evidence: provider registration/render/dedup behavior on pinned DSH unverified | NEEDS_SPIKE | Unknown DSH provider seam semantics | D (gate) | SPIKE |
 | BL-BR-04 | Cross-lane awareness / no raw transcript injection | Spec §12/§35 | Contract only; AGENTS frozen constraint | FOUNDATION_ONLY | Behavior | D | IMPLEMENTATION_TICKET |
 | BL-BR-05 | Bridge-only changes do not trigger evaluation wakes | Spec §9.1 | No code | NOT_IMPLEMENTED | Needs Attention linkage | D | IMPLEMENTATION_TICKET |
@@ -119,7 +119,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-CMP-01 | CompanionState contract | Spec §13 | `src/contracts/companion.ts` generic `CompanionState<TCompiledPersona, TMoodState>`; test asserts internals intentionally unfrozen | FOUNDATION_ONLY | Persistence + behavior | D | IMPLEMENTATION_TICKET |
+| BL-CMP-01 | CompanionState contract | Spec §13 | `src/contracts/companion.ts` generic `CompanionState<TCompiledPersona, TMoodState>`; `src/companion/state.ts` `CompanionStateHolder` keeps exactly one latest state (latest-wins, no history, no mood reducer); `src/companion/persistence.ts` saves/loads the latest `{version,state}` snapshot with temp-file + rename, no journal; 8 new tests (56 total) + mutation analysis; merged PR #66 (`19cb97f`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
 | BL-CMP-02 | Persona / Persona Compiler | Spec §15 | No code (schema intentionally generic) | NOT_IMPLEMENTED | Compiler + schema freeze decision | D | IMPLEMENTATION_TICKET |
 | BL-CMP-03 | Mood (bounded deltas, clamp, baseline return) | Spec §14 | No code | NOT_IMPLEMENTED | Reducer | D | IMPLEMENTATION_TICKET |
 | BL-CMP-04 | Attention modes (Mofish / Normal / Strict / Manual) | Spec §16 | Only `AttentionMode` type; V4 presents UI only | FOUNDATION_ONLY | Runtime semantics | D | IMPLEMENTATION_TICKET |
@@ -161,7 +161,7 @@ implementation Tickets:
 - packed-tarball profile installation (BL-PKG-05) — real `dsh plugin --profile add` verified
 - plugin mount in real Loader tree (BL-PKG-05) — fiber active verified
 - Foundation build/test (BL-PKG-04, BL-PKG-07) — typecheck + 4 tests + build verified
-- frozen core contracts (BL-RT-03, BL-BR-01, BL-CMP-01, BL-CMP-04) — type-level tests
+- frozen core contracts (BL-RT-03, BL-CMP-04) — type-level tests
 - cooperative-yield feasibility (BL-RT-07) — 3/3 spike experiments pass
 - cooperative-yield executable evidence — `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`
 - cooperative-yield upgrade gate (BL-PKG-09) — real pinned-DSH AgentLoop gate
@@ -178,25 +178,9 @@ requires `ESCALATION_REQUIRED`:
 
 - `Lane`, `PendingFocusIntent`, `RuntimeFocusState` (BL-RT-03)
 - `RuntimeFocusState.pausedLane` state field (BL-RT-08)
-- `WorkSnapshot`, `GameNotice`, `AffectedGroupDelta`, `CompanionBridge` (BL-BR-01)
-- `CompanionState`, `AttentionMode` (BL-CMP-01, BL-CMP-04)
+- `AttentionMode` (BL-CMP-04)
 
 # VERIFIED FACT — NOT INTEGRATED
-
-cooperative yield (BL-RT-07):
-
-```text
-Feasibility:          VERIFIED (3/3 spike experiments, pinned DSH b150a551...)
-Upgrade gate:         IMPLEMENTED_VERIFIED (BL-PKG-09)
-Production integration: VERIFIED_FACT_NOT_INTEGRATED
-```
-
-resume sequencing / cooperative external resume integration (BL-RT-11):
-
-```text
-Feasibility:          VERIFIED (spike resume ordering A→B→C→companion-resume, pinned DSH b150a551...)
-Production integration: VERIFIED_FACT_NOT_INTEGRATED
-```
 
 request-level token hard-cap seam (BL-BUD-07):
 

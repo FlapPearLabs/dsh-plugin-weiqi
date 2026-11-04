@@ -5,6 +5,7 @@ import type { Lane } from './contracts/focus.js'
 import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
 import { RuntimeFocusOwner, bindPinnedDshFocusBoundary } from './runtime/focus-boundary.js'
 import { bindPinnedDshCooperativeYield } from './runtime/focus-yield.js'
+import { bindPinnedDshLaneResume, emitLaneSwitched } from './runtime/focus-resume.js'
 
 export * from './contracts/index.js'
 
@@ -31,5 +32,8 @@ export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
 
   const focusOwner = new RuntimeFocusOwner('work')
   bindPinnedDshFocusBoundary(ctx, focusOwner, agents)
-  bindPinnedDshCooperativeYield(ctx, focusOwner, agents)
+  bindPinnedDshCooperativeYield(ctx, focusOwner, agents, {
+    onLaneSwitch: transition => emitLaneSwitched(ctx, transition),
+  })
+  bindPinnedDshLaneResume(ctx, focusOwner, agents)
 }
