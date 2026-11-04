@@ -531,7 +531,10 @@ describe('Spec §39.4 deep-think boost attempts', () => {
 
 describe('Spec §39.4 total turn-token exhaustion', () => {
   it('denies every analysis path but still permits the authoritative action', async () => {
-    const harness = createBypassHarness({ budget: { maxModelSteps: 5 } })
+    const harness = createBypassHarness({
+      colors: DEEPSEEK_FIRST_COLORS,
+      budget: { maxModelSteps: 5 },
+    })
     harness.enforcement.beginModelStep().complete({ tokens: 500 })
     harness.enforcement.beginModelStep().complete({ tokens: 500 })
     expect(harness.enforcement.remainingTurnTokens()).toBe(0)
@@ -550,9 +553,12 @@ describe('Spec §39.4 total turn-token exhaustion', () => {
     expect((await applyRequest(harness, OVERSIZED_REQUEST)).maxTokens).toBe(0)
 
     // §22.4: DeepSeek must choose using the current information, so the
-    // authoritative commit must remain available after exhaustion.
+    // authoritative commit must remain available after exhaustion. Drive the
+    // real go.play tool (not just the enforcement recorder) so the claim
+    // covers the tool path the model actually uses.
     expect(harness.enforcement.snapshot().committedAction).toBeUndefined()
-    harness.enforcement.recordCommittedAction('play')
+    expect(invoke(harness, 'go.play', { gameId: harness.gameId, point: { x: 4, y: 4 } }))
+      .toMatchObject({ ok: true })
     expect(harness.enforcement.snapshot().committedAction).toBe('play')
   })
 })
