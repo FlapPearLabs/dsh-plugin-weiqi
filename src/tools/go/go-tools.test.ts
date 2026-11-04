@@ -10,7 +10,8 @@ import {
 import { GoCapabilityGuard } from '../../runtime/go-capability-guard.js'
 import { createTenukiGoRulesPort } from '../../rules/tenuki-adapter.js'
 import { createStubGoRulesPort } from '../../../tests/rules/stub-port.js'
-import { GO_TOOL_DEFINITIONS, GO_TOOL_NAMES, GoToolArgumentError } from './go-tools.js'
+import { GO_TOOL_DEFINITIONS, GO_TOOL_NAMES } from './go-tools.js'
+import { GoToolArgumentError } from './errors.js'
 import { registerGoTools } from './go-tool-registry.js'
 import type {
   GoDeepThinkResult,
@@ -108,6 +109,16 @@ function createHarness(options: HarnessOptions = {}) {
  */
 function invoke<T>(registry: GoToolRegistry, toolPath: string, args: unknown = {}): T {
   return registry.invoke(toolPath, args) as T
+}
+
+function success<T extends { ok: boolean }>(result: T): Extract<T, { ok: true }> {
+  if (!result.ok) throw new Error(`expected an ok result, received ${JSON.stringify(result)}`)
+  return result as Extract<T, { ok: true }>
+}
+
+function failure<T extends { ok: boolean }>(result: T): Extract<T, { ok: false }> {
+  if (result.ok) throw new Error(`expected a rejected result, received ${JSON.stringify(result)}`)
+  return result as Extract<T, { ok: false }>
 }
 
 function collectSchemaPropertyNames(schema: unknown): string[] {
@@ -419,19 +430,18 @@ describe('go.try_move', () => {
 describe('go.play', () => {
   it('applies an accepted move through the port and ends the analysis loop', () => {
     const harness = createHarness({ colors: DEEPSEEK_FIRST_COLORS })
-    const result = invoke<GoPlayResult>(harness.registry, 'go.play', {
+    const accepted = success(invoke<GoPlayResult>(harness.registry, 'go.play', {
       gameId: harness.gameId,
       point: { x: 4, y: 4 },
-    })
+    }))
 
-    expect(result.ok).toBe(true)
-    expect(result.state.moveNumber).toBe(1)
-    expect(result.state.stones).toEqual([{ point: { x: 4, y: 4 }, color: 'black' }])
-    expect(result.captured).toEqual([])
-    expect(result.notice.status).toBe('playing')
+    expect(accepted.state.moveNumber).toBe(1)
+    expect(accepted.state.stones).toEqual([{ point: { x: 4, y: 4 }, color: 'black' }])
+    expect(accepted.captured).toEqual([])
+    expect(accepted.notice.status).toBe('playing')
     expect(harness.notices).toHaveLength(1)
     expect(harness.calls).toContain('play')
-    expect(harness.port.getState(harness.gameId)).toEqual(result.state)
+    expect(harness.port.getState(harness.gameId)).toEqual(accepted.state)
     expect(lastSnapshot(harness.enforcement)).toMatchObject({
       committedAction: 'play',
       gameTerminal: false,
@@ -449,14 +459,13 @@ describe('go.play', () => {
     harness.port.play(harness.gameId, 'user', { x: 4, y: 4 })
     const before = harness.port.getState(harness.gameId)
 
-    const result = invoke<GoPlayResult>(harness.registry, 'go.play', {
+    const rejected = failure(invoke<GoPlayResult>(harness.registry, 'go.play', {
       gameId: harness.gameId,
       point: { x: 4, y: 4 },
-    })
+    }))
 
-    expect(result.ok).toBe(false)
-    expect(result.reason).toBe('occupied')
-    expect(result.state).toEqual(before)
+    expect(rejected.reason).toBe('occupied')
+    expect(rejected.state).toEqual(before)
     expect(harness.port.getState(harness.gameId)).toEqual(before)
     expect(harness.notices).toHaveLength(0)
     expect(lastSnapshot(harness.enforcement).committedAction).toBeUndefined()
@@ -472,7 +481,9 @@ describe('go.play', () => {
 describe('go.pass', () => {
   it('applies the pass, publishes the notice and records the commit', () => {
     const harness = createHarness({ colors: DEEPSEEK_FIRST_COLORS })
-    const result = invoke<GoPassResult>(harness.registry, 'go.pass', { gameId: harness.gameId })
+    const result = success(invoke<GoPassResult>(harness.registry, 'go.pass', {
+      gameId: harness.gameId,
+    }))
 
     expect(result.ok).toBe(true)
     expect(result.state.consecutivePasses).toBe(1)
@@ -490,12 +501,12 @@ describe('go.resign', () => {
     })
     harness.port.play(harness.gameId, 'deepseek', { x: 4, y: 4 })
     harness.port.play(harness.gameId, 'user', { x: 4, y: 5 })
-    harness.calls.length = 0
     const before = harness.port.getState(harness.gameId)
+    harness.calls.length = 0
 
-    const result = invoke<GoResignResult>(harness.registry, 'go.resign', {
+    const result = success(invoke<GoResignResult>(harness.registry, 'go.resign', {
       gameId: harness.gameId,
-    })
+    }))
 
     expect(result.ok).toBe(true)
     expect(harness.calls).toEqual(['resign'])
@@ -546,8 +557,9 @@ describe('go.resign', () => {
       GoTurnAnalysisEndedError,
     )
 
-    const second = invoke<GoResignResult>(harness.registry, 'go.resign', { gameId: harness.gameId })
-    expect(second.ok).toBe(false)
+    const second = failure(invoke<GoResignResult>(harness.registry, 'go.resign', {
+      gameId: harness.gameId,
+    }))
     expect(second.reason).toBe('game-over')
     expect(harness.notices).toHaveLength(1)
   })
