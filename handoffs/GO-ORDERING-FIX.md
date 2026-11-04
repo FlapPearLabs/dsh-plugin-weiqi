@@ -2,6 +2,9 @@
 
 Ticket: none (regression found by WAVE-C-T09; split out per that ticket's explicit
 "no enforcement changes" non-goal and its `tests/`-only expected surface).
+Parent ticket: WAVE-C-T09 (#26), Baseline BL-BUD-05. Split rationale: C-T09's
+Expected Surfaces are `tests/` + CI only, so its product fix ships as this
+standalone follow-up PR; the ticket's own diff stays tests-only (#105).
 Baseline: `48e51b5` (main after the C-T08/B-T05/F-T01/F-T02 sync).
 Branch: `fix/post-commit-ordering`.
 
@@ -42,8 +45,14 @@ Diff surface: `src/tools/go/go-tools.ts` +18/-1, `tests/budget/post-commit-order
 | --- | --- | --- |
 | Red | `pnpm exec vitest run tests/budget/post-commit-ordering.test.ts` (before the fix) | 4/4 failed: `expected 4 to be 3`, `ordering: the post-commit action was admitted` |
 | Green (focused) | same file | 4/4 pass |
-| Green (package) | `pnpm verify` | exit 0 |
+| Green (package) | `pnpm verify` | exit 0; **35 files / 442 tests** (this branch) |
+| Regression scope | `pnpm exec vitest run tests/budget src/tools/go src/budget` | **7 files / 115 tests** (this branch) |
 | Existing contract | C-T02 "second resignation is game-over" tests | unchanged and green |
+
+Evidence note: the cherry-picked fix commit's message quotes 8 files / 141 tests
+and 33 files / 433 tests, which were measured on the original
+`work/c-t09-budget-bypass` tree before the split. The numbers above are the
+measurements for this branch at HEAD.
 
 Local Node v26.10.0 (repo pin 24.11.1) — engine warning only; CI is authoritative.
 
