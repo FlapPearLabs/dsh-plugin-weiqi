@@ -1,6 +1,28 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type { CreateAgentOptions } from '@deepseek-ai/dsh-agent'
+import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
 import { describe, expect, it, vi } from 'vitest'
 import * as CompanionGo from './index.js'
+import { GO_PRESET_ID } from './preset/go-preset.js'
+
+/**
+ * Stand-in for the pinned AgentLoop factory: it performs the same durable
+ * header construction `SessionStore.create` performs (it folds `CreateAgentOptions.meta`
+ * into the real `SessionHeader` through the real `Session.create` boundary).
+ */
+function laneFactory(sessions: Session[]) {
+  return vi.fn(async (options: CreateAgentOptions) => {
+    const id = SessionId(options.sessionId)
+    const session = Session.create(id, undefined, {
+      version: SESSION_FORMAT_VERSION,
+      id,
+      createdAt: 0,
+      ...options.meta,
+    })
+    sessions.push(session)
+    return { agent: { session }, dispose: async () => undefined }
+  })
+}
 
 describe('Companion Go Cordis entry', () => {
   it('uses the named function-plugin namespace required by Loader', () => {
@@ -18,10 +40,8 @@ describe('Companion Go Cordis entry', () => {
   })
 
   it('asks the AgentRegistry factory to materialize both exact lane identities', async () => {
-    const create = vi.fn(async (options: { sessionId: string }) => ({
-      agent: { session: { id: options.sessionId } },
-      dispose: async () => undefined,
-    }))
+    const sessions: Session[] = []
+    const create = laneFactory(sessions)
     const on = vi.fn((_event: string, _listener: unknown) => vi.fn())
     const ctx = { agents: { create }, on } as unknown as Context
 
@@ -30,7 +50,7 @@ describe('Companion Go Cordis entry', () => {
     expect(create).toHaveBeenCalledTimes(2)
     expect(create.mock.calls.map(([options]) => options)).toEqual([
       { sessionId: 'companion-go-work' },
-      { sessionId: 'companion-go-go' },
+      { sessionId: 'companion-go-go', meta: { agentPreset: GO_PRESET_ID } },
     ])
     expect(on.mock.calls.map(([event]) => event)).toEqual([
       'session/event',
@@ -39,6 +59,19 @@ describe('Companion Go Cordis entry', () => {
       'agent/status',
       'focus/lane-switched',
     ])
+  })
+
+  it('stamps only the Go lane session header with the Go preset id', async () => {
+    const sessions: Session[] = []
+    const create = laneFactory(sessions)
+    const on = vi.fn((_event: string, _listener: unknown) => vi.fn())
+    const ctx = { agents: { create }, on } as unknown as Context
+
+    await CompanionGo.apply(ctx)
+
+    expect(sessions).toHaveLength(2)
+    expect(sessions.map(session => session.header.agentPreset)).toEqual([undefined, GO_PRESET_ID])
+    expect(sessions[1]?.header.agentPreset).toBe(GO_PRESET_ID)
   })
 
   it('propagates factory collisions instead of adopting an existing identity', async () => {

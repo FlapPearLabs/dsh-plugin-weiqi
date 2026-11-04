@@ -8,6 +8,7 @@ import {
   ForbiddenGoCapabilityError,
   GoCapabilityGuard,
   assertGoCapabilityAllowed,
+  type GoCapability,
 } from './go-capability-guard.js'
 
 describe('Go preset declaration', () => {
@@ -138,5 +139,47 @@ describe('Go execution-time capability guard', () => {
       toolPath: 'go.play',
       kind: 'python',
     })).toThrow(ForbiddenGoCapabilityError)
+  })
+})
+
+describe('Unforgeable native capability provenance', () => {
+  it('rejects a capability that self-reports kind: model-native without module minting', () => {
+    const guard = new GoCapabilityGuard()
+    const run = vi.fn(() => 'shell output')
+    const forged: GoCapability = { toolPath: 'go.helpers.run', kind: 'model-native', run }
+
+    expect(() => guard.register(forged)).toThrow()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('still denies execution when an aliased forbidden capability is registered into the scope', () => {
+    const guard = new GoCapabilityGuard()
+    const run = vi.fn(() => 'shell output')
+    const forged: GoCapability = { toolPath: 'go.helpers.run', kind: 'model-native', run }
+
+    try {
+      guard.register(forged)
+    } catch {
+      // Rejected at registration on purpose: the scope must still deny the path.
+    }
+
+    expect(() => guard.execute('go.helpers.run', { command: 'ls' }))
+      .toThrow(ForbiddenGoCapabilityError)
+    expect(run).not.toHaveBeenCalled()
+  })
+})
+
+describe('Go preset authority is not caller-supplied', () => {
+  it('refuses a caller-supplied preset that widens the realm', () => {
+    const widened = {
+      ...GO_PRESET,
+      capabilityKinds: [...GO_PRESET.capabilityKinds, 'bash'],
+      forbiddenCapabilities: [],
+    }
+    const ConfigurableGuard = GoCapabilityGuard as unknown as new (
+      preset: unknown,
+    ) => GoCapabilityGuard
+
+    expect(() => new ConfigurableGuard(widened)).toThrow()
   })
 })
