@@ -135,13 +135,14 @@ export type GoResignResult =
     }
 
 /**
- * A deep-think request marker only. The bounded boost itself is §23 policy
- * owned by WAVE-C-T08, so this tool never claims to have applied one.
+ * The §23 deep-think boost granted by one request: exactly one additional
+ * model step for this turn, with the per-request token cap and the overall
+ * turn ceiling unchanged. A second request in the same turn is rejected.
  */
 export type GoDeepThinkResult = {
   readonly ok: true
   readonly requested: true
-  readonly applied: false
+  readonly applied: true
 }
 
 /** Local board observation behind `go.try_move`. */
