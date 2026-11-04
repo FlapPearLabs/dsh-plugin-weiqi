@@ -181,15 +181,17 @@ granularity.
 The exact token and cache-hit delta is provider-tokenizer output and needs a
 with-key run; it is not measured here.
 
-Decision rule for the Runtime (no price assumptions): let `X` be the input
-tokens of one request. A natural request whose system section differs from the
-previous request's cannot match that previous prefix unit, so it pays
-miss-rate input where a match would have paid the (much cheaper) hit rate;
-official Flash pricing on 2026-11-04 was CNY 0.02 vs CNY 1 per million input
-tokens off-peak for hit vs miss (ratio 1/50). Twenty coalesced updates cost one
-such request (only the value at admission is rendered), not twenty. The cost is
-acceptable if changes are rare relative to natural requests; it is not
-acceptable if a snapshot can change between the steps of one tool loop.
+Cost model, explicitly unmeasured: let `X` be the input tokens of one request.
+A request whose system section differs from the previous request's cannot fully
+match that previous prefix unit, but which smaller persisted units still match
+is provider-side and unobserved here, so the share of input that misses is
+unknown. Official Flash pricing on 2026-11-04 was CNY 0.02 vs CNY 1 per million
+input tokens off-peak for hit vs miss (ratio 1/50), so the difference matters in
+proportion to the tokens that actually miss. Twenty coalesced updates produce at
+most one changed request (only the value at admission is rendered), not twenty.
+Whether that cost is acceptable cannot be decided from this fixture; it needs a
+with-key run reporting `prompt_cache_hit_tokens` and `prompt_cache_miss_tokens`
+over a realistic session.
 
 One persistence caveat, confirmed by review: `agent.ts:477-488` in the pinned
 tree appends `request/header` events containing the rendered system text, so old
@@ -242,17 +244,15 @@ system text is still persisted in `request/header` log events, so "no history
 pollution" does not mean "nothing on disk".
 
 **B. Cache cost.** A request that observes a changed section cannot fully match
-the previous request's persisted prefix unit, so the changed part of the prefix
-is paid at the miss rate instead of the hit rate. The exact token and cache-hit
-delta is **not measured** in this environment (Q7), and the official guide
-describes hits as best-effort with independent prefix units rather than a
-strict longest-common-prefix rule, so this document does not claim a precise
-per-change cost. Coalescing means many updates between two requests cost one
-such request. The cost is acceptable when snapshot changes are rare relative to
-natural requests, and not acceptable if a snapshot can change between the steps
-of one turn. A core-added ephemeral tail would avoid rewriting the prefix, but
-per the review recorded in this run it is not identical to append-only replay
-and needs its own spike; it remains a candidate, not a proven win. Recommendation:
+the previous request's persisted prefix unit; which smaller persisted units still
+match is provider-side and unobserved here. The exact token and cache-hit delta
+is **not measured** in this environment (Q7), and the official guide describes
+hits as best-effort with independent prefix units rather than a strict
+longest-common-prefix rule, so this document claims no precise per-change cost and
+no acceptability verdict. Coalescing means many updates between two requests cost
+at most one changed request. A core-added ephemeral tail would avoid rewriting the
+prefix, but the in-run review notes it is not identical to append-only replay and
+needs its own spike; it remains a candidate, not a proven win. Recommendation:
 treat the section approach as viable pending a with-key measurement of Q7.
 
 **C. Minimal change if adopted.** Plugin-side only, no DSH patch:
