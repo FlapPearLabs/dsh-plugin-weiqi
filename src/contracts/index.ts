@@ -6,6 +6,8 @@ export type {
   WorkSnapshot,
 } from './bridge.js'
 export type { AttentionMode, CompanionState } from './companion.js'
+export { GO_TURN_BUDGET_FIELDS } from './budget.js'
+export type { GoTurnBudget, GoTurnBudgetField } from './budget.js'
 export { GO_RULES_PORT_METHODS } from './rules.js'
 export type {
   AcceptedMove,
