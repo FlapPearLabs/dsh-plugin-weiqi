@@ -1,0 +1,1393 @@
+{
+  "recordKind": "cognition-benchmark",
+  "specSection": "§38",
+  "ticket": "WAVE-C-T10",
+  "generatedAt": "2026-11-04T07:53:49.815Z",
+  "model": {
+    "kind": "scripted-deterministic",
+    "id": "scripted-legal-move-adapter-v1",
+    "isDeepSeek": false,
+    "disclosure": "All token counts and moves come from a deterministic scripted adapter. No DeepSeek request was made. Latency is local harness wall-clock, not model latency. These numbers cannot calibrate production token caps; a real DeepSeek run awaits owner approval."
+  },
+  "budgetUnderTest": {
+    "maxModelSteps": 3,
+    "maxInspectCalls": 4,
+    "maxTryMoves": 3,
+    "perRequestMaxTokens": 1024,
+    "maxTurnTokens": 4096,
+    "status": "candidate-not-applied",
+    "hardCaps": [
+      "perRequestMaxTokens (Spec §22.1 absolute per-request hard cap, C-S01)",
+      "maxTurnTokens (Spec §22.2 turn ceiling)",
+      "maxModelSteps (Spec §22.2 per-turn model-step cap)",
+      "maxInspectCalls (Spec §22.3 per-turn inspect cap)",
+      "maxTryMoves (Spec §22.3 per-turn try_move cap)"
+    ],
+    "note": "Candidate values only. src/budget/ production defaults were not changed by this ticket; no production GoTurnBudget config exists yet."
+  },
+  "runsPerFixture": 3,
+  "classes": [
+    {
+      "class": "opening",
+      "fixtures": [
+        {
+          "fixture": "opening-spread",
+          "class": "opening",
+          "position": "Three-move opening: black (3,3) and (5,3), white (5,5); White to play.",
+          "runs": [
+            {
+              "fixture": "opening-spread",
+              "class": "opening",
+              "latencyMs": 0.7169159999999977,
+              "stepLatenciesMs": [
+                0.5297079999999994,
+                0.18483299999999758
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            },
+            {
+              "fixture": "opening-spread",
+              "class": "opening",
+              "latencyMs": 0.12837500000000546,
+              "stepLatenciesMs": [
+                0.06583300000001202,
+                0.05854200000000276
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            },
+            {
+              "fixture": "opening-spread",
+              "class": "opening",
+              "latencyMs": 0.08595799999999088,
+              "stepLatenciesMs": [
+                0.047207999999997696,
+                0.037582999999997924
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.08595799999999088,
+              "max": 0.7169159999999977,
+              "mean": 0.31041633333333135,
+              "range": 0.6309580000000068
+            },
+            "inputTokens": {
+              "min": 887,
+              "max": 887,
+              "mean": 887,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 352,
+              "max": 352,
+              "mean": 352,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1239,
+              "max": 1239,
+              "mean": 1239,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "simple capture",
+      "fixtures": [
+        {
+          "fixture": "simple-capture-single-stone",
+          "class": "simple capture",
+          "position": "Black (1,1) is surrounded by white (2,1), (1,0), (0,1); its only liberty is (1,2); White to play.",
+          "runs": [
+            {
+              "fixture": "simple-capture-single-stone",
+              "class": "simple capture",
+              "latencyMs": 0.18029200000000856,
+              "stepLatenciesMs": [
+                0.11429199999999184,
+                0.06491700000000833
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (1,2)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "simple-capture-single-stone",
+              "class": "simple capture",
+              "latencyMs": 0.08762500000000273,
+              "stepLatenciesMs": [
+                0.0397920000000056,
+                0.043416999999990935
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (1,2)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "simple-capture-single-stone",
+              "class": "simple capture",
+              "latencyMs": 0.0802500000000066,
+              "stepLatenciesMs": [
+                0.03620899999999949,
+                0.04345800000000111
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (1,2)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.0802500000000066,
+              "max": 0.18029200000000856,
+              "mean": 0.11605566666667262,
+              "range": 0.10004200000000196
+            },
+            "inputTokens": {
+              "min": 839,
+              "max": 839,
+              "mean": 839,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 320,
+              "max": 320,
+              "mean": 320,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1159,
+              "max": 1159,
+              "mean": 1159,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "escape",
+      "fixtures": [
+        {
+          "fixture": "escape-from-atari",
+          "class": "escape",
+          "position": "White (4,4) is in atari: black (4,3), (3,4), (5,4); its only liberty is (4,5); White to play.",
+          "runs": [
+            {
+              "fixture": "escape-from-atari",
+              "class": "escape",
+              "latencyMs": 0.053625000000010914,
+              "stepLatenciesMs": [
+                0.03079200000000526,
+                0.022291999999993095
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            },
+            {
+              "fixture": "escape-from-atari",
+              "class": "escape",
+              "latencyMs": 0.04429100000000119,
+              "stepLatenciesMs": [
+                0.022542000000001394,
+                0.02137500000000614
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            },
+            {
+              "fixture": "escape-from-atari",
+              "class": "escape",
+              "latencyMs": 0.042541999999997415,
+              "stepLatenciesMs": [
+                0.017499999999998295,
+                0.02462500000000034
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.042541999999997415,
+              "max": 0.053625000000010914,
+              "mean": 0.04681933333333651,
+              "range": 0.011083000000013499
+            },
+            "inputTokens": {
+              "min": 791,
+              "max": 791,
+              "mean": 791,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 288,
+              "max": 288,
+              "mean": 288,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1079,
+              "max": 1079,
+              "mean": 1079,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "local fight",
+      "fixtures": [
+        {
+          "fixture": "local-fight-contact",
+          "class": "local fight",
+          "position": "Contact fight in the lower-left: black (2,2), (3,2), (1,3); white (2,3), (3,3); White to play.",
+          "runs": [
+            {
+              "fixture": "local-fight-contact",
+              "class": "local fight",
+              "latencyMs": 0.09583300000001316,
+              "stepLatenciesMs": [
+                0.0654169999999965,
+                0.03012499999999818
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "local-fight-contact",
+              "class": "local fight",
+              "latencyMs": 0.1867080000000101,
+              "stepLatenciesMs": [
+                0.1676249999999868,
+                0.01866699999999355
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "local-fight-contact",
+              "class": "local fight",
+              "latencyMs": 0.11562500000000853,
+              "stepLatenciesMs": [
+                0.08470799999999201,
+                0.03020800000000179
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.09583300000001316,
+              "max": 0.1867080000000101,
+              "mean": 0.13272200000001058,
+              "range": 0.09087499999999693
+            },
+            "inputTokens": {
+              "min": 839,
+              "max": 839,
+              "mean": 839,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 320,
+              "max": 320,
+              "mean": 320,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1159,
+              "max": 1159,
+              "mean": 1159,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "ko",
+      "fixtures": [
+        {
+          "fixture": "ko-immediate-recapture",
+          "class": "ko",
+          "position": "After black (2,1) captured white (1,1), the immediate white recapture at (1,1) is superko; White to play.",
+          "runs": [
+            {
+              "fixture": "ko-immediate-recapture",
+              "class": "ko",
+              "latencyMs": 0.1721249999999941,
+              "stepLatenciesMs": [
+                0.041042000000004464,
+                0.13016600000000267
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 1,
+              "illegalAttemptReasons": [
+                "go.play superko"
+              ],
+              "finalMove": "play (6,6)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "ko-immediate-recapture",
+              "class": "ko",
+              "latencyMs": 0.08520899999999187,
+              "stepLatenciesMs": [
+                0.030167000000005828,
+                0.05445799999999679
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 1,
+              "illegalAttemptReasons": [
+                "go.play superko"
+              ],
+              "finalMove": "play (6,6)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            },
+            {
+              "fixture": "ko-immediate-recapture",
+              "class": "ko",
+              "latencyMs": 0.07766699999999105,
+              "stepLatenciesMs": [
+                0.021250000000009095,
+                0.055959000000001424
+              ],
+              "inputTokens": 839,
+              "outputTokens": 320,
+              "totalTokens": 1159,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 1,
+              "illegalAttemptReasons": [
+                "go.play superko"
+              ],
+              "finalMove": "play (6,6)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1159,
+              "remainingTurnTokens": 2937
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.07766699999999105,
+              "max": 0.1721249999999941,
+              "mean": 0.11166699999999234,
+              "range": 0.09445800000000304
+            },
+            "inputTokens": {
+              "min": 839,
+              "max": 839,
+              "mean": 839,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 320,
+              "max": 320,
+              "mean": 320,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1159,
+              "max": 1159,
+              "mean": 1159,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "large-group pressure",
+      "fixtures": [
+        {
+          "fixture": "large-group-pressure",
+          "class": "large-group pressure",
+          "position": "A four-stone white chain (1,3), (1,4), (1,5), (2,4) pressed against a black wall with three liberties; White to play.",
+          "runs": [
+            {
+              "fixture": "large-group-pressure",
+              "class": "large-group pressure",
+              "latencyMs": 0.11804200000000264,
+              "stepLatenciesMs": [
+                0.05520800000000747,
+                0.03495900000000063,
+                0.009833000000000425,
+                0.017208999999994035
+              ],
+              "inputTokens": 1658,
+              "outputTokens": 608,
+              "totalTokens": 2266,
+              "modelSteps": 4,
+              "inspectCalls": 2,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 1,
+              "deepThinkBoostConsumed": 1,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024,
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 4,
+              "turnTokens": 2266,
+              "remainingTurnTokens": 1830
+            },
+            {
+              "fixture": "large-group-pressure",
+              "class": "large-group pressure",
+              "latencyMs": 0.08100000000000307,
+              "stepLatenciesMs": [
+                0.01779200000000003,
+                0.029541999999992186,
+                0.009332999999998037,
+                0.023707999999999174
+              ],
+              "inputTokens": 1658,
+              "outputTokens": 608,
+              "totalTokens": 2266,
+              "modelSteps": 4,
+              "inspectCalls": 2,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 1,
+              "deepThinkBoostConsumed": 1,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024,
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 4,
+              "turnTokens": 2266,
+              "remainingTurnTokens": 1830
+            },
+            {
+              "fixture": "large-group-pressure",
+              "class": "large-group pressure",
+              "latencyMs": 0.07483300000001236,
+              "stepLatenciesMs": [
+                0.019874999999998977,
+                0.025334000000000856,
+                0.011665999999991072,
+                0.017417000000008898
+              ],
+              "inputTokens": 1658,
+              "outputTokens": 608,
+              "totalTokens": 2266,
+              "modelSteps": 4,
+              "inspectCalls": 2,
+              "tryMoveCalls": 2,
+              "deepThinkRequests": 1,
+              "deepThinkBoostConsumed": 1,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (2,3)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024,
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 4,
+              "turnTokens": 2266,
+              "remainingTurnTokens": 1830
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.07483300000001236,
+              "max": 0.11804200000000264,
+              "mean": 0.0912916666666727,
+              "range": 0.04320899999999028
+            },
+            "inputTokens": {
+              "min": 1658,
+              "max": 1658,
+              "mean": 1658,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 608,
+              "max": 608,
+              "mean": 608,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 2266,
+              "max": 2266,
+              "mean": 2266,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 4,
+              "max": 4,
+              "mean": 4,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "endgame",
+      "fixtures": [
+        {
+          "fixture": "endgame-dame-fill",
+          "class": "endgame",
+          "position": "Endgame boundary: black fills y=4, white fills y=5 up to x=3, with the last boundary point (4,5) open; White to play.",
+          "runs": [
+            {
+              "fixture": "endgame-dame-fill",
+              "class": "endgame",
+              "latencyMs": 0.047291000000001304,
+              "stepLatenciesMs": [
+                0.017333000000007814,
+                0.029582999999988147
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 0,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            },
+            {
+              "fixture": "endgame-dame-fill",
+              "class": "endgame",
+              "latencyMs": 0.03395799999999838,
+              "stepLatenciesMs": [
+                0.01229200000000219,
+                0.021291000000005056
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 0,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            },
+            {
+              "fixture": "endgame-dame-fill",
+              "class": "endgame",
+              "latencyMs": 0.03958299999999326,
+              "stepLatenciesMs": [
+                0.01825000000000898,
+                0.02087500000000375
+              ],
+              "inputTokens": 791,
+              "outputTokens": 288,
+              "totalTokens": 1079,
+              "modelSteps": 2,
+              "inspectCalls": 1,
+              "tryMoveCalls": 0,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,5)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1079,
+              "remainingTurnTokens": 3017
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.03395799999999838,
+              "max": 0.047291000000001304,
+              "mean": 0.04027733333333098,
+              "range": 0.013333000000002926
+            },
+            "inputTokens": {
+              "min": 791,
+              "max": 791,
+              "mean": 791,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 288,
+              "max": 288,
+              "mean": 288,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1079,
+              "max": 1079,
+              "mean": 1079,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "class": "ambiguous position",
+      "fixtures": [
+        {
+          "fixture": "ambiguous-wide-board",
+          "class": "ambiguous position",
+          "position": "Balanced scattered position: black (2,6), (6,6), (4,7); white (6,2), (2,2); no urgent local fight; White to play.",
+          "runs": [
+            {
+              "fixture": "ambiguous-wide-board",
+              "class": "ambiguous position",
+              "latencyMs": 0.0906659999999988,
+              "stepLatenciesMs": [
+                0.0401250000000033,
+                0.0501249999999942
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 2,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            },
+            {
+              "fixture": "ambiguous-wide-board",
+              "class": "ambiguous position",
+              "latencyMs": 0.08291700000000901,
+              "stepLatenciesMs": [
+                0.0319160000000096,
+                0.050667000000004236
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 2,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            },
+            {
+              "fixture": "ambiguous-wide-board",
+              "class": "ambiguous position",
+              "latencyMs": 0.08370799999998724,
+              "stepLatenciesMs": [
+                0.03216599999998948,
+                0.05116699999999241
+              ],
+              "inputTokens": 887,
+              "outputTokens": 352,
+              "totalTokens": 1239,
+              "modelSteps": 2,
+              "inspectCalls": 2,
+              "tryMoveCalls": 1,
+              "deepThinkRequests": 0,
+              "deepThinkBoostConsumed": 0,
+              "illegalAttempts": 0,
+              "illegalAttemptReasons": [],
+              "finalMove": "play (4,4)",
+              "committedAction": "play",
+              "requestCaps": [
+                1024,
+                1024
+              ],
+              "oversizedProposalsClamped": 2,
+              "turnTokens": 1239,
+              "remainingTurnTokens": 2857
+            }
+          ],
+          "variation": {
+            "identicalStructuralMetrics": true,
+            "comparedFields": [
+              "inputTokens",
+              "outputTokens",
+              "totalTokens",
+              "modelSteps",
+              "inspectCalls",
+              "tryMoveCalls",
+              "deepThinkRequests",
+              "illegalAttempts",
+              "finalMove",
+              "committedAction",
+              "requestCaps",
+              "turnTokens",
+              "remainingTurnTokens"
+            ],
+            "latencyMs": {
+              "min": 0.08291700000000901,
+              "max": 0.0906659999999988,
+              "mean": 0.08576366666666502,
+              "range": 0.007748999999989792
+            },
+            "inputTokens": {
+              "min": 887,
+              "max": 887,
+              "mean": 887,
+              "range": 0
+            },
+            "outputTokens": {
+              "min": 352,
+              "max": 352,
+              "mean": 352,
+              "range": 0
+            },
+            "totalTokens": {
+              "min": 1239,
+              "max": 1239,
+              "mean": 1239,
+              "range": 0
+            },
+            "modelSteps": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "inspectCalls": {
+              "min": 2,
+              "max": 2,
+              "mean": 2,
+              "range": 0
+            },
+            "tryMoveCalls": {
+              "min": 1,
+              "max": 1,
+              "mean": 1,
+              "range": 0
+            },
+            "deepThinkRequests": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            },
+            "illegalAttempts": {
+              "min": 0,
+              "max": 0,
+              "mean": 0,
+              "range": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
