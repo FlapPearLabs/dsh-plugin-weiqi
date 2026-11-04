@@ -405,7 +405,7 @@ describe('Pre-A spike: dynamic system section + variable on pinned DSH', () => {
       systemCharsBefore: before.length,
       systemCharsAfter: after.length,
       stablePrefixChars: prefix,
-      invalidatedSystemChars: after.length - prefix,
+      changedSystemChars: after.length - prefix,
       messageCharsAfter: tailMessages.length,
       recordedUsage: recordedUsage(agent),
     })

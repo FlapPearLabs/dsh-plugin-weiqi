@@ -42,10 +42,12 @@ Two properties of the mechanism that the design must respect:
   substituted values, so a value containing `{{x}}`, `{{}}`, or a dangling
   `{{` reaches the model literally. The same text written directly into a
   section renders an `unknown prompt variable` error.
-- **Every changed value costs one full prompt-prefix invalidation** in the
-  request that observes it. The section is placed before all tool schemas and
-  messages, so the provider's prefix cache restarts at the section. Absolute
-  token cost requires provider usage records (Q7 below, not measured here).
+- **Every changed value prevents a full match with the previous request's
+  prefix unit** in the request that observes it. The section is placed before all
+  tool schemas and messages, so the old system text is early in the request; how
+  much of that the provider can still serve from other persisted prefix units is
+  best-effort and unobserved here. Absolute token cost requires provider usage
+  records (Q7 below, not measured here).
 
 ## Execution basis
 
@@ -100,7 +102,7 @@ DSH_SECTION_SPIKE 4-double-braces {"rendered":1,"systemTail":" AI agent powered 
 
 DSH_SECTION_SPIKE 5-agent-isolation {"work":{"workMarker":1,"goMarker":0},"go":{"goMarker":1,"workMarker":0},"bare":{"goMarker":0,"workMarker":0}}
 
-DSH_SECTION_SPIKE 6-prefix-cost-shape {"systemCharsBefore":64,"systemCharsAfter":64,"stablePrefixChars":62,"invalidatedSystemChars":2,"messageCharsAfter":423,"recordedUsage":[{"inputTokens":10,"outputTokens":5},{"inputTokens":10,"outputTokens":5}]}
+DSH_SECTION_SPIKE 6-prefix-cost-shape {"systemCharsBefore":64,"systemCharsAfter":64,"stablePrefixChars":62,"changedSystemChars":2,"messageCharsAfter":423,"recordedUsage":[{"inputTokens":10,"outputTokens":5},{"inputTokens":10,"outputTokens":5}]}
 
  Test Files  1 passed (1)
       Tests  6 passed (6)
