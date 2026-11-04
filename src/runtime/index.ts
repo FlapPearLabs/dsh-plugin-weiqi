@@ -18,6 +18,14 @@ export {
 } from './focus.js'
 
 export {
+  admitInactiveLaneUserMessage,
+  type FocusIntentArbitration,
+  type InactiveLaneAdmission,
+  type InactiveLaneAdmissionRejection,
+  type InactiveLaneAdmissionResult,
+} from './admission.js'
+
+export {
   RuntimeFocusOwner,
   bindPinnedDshFocusBoundary,
   type EligibleFocusHandoff,
