@@ -2,14 +2,17 @@
 
 - 仓库：`FlapPearLabs/dsh-plugin-weiqi`
 - 工作树：`~/Documents/ChatGPT/dsh-plugin-weiqi-wt/WAVE-A-T06`
-- 基线 `main`：`77dd581`（`Merge pull request #73 from FlapPearLabs/docs/d-t01-post-merge-sync`）
+- 基线 `main`：开票时 `77dd581`；r2 复审时 `origin/main` 为 `a9de2f1`；
+  本交接更新时为 `d2e85a3`（`Merge pull request #84 from FlapPearLabs/docs/c-t06-post-merge-sync`）
 - 分支：`work/a-t06-inactive-lane-admission`
-- 测试提交（红）：`7929600`
-- 实现提交（绿）：`bde733d`
-- 审查 r1 发现修复：测试 `4b92b99`、实现 `e1f25d3`、本文档更新（`git log -1`）
+- 测试提交（红，初版）：`7929600`
+- 实现提交（绿，初版）：`bde733d`
+- 审查 r1 修复：测试 `4b92b99`、实现 `e1f25d3`
+- 审查 r2 修复：测试 `e63c9aa`、实现 `f8a204b`、本文档更新（`docs:` 提交）
 - 审查 r1 审阅 HEAD：`064bd9e`（裁决 CHANGES_REQUESTED：P0×1、P1×1、P2×1、P3×1）
-- 状态：r1 的 P0/P1/P2/P3 均已修复并有回归测试；本地 `pnpm verify` 通过；
-  **未 push、未开 PR、未合并**
+- 审查 r2 审阅 HEAD：`9449b90`（裁决 CHANGES_REQUESTED：P0×1、P1×1、P2×2、P3×3）
+- 状态：r1 与 r2 的 P0/P1/P2 全部修复并有可失败的回归测试，P3 已处理；
+  本地 `pnpm verify` 通过；**未 push、未开 PR、未合并**
 
 ## 做了什么
 
@@ -22,18 +25,18 @@
   - `sourceMessage.message` 就是用户那条不可变 DSH `UserMessage` 的同一引用，
     不做文本复制、不落 `capturedText`；意图与 `sourceMessage` 包装均冻结；
   - **不可变性来自 DSH `createUserMessage` 的深冻结契约并被显式校验**：
-    `message`、`content` 数组、每个 block 都必须已冻结，否则返回
-    `mutable-message`；不冻结调用方对象、不复制消息，也不接受可变引用
-    （修复 r1 P1 的虚假不可变断言）；
+    `message`、`content` 数组、每个已存在的 block、以及 `source` 及其嵌套
+    provenance 对象都必须已冻结，否则返回 `mutable-message`；不冻结调用方
+    对象、不复制消息，也不接受可变引用（修复 r1 P1、r2 P1）；
   - 通过 A-T02 的 `submitFocusIntent` 提交一次，并把仲裁返回的
     `disposition` / `state` 原样带回；仲裁函数可注入（默认即 A-T02 原语），
-    供测试断言"仲裁确实收到意图"；
-  - 空内容、纯空白文本、`content` 中混入 `null`/`undefined` 块、缺
-    `sourceSessionId`、非 `user` 角色、非法 target、缺 message 都在创建意图之前
-    拒绝，仲裁不会被调用；
+    这是测试专用注入点，生产调用方必须省略（r2 P3）；
+  - 空内容、纯空白文本、`content` 中混入 `null`/`undefined`/无字符串 `type`
+    的块、缺 `sourceSessionId`、非 `user` 角色、非 `user` 来源（tool/plugin/
+    model）、非法 target、缺 message 都在创建意图之前拒绝，仲裁不会被调用；
   - 不持有 Agent、定时器、队列、邮箱、路由，也不复制消息文本。
-- 新增 `src/runtime/admission.test.ts`（24 个用例，其中 `it.each` 共 7 个：
-  5 个通用拒绝 + 2 个同泳道方向）。
+- 新增 `src/runtime/admission.test.ts`（32 个用例，其中 10 个来自 `it.each`
+  表：5 个通用拒绝、2 个同泳道方向、3 种非 user 来源）。
 - `src/runtime/index.ts` 导出 `admitInactiveLaneUserMessage`、
   `InactiveLaneUserCommandIntent` 与 `InactiveLaneAdmission` /
   `InactiveLaneAdmissionRejection` / `InactiveLaneAdmissionResult` /
@@ -62,6 +65,22 @@ P0 死锁用例的修复前后对照（`keeps the single focus slot free after a
   `{ kind: 'rejected', reason: 'already-active-lane' }`，单槽保持空，
   后续跨泳道准入 `'admitted'`。
 
+## 审查 r2 意见处理
+
+| 级别 | 意见 | 处理 | 回归证据 |
+|---|---|---|---|
+| P0 | 「非活动 Agent 不会先运行」用例里的 Agent/reads 对象从未传入被测函数，`run`/`steer`/`cancel` 零调用与 symbol-key 断言恒真，handoff 却把它当作覆盖证据 | 删除装饰性 helper 与那五条恒真断言；用例改名为「无 Agent 句柄也能准入」，用 `llmRunning === false`、`activeLane` 不变与源码审计承担证据 | `admits without an Agent handle and leaves the lane and run state untouched`、`has no Agent dependency: no dsh-agent import and no Agent parameter`；恒真演示见下 |
+| P1 | `message.source` 未校验冻结，准入后仍可把 `source.kind` 改成 `tool` | `isDeeplyFrozenUserMessage` 递归校验 `source` 及其嵌套 provenance 对象 | `rejects a message whose frozen shell, content and block still hold a mutable source`、`rejects a frozen source that still holds mutable nested provenance` |
+| P2-1 | `source.kind: 'tool'`（含 `createToolResultMessage`）被当作 `user_command` 准入 | `isUserMessage` 要求 `source.kind === 'user'`；tool/plugin/model 一律 `not-user-message` | `rejects a 'tool'/'plugin'/'model' source as a non-user message`、`rejects a real DSH tool-result message instead of admitting it as user intent` |
+| P2-2 | 无 `type` 的畸形块 `{}` 被当作有效内容 | `hasMeaningfulContent` 要求块是非空对象且 `type` 为字符串；未知/无 type 块按空内容 | `rejects a malformed block without a string type as empty` |
+| P3 | 可注入仲裁与「只有一条仲裁路径」表述不符；意图类型重复；handoff 基线过期、审计命令大小写敏感 | `arbitrate` 在 JSDoc 中标注为测试专用注入点，生产调用方必须省略；`InactiveLaneUserCommandIntent` 改为 `PendingFocusIntent` 的收窄交叉类型；更新基线并给审计命令加 `-i` | 类型检查 + 本文档 |
+
+P0 恒真演示（临时改动已还原，未提交）：把 `admission.ts` 的
+`rejectionReason` 调用短路为 `undefined`（等于删掉全部准入校验），再用
+`git show 9449b90:src/runtime/admission.test.ts` 跑旧用例
+`-t 'never runs or consults'`，结果 **1 passed**。也就是说该用例在「零校验」
+实现下依然通过——它的 Agent 断言与被测函数无关，不能作为验收证据。
+
 ## 红 / 绿 / 回归
 
 | 阶段 | 命令 | 结果 | 提交 |
@@ -74,13 +93,21 @@ P0 死锁用例的修复前后对照（`keeps the single focus slot free after a
 | 红（r1 回归测试类型） | `pnpm typecheck` | exit 0（测试只依赖既有 API 类型，红在断言） | `4b92b99` |
 | 绿（修复后定向） | `pnpm exec vitest run src/runtime/admission.test.ts` | **24/24 passed** | `e1f25d3` |
 | 回归 | `pnpm verify` | **exit 0**：typecheck PASS、**14 files / 139 tests PASS**、clean + build PASS | `e1f25d3` |
+| 红（r2 回归测试） | `pnpm exec vitest run src/runtime/admission.test.ts` | exit 1：**7 failed / 25 passed**（source 可变×2、tool/plugin/model 来源×3、真实 tool-result、无 type 块） | `e63c9aa` |
+| 绿（r2 修复后定向） | `pnpm exec vitest run src/runtime/admission.test.ts` | **32/32 passed** | `f8a204b` |
+| 回归（r2 修复后） | `pnpm verify` | **exit 0**：typecheck PASS、**14 files / 147 tests PASS**、clean + build PASS | `f8a204b` |
 
 ## 变异验证（证明测试不是摆设）
 
 初版实现时的三次临时变异（改完已还原，未提交）：重复调用 `arbitrate` → 2 failed；
 `origin` 改成 `self_initiated` → 2 failed；绕过仲裁直接写 `state.pendingFocus`
 → 3 failed。r1 修复后新增用例的红测本身就是变异证据：去掉同泳道判断或深冻结
-校验，上述 6 个用例立即失败。
+校验，上述 6 个用例立即失败。r2 修复的 7 个红测同样就是变异证据；另做定向变异：
+临时给 `admission.ts` 加 `@deepseek-ai/dsh-agent` 导入时，
+`has no Agent dependency` 用例报
+`expected [ '@deepseek-ai/dsh-agent' ] to deeply equal []`（1 failed），
+移除后恢复通过。另外，把 `rejectionReason` 短路为 `undefined` 后，旧版
+「never runs or consults the inactive Agent」用例仍 **1 passed**（见 r2 P0 演示）。
 
 ## 覆盖的验收点
 
@@ -92,10 +119,14 @@ P0 死锁用例的修复前后对照（`keeps the single focus slot free after a
   第二个待处理意图；
 - 同泳道（`work->work`、`go->go`）被拒绝、仲裁不调用、单槽不受污染，且不会
   让后续跨泳道消息死锁；`activeLane=go -> target=work` 对称方向可准入；
-- 消息按引用存储；真实 DSH `createUserMessage` 生成的深冻结消息被接纳，
-  未冻结或仅外壳冻结的消息被拒绝；
-- 模拟非活动 View 的 Agent 句柄（`run` / `steer` / `cancel` / `status`）
-  计数保持 0，`status` 一次都没读；
+- 消息按引用存储；真实 DSH `createUserMessage` 生成的深冻结消息（含 frozen
+  `source`）被接纳，未冻结、仅外壳冻结、或 `source`/嵌套 provenance 可变的
+  消息被拒绝；tool/plugin/model 来源的消息被拒绝；
+- 准入不需要 Agent 句柄：成功准入后 `activeLane` 不变、`llmRunning` 仍为
+  `false`；源码级审计断言 `admission.ts` 不 import `@deepseek-ai/dsh-agent`，
+  且导出函数签名与函数体不含 Agent 参数。r2 P0 指出旧用例里的模拟 Agent
+  对象从未传入被测函数，那五条零调用断言对任何实现恒真，已删除；
+  「非活动 Agent 不会先运行」的证据由上述状态不变式 + 源码审计承担；
 - 模块命名面没有 queue / mailbox / router / buffer / history；
 - 反复准入后 `RuntimeFocusState` 只有 `activeLane, llmRunning, pendingFocus`，
   `pendingFocus` 永远不是数组（无队列/邮箱）；
@@ -112,10 +143,15 @@ P0 死锁用例的修复前后对照（`keeps the single focus slot free after a
 ## no-queue / no-agent 审计
 
 ```text
-$ grep -nE "agent|steer|\brun\b|status" src/runtime/admission.ts
-no matches
+$ grep -niE "agent|steer|\brun\b|status" src/runtime/admission.ts
+7: * it to the A-T02 single-slot arbitration. The inactive Agent is never asked
+8: * to read the message or request focus first. This module holds no Agent,
+   ← 仅模块注释里的否定声明，不是代码
 
-$ grep -nE "queue|mailbox|router|buffer|history|capturedText" src/runtime/admission.ts
+$ grep -n "@deepseek-ai/dsh-agent" src/runtime/admission.ts
+no matches（grep exit 1）
+
+$ grep -niE "queue|mailbox|router|buffer|history|capturedText" src/runtime/admission.ts
 9: * queue, mailbox, router, timer, or copied text.   ← 仅模块注释中的否定声明
 
 $ grep -n "^export" src/runtime/admission.ts
@@ -127,14 +163,18 @@ export type InactiveLaneAdmissionResult
 export function admitInactiveLaneUserMessage
 ```
 
-模块没有 import `@deepseek-ai/dsh-agent`，没有 Agent 参数，没有数组/集合型状态，
-没有定时器/事件订阅；唯一状态写入是 A-T02 `submitFocusIntent` 的返回值。
+模块没有 import `@deepseek-ai/dsh-agent`（`admission.test.ts` 的
+`has no Agent dependency` 用例在源码层面断言这一点，并在临时加入该导入时
+确实失败），没有 Agent 参数，没有数组/集合型状态，没有定时器/事件订阅；
+唯一状态写入是 A-T02 `submitFocusIntent` 的返回值。上面的 `agent`/`status`
+命中都是第 7–8 行注释里的否定声明，不是代码。
 
 ## 改动的文件
 
-- `src/runtime/admission.ts`（新增 `bde733d`；r1 修复 `e1f25d3`）
-- `src/runtime/admission.test.ts`（新增 `7929600`；r1 回归测试 `4b92b99`）
-- `src/runtime/index.ts`（新增导出 `bde733d`、`e1f25d3`）
+- `src/runtime/admission.ts`（新增 `bde733d`；r1 修复 `e1f25d3`；r2 修复 `f8a204b`）
+- `src/runtime/admission.test.ts`（新增 `7929600`；r1 回归测试 `4b92b99`；
+  r2 回归测试 `e63c9aa`）
+- `src/runtime/index.ts`（新增导出 `bde733d`、`e1f25d3`；r2 未改动）
 - `handoffs/WAVE-A-T06.md`（本文件，`docs:` 提交）
 
 ## 假设与边界
@@ -145,8 +185,9 @@ export function admitInactiveLaneUserMessage
 - 本票只做准入意图：API 是 `RuntimeFocusState` 上的纯函数，返回新 state。
   接进 `RuntimeFocusOwner` / 真实 UI 不在本票范围（允许面也只有
   `src/runtime/` 与导出）；A-T03/A-T04/A-T07 负责边界、yield、resume。
-- 仲裁参数可注入只用于测试证明"仲裁确实收到意图"；生产默认即 A-T02
-  `submitFocusIntent`，没有第二条仲裁路径。
+- 仲裁参数 `arbitrate` 是测试专用注入点（JSDoc 已标注），用于证明「仲裁确实
+  收到意图」；生产调用方必须省略，默认即 A-T02 `submitFocusIntent`。生产路径
+  只有这一条仲裁路径。
 - 同泳道消息由正常会话路径处理，不经过本准入函数；本函数只服务非活动泳道。
 
 ## 未验证
@@ -154,8 +195,13 @@ export function admitInactiveLaneUserMessage
 - 真实 UI / View 与 DSH 真实 Inbox 投递未接线（本票明确不含）。
 - 未在 Node `24.11.1` 下复跑：本机是 Node `26.10.0`，`pnpm` 只打印
   `Unsupported engine` 警告，typecheck / test / build 全部通过。
-- r1 审查已由独立 agent 完成；r1 修复后的 r2 复审尚未进行（实现者不能给自己
-  审查），本文件不声称已通过复审。
+- r1/r2 审查均由独立 agent 完成；r2 修复后的 r3 复审尚未进行（实现者不能
+  给自己审查），本文件不声称已通过复审。
+- r2 复审时分支落后 `origin/main` 33 个提交（`a9de2f1`）；r2 修复后在本机用
+  `git merge-tree --write-tree origin/main HEAD`（`origin/main` = `d2e85a3`）
+  得到干净合并树 `05419a7`，`git archive` 到 `/tmp` 后 `pnpm verify` **exit 0**
+  （**18 files / 176 tests passed**，Node 26.10.0）。合并结果最终以 PR CI 为准；
+  本次未 push，因此没有真实 CI 记录。
 - 未更新 `CURRENT_IMPLEMENTATION_BASELINE.md` / ticket 状态（按仓库规则由
   合并后的 docs sync 处理）。
 
@@ -171,5 +217,6 @@ export function admitInactiveLaneUserMessage
   放宽本准入函数。
 - `retained-existing` 时新意图会随结果返回但不入状态（旧 user_command 胜出），
   调用方若需要"提示用户上一条命令尚未处理"，需由 UI 层决定；本票不引入队列。
-- `FocusIntentArbitration` 作为公开类型导出，仅服务于可测试注入；若后续
-  不允许外部替换仲裁，可在 UI 接线时收窄为模块内部类型。
+- `FocusIntentArbitration` 作为公开类型导出，仅服务于测试可注入性；JSDoc 已
+  明确它是测试专用注入点，生产调用方必须省略。若后续不允许外部替换仲裁，
+  可在 UI 接线时收窄为模块内部类型。
