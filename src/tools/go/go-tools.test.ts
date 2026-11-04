@@ -406,8 +406,9 @@ describe('go.try_move', () => {
     expect(outOfTurn.legal).toBe(false)
     expect(outOfTurn.reason).toBe('out-of-turn')
 
-    const offBoard = invoke<GoTryMoveResult>(turnHarness.registry, 'go.try_move', {
-      gameId: turnHarness.gameId,
+    const deepseekTurnHarness = createHarness({ colors: DEEPSEEK_FIRST_COLORS })
+    const offBoard = invoke<GoTryMoveResult>(deepseekTurnHarness.registry, 'go.try_move', {
+      gameId: deepseekTurnHarness.gameId,
       point: { x: 9, y: 0 },
     })
     expect(offBoard.legal).toBe(false)
@@ -497,7 +498,7 @@ describe('go.resign', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(harness.calls).toEqual(['resign', 'getState'])
+    expect(harness.calls).toEqual(['resign'])
     expect(result.state.status).toBe('over')
     expect(result.state.outcome).toEqual({
       winner: 'user',
