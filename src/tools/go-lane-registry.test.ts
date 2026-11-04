@@ -12,7 +12,6 @@ import {
   goLanePathViolation,
 } from './go-lane-registry.js'
 import * as registryModule from './go-lane-registry.js'
-import * as toolsBarrel from './index.js'
 
 const registrySource = readFileSync(
   fileURLToPath(new URL('./go-lane-registry.ts', import.meta.url)),
@@ -145,12 +144,12 @@ describe('Go lane model-facing registry structure (Phase A)', () => {
     expect(Object.isFrozen(GO_LANE_REGISTRY.registeredPaths)).toBe(true)
   })
 
-  it('exposes no registration entry point yet', () => {
-    const registrationFunctions = Object.entries(toolsBarrel).filter(
+  it('keeps registration out of the policy module (C-T02 registers elsewhere)', () => {
+    const registrationFunctions = Object.entries(registryModule).filter(
       ([exportName, value]) => typeof value === 'function' && /register/i.test(exportName),
     )
     expect(registrationFunctions).toEqual([])
-    expect('registerGoLaneTool' in toolsBarrel).toBe(false)
+    expect('registerGoLaneTool' in registryModule).toBe(false)
   })
 
   it('imports no solver, engine or general-execution module', () => {
