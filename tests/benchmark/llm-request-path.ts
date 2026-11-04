@@ -206,6 +206,25 @@ export class BenchmarkRetryPolicyError extends Error {
   }
 }
 
+/**
+ * Raised before any request leaves when the registered adapter does not expose
+ * the counters the benchmark audits dispatch and retries with. Without them
+ * `stats()` would have to fall back to a sentinel (-1), which silently reads
+ * as "no retries"; an unmetered adapter is refused instead.
+ */
+export class BenchmarkAdapterCounterError extends Error {
+  readonly counter: string
+
+  constructor(counter: string) {
+    super(
+      `Benchmark adapter must expose a real ${counter} counter (a non-negative integer); `
+      + 'an unmetered adapter makes dispatch and retry accounting unverifiable',
+    )
+    this.name = 'BenchmarkAdapterCounterError'
+    this.counter = counter
+  }
+}
+
 export type BenchmarkRequestPath = Readonly<{
   /** Admit one gated request and dispatch it through the real runtime. */
   request(input: BenchmarkRequestInput): Promise<BenchmarkResponse>
@@ -252,6 +271,11 @@ export async function openBenchmarkRequestPath(
       + 'dispatching benchmark requests without the spend gate is forbidden',
     )
   }
+
+  // Fail closed before anything is registered or dispatched: `stats()` reads
+  // these counters off the adapter, so an adapter that does not report them
+  // would make every retry invisible.
+  assertAdapterCounters(provider)
 
   const providerId = options.providerId ?? BENCHMARK_PROVIDER_ID
   const model = options.model ?? SCRIPTED_MODEL_ID
@@ -483,34 +507,44 @@ export async function openBenchmarkRequestPath(
   })
 }
 
-type ProviderCounters = {
-  readonly physicalCalls: number
-  readonly loopMarkedRequests: number
-  readonly transportAttempts?: number
+type AdapterCounter = 'physicalCalls' | 'loopMarkedRequests' | 'transportAttempts'
+
+const ADAPTER_COUNTERS: readonly AdapterCounter[] = [
+  'physicalCalls',
+  'loopMarkedRequests',
+  'transportAttempts',
+]
+
+/**
+ * Reads one benchmark audit counter from the adapter. A missing or malformed
+ * counter is a hard failure, never a sentinel: `-1` would flow into
+ * `retryAttempts` as zero and hide adapter-internal retries.
+ */
+function readAdapterCounter(provider: LlmAdapter, counter: AdapterCounter): number {
+  const value = (provider as unknown as Record<string, unknown>)[counter]
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new BenchmarkAdapterCounterError(counter)
+  }
+  return value
 }
 
-function providerCounters(provider: LlmAdapter): ProviderCounters | undefined {
-  const candidate = provider as Partial<ProviderCounters>
-  return typeof candidate.physicalCalls === 'number' && typeof candidate.loopMarkedRequests === 'number'
-    ? candidate as ProviderCounters
-    : undefined
+function assertAdapterCounters(provider: LlmAdapter): void {
+  for (const counter of ADAPTER_COUNTERS) readAdapterCounter(provider, counter)
 }
 
 function physicalCallsOf(provider: LlmAdapter): number {
-  return providerCounters(provider)?.physicalCalls ?? -1
+  return readAdapterCounter(provider, 'physicalCalls')
 }
 
 function loopMarkedCallsOf(provider: LlmAdapter): number {
-  return providerCounters(provider)?.loopMarkedRequests ?? -1
+  return readAdapterCounter(provider, 'loopMarkedRequests')
 }
 
 /**
  * Attempts the adapter reports for its own transport (an HTTP adapter counts
- * requests it actually sent). An adapter that does not expose the counter is
- * measured by its stream invocations.
+ * requests it actually sent). Required, not optional: falling back to stream
+ * invocations would report an internally retrying adapter as zero retries.
  */
 function transportAttemptsOf(provider: LlmAdapter): number {
-  const counters = providerCounters(provider)
-  if (counters === undefined) return -1
-  return typeof counters.transportAttempts === 'number' ? counters.transportAttempts : counters.physicalCalls
+  return readAdapterCounter(provider, 'transportAttempts')
 }

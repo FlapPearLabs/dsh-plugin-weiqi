@@ -3,6 +3,7 @@ import { LlmError, type GenerateOptions, type StreamChunk } from '@deepseek-ai/d
 import {
   BENCHMARK_GATE_DEFAULTS,
   BENCHMARK_PLACEHOLDER_PRICES,
+  estimateRequestInputTokens,
   BenchmarkBudgetGate,
   BenchmarkBudgetStopError,
   type BenchmarkBudgetStop,
@@ -452,5 +453,87 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     expect(record.budgetGate.requests).toBe(1)
     expect(record.budgetGate.stops).toHaveLength(SPEC_38_CLASSES.length)
     expect(record.model.requestPath).toBe('dsh-llm-runtime')
+  })
+
+  it('stops on negative, NaN, and Infinity usage before it can corrupt the ledger', () => {
+    const cases = [
+      { label: 'negative input/output', usage: { inputTokens: -1e6, outputTokens: -1e6 } },
+      { label: 'NaN input', usage: { inputTokens: Number.NaN, outputTokens: 10 } },
+      { label: 'Infinity output', usage: { inputTokens: 10, outputTokens: Number.POSITIVE_INFINITY } },
+      {
+        label: 'negative cache read',
+        usage: { inputTokens: 10, outputTokens: 10, cacheReadTokens: -1e6 },
+      },
+    ]
+
+    for (const testCase of cases) {
+      const gate = new BenchmarkBudgetGate()
+      gate.beginRequest({
+        step: 1,
+        estimatedInputTokens: 10,
+        proposedMaxTokens: 10,
+        toolNames: [],
+      })
+
+      let caught: unknown
+      try {
+        gate.completeRequest({ step: 1, usage: testCase.usage })
+      } catch (error) {
+        caught = error
+      }
+
+      expect(caught, testCase.label).toBeInstanceOf(BenchmarkBudgetStopError)
+      expect((caught as BenchmarkBudgetStopError).stop.gate, testCase.label).toBe('invalid-usage')
+
+      const snapshot = gate.snapshot()
+      expect(snapshot.estimatedCostUsd, testCase.label).toBe(0)
+      expect(snapshot.inputTokens, testCase.label).toBe(0)
+      expect(snapshot.outputTokens, testCase.label).toBe(0)
+      expect(snapshot.cacheReadTokens, testCase.label).toBe(0)
+      expect(snapshot.stops.map(entry => entry.gate), testCase.label).toEqual(['invalid-usage'])
+      // The dispatched request's real spend is unknown, so its reservation is
+      // kept rather than refunded.
+      expect(snapshot.reservedCostUsd, testCase.label).toBeGreaterThan(0)
+    }
+  })
+
+  it('estimates Chinese and mixed input at or above the reference reported usage', () => {
+    // Fixed reference usage for the same text (CJK: 1 token/char, ASCII: 4
+    // chars/token). The estimate is a lower bound that must never fall short.
+    const samples = [
+      { label: 'Han only', text: '中'.repeat(8_000), referenceTokens: 8_000 },
+      { label: 'ASCII only', text: 'a'.repeat(8_000), referenceTokens: 2_000 },
+      {
+        label: 'mixed',
+        text: '中'.repeat(4_000) + 'a'.repeat(8_000),
+        referenceTokens: 6_000,
+      },
+    ]
+
+    for (const sample of samples) {
+      const estimate = estimateRequestInputTokens({
+        system: sample.text,
+        messages: [],
+        tools: [],
+      })
+      expect(estimate, sample.label).toBeGreaterThanOrEqual(sample.referenceTokens)
+    }
+  })
+
+  it('stops an 8000-character Chinese request the flat 4-chars/token estimate admitted', () => {
+    const system = '中'.repeat(8_000)
+    const estimate = estimateRequestInputTokens({ system, messages: [], tools: [] })
+    expect(estimate).toBeGreaterThan(Math.ceil((8_000 + 4) / 4))
+
+    const gate = new BenchmarkBudgetGate()
+    expect(() => gate.beginRequest({
+      step: 1,
+      estimatedInputTokens: estimate,
+      proposedMaxTokens: 10,
+      toolNames: [],
+    })).toThrow(BenchmarkBudgetStopError)
+
+    expect(gate.snapshot().requests).toBe(0)
+    expect(gate.snapshot().stops.map(entry => entry.gate)).toEqual(['request-input-tokens'])
   })
 })

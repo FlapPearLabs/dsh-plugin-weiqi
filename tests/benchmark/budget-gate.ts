@@ -73,6 +73,7 @@ export type BenchmarkBudgetStopGate =
   | 'estimated-cost'
   | 'retries-forbidden'
   | 'search-fetch-forbidden'
+  | 'invalid-usage'
 
 export type BenchmarkBudgetStop = Readonly<{
   readonly kind: 'budget_stop'
@@ -134,20 +135,44 @@ export function isForbiddenBenchmarkTool(name: string): boolean {
 }
 
 /**
- * Cheap pre-dispatch estimate (~4 characters per token) used only to stop an
- * obviously oversized request before it leaves the process. The authoritative
- * count is the provider's reported `usage.inputTokens`, checked again after
- * the request completes.
+ * Conservative pre-dispatch lower bound on the input tokens a request will be
+ * billed for, used only to stop an obviously oversized request before it
+ * leaves the process. The authoritative count is the provider's reported
+ * `usage.inputTokens`, checked again after the request completes.
+ *
+ * The estimate must never under-count: CJK characters are charged at >= 1 token
+ * per UTF-16 unit and everything else at >= 0.25 tokens per UTF-16 unit. A flat
+ * 4-characters-per-token rule put 8000 Han characters at ~2000 tokens, so a
+ * Chinese request could clear the 8000 cap on the pre-dispatch check and only
+ * be caught after it had already been paid for.
  */
 export function estimateRequestInputTokens(request: Readonly<{
   readonly system?: string
   readonly messages: readonly unknown[]
   readonly tools?: readonly unknown[]
 }>): number {
-  const characters = (request.system?.length ?? 0)
-    + JSON.stringify(request.messages).length
-    + JSON.stringify(request.tools ?? []).length
-  return Math.ceil(characters / 4)
+  const text = (request.system ?? '')
+    + JSON.stringify(request.messages)
+    + JSON.stringify(request.tools ?? [])
+  let weighted = 0
+  for (const character of text) {
+    const codePoint = character.codePointAt(0) ?? 0
+    // `character.length` is the UTF-16 width: a BMP CJK character is charged 1
+    // token, an astral-plane one is charged 2.
+    weighted += isCjkCodePoint(codePoint) ? character.length : character.length / 4
+  }
+  return Math.ceil(weighted)
+}
+
+function isCjkCodePoint(codePoint: number): boolean {
+  return (codePoint >= 0x2e80 && codePoint <= 0x2fff) // CJK radicals, Kangxi
+    || (codePoint >= 0x3000 && codePoint <= 0x303f) // CJK symbols and punctuation
+    || (codePoint >= 0x3040 && codePoint <= 0x30ff) // Hiragana, Katakana
+    || (codePoint >= 0x3400 && codePoint <= 0x4dbf) // CJK Unified Ideographs Extension A
+    || (codePoint >= 0x4e00 && codePoint <= 0x9fff) // CJK Unified Ideographs
+    || (codePoint >= 0xf900 && codePoint <= 0xfaff) // CJK Compatibility Ideographs
+    || (codePoint >= 0xff00 && codePoint <= 0xffef) // Halfwidth and Fullwidth Forms
+    || (codePoint >= 0x20000 && codePoint <= 0x2fa1f) // Extensions B-F, Compatibility Supplement
 }
 
 function roundCost(value: number): number {
@@ -472,6 +497,32 @@ export class BenchmarkBudgetGate {
    * its real usage and the stop must be recorded in the same call.
    */
   completeRequest(input: CompleteRequestInput): void {
+    const { usage } = input
+
+    // Validate before anything is accumulated or the reservation is released.
+    // A negative or non-finite count would flow into the session totals, turn
+    // the cost negative, and leave the budget permanently under its ceiling.
+    // The reservation stays held on this stop: the request was dispatched and
+    // its real spend is unknown, so the budget stays conservatively consumed.
+    const counts: readonly (readonly [string, number | undefined])[] = [
+      ['usage.inputTokens', usage.inputTokens],
+      ['usage.outputTokens', usage.outputTokens],
+      ['usage.cacheReadTokens', usage.cacheReadTokens],
+      ['usage.cacheWriteTokens', usage.cacheWriteTokens],
+    ]
+    for (const [field, value] of counts) {
+      if (value === undefined) continue
+      if (!Number.isFinite(value) || value < 0) {
+        throw this.stop(
+          'invalid-usage',
+          `${field} must be a non-negative finite number: ${String(value)}`,
+          input.step,
+          Number.isFinite(value) ? value : null,
+          null,
+        )
+      }
+    }
+
     const reservation = this.reservations.get(input.step)
     if (reservation === undefined) {
       throw new Error(
@@ -481,7 +532,6 @@ export class BenchmarkBudgetGate {
     this.reservations.delete(input.step)
     this.reservedCostUsd = roundCost(Math.max(0, this.reservedCostUsd - reservation))
 
-    const { usage } = input
     this.inputTokenCount += usage.inputTokens
     this.outputTokenCount += usage.outputTokens
     this.cacheReadTokenCount += usage.cacheReadTokens ?? 0
