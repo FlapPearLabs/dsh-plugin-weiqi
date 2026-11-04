@@ -107,7 +107,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-BUD-01 | GoTurnBudget contract | Spec §22 fields | Absent from `src/contracts` | NOT_IMPLEMENTED | Contract + defaults | C | IMPLEMENTATION_TICKET |
+| BL-BUD-01 | GoTurnBudget contract | Spec §22 fields | `src/contracts/budget.ts` defines `GoTurnBudget` with the five Spec §22 fields (all required, no numeric defaults); `src/budget/config.ts` loads only explicit injected values, rejects missing/invalid fields without defaults, and allows a zero cap for counted operations/token caps while `maxModelSteps` requires >= 1; fixture labeled `NON_PRODUCTION_FIXTURE`; 135 tests incl. a delete-a-field typecheck tooth; PR #81 (`796e1be`), adversarial review r1 APPROVE + P2 fixes | IMPLEMENTED_VERIFIED | None | C | NO_ACTION |
 | BL-BUD-02 | Per-request / per-turn hard caps + tool accounting + exhaustion | Spec §22.1-22.4 | No code | NOT_IMPLEMENTED | Accounting + enforcement | C | IMPLEMENTATION_TICKET |
 | BL-BUD-03 | Deep-think boost (bounded) | Spec §23 | No code | NOT_IMPLEMENTED | Boost path | C | IMPLEMENTATION_TICKET |
 | BL-BUD-04 | Post-move no-analysis-loop rule | Spec §24 (R2.4.2): after committed play / pass / **resign**, the same Go turn must not restart another analysis loop; after resign the game is terminal immediately with no further inspect / try_move / deep-think / model step permitted for that turn | No code | NOT_IMPLEMENTED | Rule enforcement (incl. resign terminal) | C | IMPLEMENTATION_TICKET |
