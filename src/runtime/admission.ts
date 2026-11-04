@@ -39,17 +39,19 @@ export type FocusIntentArbitration = (
 /**
  * The exact user-command intent created for one inactive-lane admission.
  *
- * `sourceMessage` is required here: unlike a generic `PendingFocusIntent`, an
- * inactive-lane user message always carries the DSH message that produced it.
+ * A narrowing of the shared `PendingFocusIntent` contract: unlike a generic
+ * intent, an inactive-lane user message always carries `origin: "user_command"`
+ * and the DSH message that produced it.
  */
-export type InactiveLaneUserCommandIntent = Readonly<{
-  target: Lane
-  origin: 'user_command'
-  sourceMessage: Readonly<{
-    sourceSessionId: string
-    message: UserMessage
-  }>
-}>
+export type InactiveLaneUserCommandIntent = Readonly<
+  PendingFocusIntent & {
+    origin: 'user_command'
+    sourceMessage: Readonly<{
+      sourceSessionId: string
+      message: UserMessage
+    }>
+  }
+>
 
 export type InactiveLaneAdmissionResult =
   | Readonly<{
@@ -79,6 +81,10 @@ export type InactiveLaneAdmissionResult =
  * The message is stored by exact reference, so it must already be deeply frozen
  * by the DSH `createUserMessage` contract. A mutable message is rejected rather
  * than freezing the caller's object or copying its text.
+ *
+ * @param arbitrate - test-only injection seam defaulting to the A-T02
+ *   `submitFocusIntent`; production callers must omit it so admission has
+ *   exactly one arbitration path.
  */
 export function admitInactiveLaneUserMessage(
   state: RuntimeFocusState,
@@ -124,25 +130,46 @@ function isNonBlankString(value: string): boolean {
 }
 
 function isUserMessage(message: UserMessage): boolean {
-  return typeof message === 'object' && message !== null && message.role === 'user'
+  return typeof message === 'object'
+    && message !== null
+    && message.role === 'user'
+    && typeof message.source === 'object'
+    && message.source !== null
+    && message.source.kind === 'user'
 }
 
 function hasMeaningfulContent(content: readonly ContentBlock[]): boolean {
   if (!Array.isArray(content) || content.length === 0) return false
   return content.some(block => {
-    if (block == null) return false
-    return block.type !== 'text' || (typeof block.text === 'string' && block.text.trim() !== '')
+    if (typeof block !== 'object' || block === null) return false
+    const type: unknown = (block as { type?: unknown }).type
+    if (typeof type !== 'string') return false
+    if (type !== 'text') return true
+    const text: unknown = (block as { text?: unknown }).text
+    return typeof text === 'string' && text.trim() !== ''
   })
 }
 
 /**
  * The stored message is the exact caller reference, never a copy, so its
  * immutability must come from DSH `createUserMessage` deep-freezing. Check the
- * message, its content array, and every block before publishing that reference.
+ * message, its content array, every block, and the source provenance (including
+ * any nested provenance object) before publishing that reference.
  */
 function isDeeplyFrozenUserMessage(message: UserMessage): boolean {
   return Object.isFrozen(message)
     && Array.isArray(message.content)
     && Object.isFrozen(message.content)
     && message.content.every(block => block != null && Object.isFrozen(block))
+    && isDeeplyFrozen(message.source)
+}
+
+function isDeeplyFrozen(value: unknown, seen: Set<object> = new Set()): boolean {
+  if (typeof value !== 'object' || value === null) return true
+  if (seen.has(value)) return true
+  if (!Object.isFrozen(value)) return false
+
+  seen.add(value)
+  const children = Array.isArray(value) ? value : Object.values(value)
+  return children.every(child => isDeeplyFrozen(child, seen))
 }
