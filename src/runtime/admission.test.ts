@@ -1,4 +1,4 @@
-import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 import { describe, expect, it, vi } from 'vitest'
 import type { Lane, PendingFocusIntent, RuntimeFocusState } from '../contracts/focus.js'
@@ -258,6 +258,123 @@ describe('inactive-lane user message admission', () => {
     expect(arbitrate).not.toHaveBeenCalled()
   })
 
+  it.each([
+    { activeLane: 'work' as Lane, target: 'work' as Lane },
+    { activeLane: 'go' as Lane, target: 'go' as Lane },
+  ])(
+    'rejects a $target message while $activeLane is the active lane',
+    ({ activeLane, target }) => {
+      const arbitrate = spyArbitration()
+      const initial = createRuntimeFocusState(activeLane)
+
+      const result = admitInactiveLaneUserMessage(
+        initial,
+        admissionFor(textMessage('当前泳道上的消息'), target),
+        arbitrate,
+      )
+
+      expect(result).toEqual({ kind: 'rejected', reason: 'already-active-lane' })
+      expect(result).not.toHaveProperty('intent')
+      expect(arbitrate).not.toHaveBeenCalled()
+      expect(initial).toEqual(createRuntimeFocusState(activeLane))
+      expect(initial.pendingFocus).toBeUndefined()
+    },
+  )
+
+  it('keeps the single focus slot free after a same-lane attempt', () => {
+    const initial = createRuntimeFocusState('work')
+
+    const sameLane = admitInactiveLaneUserMessage(
+      initial,
+      admissionFor(textMessage('本该在当前泳道处理', 'same-lane'), 'work'),
+    )
+
+    const stateAfterSameLane = sameLane.kind === 'submitted' ? sameLane.state : initial
+    const crossLane = admitInactiveLaneUserMessage(
+      stateAfterSameLane,
+      admissionFor(textMessage('去 Go 那边', 'cross-lane'), 'go'),
+    )
+
+    expect(crossLane.kind === 'submitted' ? crossLane.disposition : crossLane).toBe('admitted')
+    expect(crossLane.kind === 'submitted' ? crossLane.intent.target : undefined).toBe('go')
+    expect(sameLane).toEqual({ kind: 'rejected', reason: 'already-active-lane' })
+    expect(stateAfterSameLane.pendingFocus).toBeUndefined()
+  })
+
+  it('admits a work-targeted message while go is the active lane', () => {
+    const message = textMessage('回到 Work 看这条')
+
+    const result = submitted(
+      admitInactiveLaneUserMessage(
+        createRuntimeFocusState('go'),
+        admissionFor(message, 'work', 'companion-work-work'),
+      ),
+    )
+
+    expect(result.intent.target).toBe('work')
+    expect(result.state.activeLane).toBe('go')
+    expect(result.state.pendingFocus).toBe(result.intent)
+  })
+
+  it('accepts a real DSH createUserMessage as the immutable stored reference', () => {
+    const message = createUserMessage({
+      content: [{ type: 'text', text: 'DSH 生成的消息' }],
+      source: { kind: 'user' },
+    })
+
+    const result = submitted(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    )
+
+    expect(result.intent.sourceMessage?.message).toBe(message)
+    expect(Object.isFrozen(message)).toBe(true)
+    expect(Object.isFrozen(message.content)).toBe(true)
+    expect(Object.isFrozen(message.content[0])).toBe(true)
+    expect(() => {
+      ;(message.content[0] as unknown as { text: string }).text = 'MUTATED'
+    }).toThrow(TypeError)
+  })
+
+  it('rejects a mutable message it could not store immutably', () => {
+    const message = {
+      id: 'mutable-message',
+      role: 'user',
+      content: [{ type: 'text', text: '尚未冻结' }],
+      source: { kind: 'user' },
+    } as unknown as UserMessage
+    const arbitrate = spyArbitration()
+    const initial = createRuntimeFocusState('work')
+
+    const result = admitInactiveLaneUserMessage(initial, admissionFor(message), arbitrate)
+
+    expect(result).toEqual({ kind: 'rejected', reason: 'mutable-message' })
+    expect(arbitrate).not.toHaveBeenCalled()
+    expect(initial.pendingFocus).toBeUndefined()
+  })
+
+  it('rejects a message whose frozen shell still holds mutable content', () => {
+    const message = {
+      ...textMessage('占位', 'shallow-frozen'),
+      content: [{ type: 'text', text: '内容仍可变' }],
+    } as UserMessage
+    Object.freeze(message)
+
+    expect(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    ).toEqual({ kind: 'rejected', reason: 'mutable-message' })
+  })
+
+  it('rejects malformed null content blocks as empty instead of throwing', () => {
+    const message = {
+      ...textMessage('占位', 'malformed-block'),
+      content: [null as unknown as ContentBlock],
+    } as UserMessage
+
+    expect(
+      admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
+    ).toEqual({ kind: 'rejected', reason: 'empty-message' })
+  })
+
   it('admits non-text message content that still carries user intent', () => {
     const message = userMessage('image-only-message', [
       {
@@ -273,14 +390,14 @@ describe('inactive-lane user message admission', () => {
     expect(result.state.pendingFocus?.sourceMessage?.message).toBe(message)
   })
 
-  it('stores the exact immutable message by reference, never a text copy', () => {
+  it('stores the exact message by reference, never a text copy', () => {
     const message = textMessage('照这张图下')
     const result = submitted(
       admitInactiveLaneUserMessage(createRuntimeFocusState('work'), admissionFor(message)),
     )
 
     expect(result.intent.sourceMessage?.message).toBe(message)
-    expect(Object.isFrozen(message)).toBe(true)
+    expect(result.intent.sourceMessage?.message.content[0]).toBe(message.content[0])
     expect(Object.isFrozen(result.intent)).toBe(true)
     expect(Object.isFrozen(result.intent.sourceMessage)).toBe(true)
     expect(Object.keys(result.intent.sourceMessage!)).toEqual(['sourceSessionId', 'message'])
