@@ -79,7 +79,7 @@ baseline exists or should be created.
 |---|---|---|---|---|---|---|---|
 | BL-GR-01 | GoRulesPort interface | Spec §26 (R2.4.2) `createGame/play/pass/resign/getState/inspectGroup/score/settle`; GoRulesPort = sole application-facing game-mutation boundary; resign = terminal action at the port, no second board-rules authority | Absent from `src/contracts` | NOT_IMPLEMENTED | Interface + implementation (incl. resign) | B | IMPLEMENTATION_TICKET |
 | BL-GR-02 | Tenuki Adapter | Spec §26/§27 rules authority behind port | No dependency, no code | NOT_IMPLEMENTED | Adapter + explicit config | B | IMPLEMENTATION_TICKET (blocked by BL-GR-03) |
-| BL-GR-03 | Pinned Tenuki version + conformance | Spec §27 exact version; §31 superko fixture passes | No Tenuki dependency; no fixture; no candidate evaluation record | NEEDS_SPIKE | Which Tenuki satisfies area + positional-superko + komi 7.5 explicit config | B (gate) | SPIKE |
+| BL-GR-03 | Pinned Tenuki version + conformance | Spec §27 exact version; §31 superko fixture passes | `tenuki@0.3.1` pinned by tarball sha512 + package sha1; conformance gate 6/6 PASS (explicit `scoring:"area"`, `koRule:"positional-superko"`, `komi:7.5`; repetition rejected under positional-superko, accepted under simple ko; defaults `territory`/`simple`/komi 0 proven not relied on); merged PR #61 (`1dbbe2c`), adversarial review r1 CHANGES_REQUESTED -> fix -> r2 APPROVE | VERIFIED_FACT_NOT_INTEGRATED | Adapter (B-T02) and §31 fixtures (B-T05) consume the pin | B (gate) | INTEGRATION_TICKET (predeclared consumer WAVE-B-T02) |
 | BL-GR-04 | Chinese area scoring / komi 7.5 / positional superko | Spec §25/§27 | No code; `IMPLEMENTATION_BOUNDARIES.md` fixes production komi 7.5 (not prototype 6.5) | NOT_IMPLEMENTED | Rules behavior | B | IMPLEMENTATION_TICKET |
 | BL-GR-05 | Captures / suicide / pass / two-pass settlement / dead-stone flow | Spec §25/§31 fixtures | No code, no fixture tests | NOT_IMPLEMENTED | Rules behavior | B | IMPLEMENTATION_TICKET |
 | BL-GR-06 | Canonical action log / replay | Spec §28 (R2.4.2) canonical record; actions = play/pass/resign; replay marks terminal on resign; winner/reason derived (opponent / resignation); no Tenuki internals serialized | No `CanonicalGameRecord`/`GameAction` types | NOT_IMPLEMENTED | Record schema + replay (incl. resign terminal) | B | IMPLEMENTATION_TICKET |
@@ -182,6 +182,15 @@ requires `ESCALATION_REQUIRED`:
 
 # VERIFIED FACT — NOT INTEGRATED
 
+tenuki version / conformance (BL-GR-03):
+
+```text
+Feasibility:          VERIFIED (6/6 conformance, pinned tenuki@0.3.1, PR #61 merged 1dbbe2c)
+Pin:                  tarball sha512 + internal package.json sha1 asserted by the gate
+Explicit config:      scoring area / positional-superko / komi 7.5 (defaults territory/simple/0 proven not relied on)
+Consumer:             WAVE-B-T02 TenukiAdapter (predeclared); fixtures WAVE-B-T05
+```
+
 request-level token hard-cap seam (BL-BUD-07):
 
 ```text
@@ -208,7 +217,6 @@ feasibility Spike.
 | Baseline ID | Unknown | Why not directly implement | Dependent decision | Why current evidence is insufficient |
 |---|---|---|---|---|
 | BL-PKG-06 | GitHub source install (`dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`) | `github:` spec resolution/clone/build/activate path is unverified | Installation docs, Wave F installation acceptance | Smoke covers local tarball only; no `github:` path code or CI evidence |
-| BL-GR-03 | Tenuki version satisfying area + positional-superko + komi 7.5 explicit config, passing §31 fixture | Spec §27 forbids defaults, silent downgrade, dual rules authority | GoRulesPort / TenukiAdapter version pin and implementation | No Tenuki dependency, no fixtures, no candidate evaluation record |
 | BL-BR-03 | `ctx.systemPrompt.context` agent-scoped runtime-context provider semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | No provider code or DSH-internal probe |
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
