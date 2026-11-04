@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { GoTurnBudget } from '../contracts/budget.js'
 import { GoTurnBudgetConfigError } from './config.js'
 import {
+  GoDeepThinkAlreadyRequestedError,
   GoTurnAnalysisEndedError,
   GoTurnBudgetExhaustedError,
   GoTurnUsageError,
@@ -309,13 +310,119 @@ describe('createGoTurnEnforcement tool accounting', () => {
     ).resolves.toMatchObject({ counter: 'maxInspectCalls' })
   })
 
-  it('counts deep-think requests without imposing a §22 cap', () => {
+  it('counts the turn\'s single deep-think request', () => {
     const enforcement = createGoTurnEnforcement(NON_PRODUCTION_BUDGET)
 
     enforcement.beginDeepThink()
+
+    expect(enforcement.snapshot().deepThinkRequests).toBe(1)
+  })
+})
+
+describe('createGoTurnEnforcement bounded deep-think boost (Spec §23)', () => {
+  it('grants exactly one extra model step and never an unlimited mode', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 1, maxTurnTokens: 1_000 }),
+    )
+
+    enforcement.beginModelStep()
+    await expect(captureExhaustion(() => enforcement.beginModelStep())).resolves.toMatchObject({
+      counter: 'maxModelSteps',
+    })
+
+    expect(enforcement.beginDeepThink()).toEqual({ granted: true, modelSteps: 1 })
+    expect(enforcement.snapshot().deepThinkBoost).toEqual({
+      pendingModelSteps: 1,
+      grantedModelSteps: 1,
+      consumedModelSteps: 0,
+    })
+
+    enforcement.beginModelStep()
+    expect(enforcement.snapshot()).toMatchObject({
+      modelSteps: 2,
+      deepThinkRequests: 1,
+      deepThinkBoost: { pendingModelSteps: 0, grantedModelSteps: 1, consumedModelSteps: 1 },
+    })
+    await expect(captureExhaustion(() => enforcement.beginModelStep())).resolves.toMatchObject({
+      counter: 'maxModelSteps',
+      limit: 2,
+      used: 2,
+    })
+  })
+
+  it('rejects a second request in the same turn instead of stacking boosts', () => {
+    const enforcement = createGoTurnEnforcement(budgetWith({ maxModelSteps: 1 }))
+
     enforcement.beginDeepThink()
 
-    expect(enforcement.snapshot().deepThinkRequests).toBe(2)
+    expect(() => enforcement.beginDeepThink()).toThrowError(GoDeepThinkAlreadyRequestedError)
+    expect(enforcement.snapshot()).toMatchObject({
+      deepThinkRequests: 1,
+      deepThinkBoost: { pendingModelSteps: 1, grantedModelSteps: 1 },
+    })
+  })
+
+  it('keeps the per-request token cap and the turn ceiling unchanged for the boosted step', async () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 1, perRequestMaxTokens: 257, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginModelStep().complete({ tokens: 40 })
+    enforcement.beginDeepThink()
+    const boosted = enforcement.beginModelStep()
+    const capped = await enforcement.requestTokenCap({ turn: 1, step: 2 }, async () =>
+      resolvedRequest(8_192),
+    )
+
+    expect(boosted.index).toBe(2)
+    expect(enforcement.snapshot().limits).toMatchObject({
+      perRequestMaxTokens: 257,
+      maxTurnTokens: 100,
+    })
+    expect(enforcement.remainingTurnTokens()).toBe(60)
+    expect(capped.maxTokens).toBe(60)
+  })
+
+  it('does not grant a boost once the turn token budget is exhausted', () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 5, maxTurnTokens: 100 }),
+    )
+
+    expect(enforcement.beginDeepThink()).toEqual({ granted: true, modelSteps: 1 })
+    enforcement.beginModelStep().complete({ tokens: 100 })
+
+    expect(() => enforcement.beginDeepThink()).toThrowError(GoTurnBudgetExhaustedError)
+    expect(enforcement.snapshot().deepThinkRequests).toBe(1)
+  })
+
+  it('cannot apply a pending boost through an exhausted turn ceiling', () => {
+    const enforcement = createGoTurnEnforcement(
+      budgetWith({ maxModelSteps: 1, maxTurnTokens: 100 }),
+    )
+
+    enforcement.beginDeepThink()
+    enforcement.beginModelStep().complete({ tokens: 100 })
+
+    expect(() => enforcement.beginModelStep()).toThrowError(GoTurnBudgetExhaustedError)
+    expect(enforcement.snapshot()).toMatchObject({
+      modelSteps: 1,
+      turnTokens: 100,
+      deepThinkBoost: { pendingModelSteps: 1, consumedModelSteps: 0 },
+    })
+  })
+
+  it('keeps a granted boost unusable after a committed action', () => {
+    const enforcement = createGoTurnEnforcement(budgetWith({ maxModelSteps: 2 }))
+
+    enforcement.beginDeepThink()
+    enforcement.recordCommittedAction('play')
+
+    expect(() => enforcement.beginModelStep()).toThrowError(GoTurnAnalysisEndedError)
+    expect(() => enforcement.beginDeepThink()).toThrowError(GoTurnAnalysisEndedError)
+    expect(enforcement.snapshot().deepThinkBoost).toMatchObject({
+      pendingModelSteps: 1,
+      consumedModelSteps: 0,
+    })
   })
 })
 
