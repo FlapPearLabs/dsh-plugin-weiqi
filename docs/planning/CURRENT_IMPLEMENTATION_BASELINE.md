@@ -67,8 +67,8 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-BR-01 | WorkSnapshot / GameNotice / CompanionBridge contracts | Spec §9-11 exact shapes | `src/contracts/bridge.ts` matches Spec; type-level tests | FOUNDATION_ONLY | Behavior, not shape | D | IMPLEMENTATION_TICKET |
-| BL-BR-02 | Latest-value semantics | Spec §9 awareness only, never a queue | No runtime holder/updater | NOT_IMPLEMENTED | State ownership + updates | D | IMPLEMENTATION_TICKET |
+| BL-BR-01 | WorkSnapshot / GameNotice / CompanionBridge contracts | Spec §9-11 exact shapes | `src/contracts/bridge.ts` matches Spec; `src/bridge/schema.ts` validates the exact field sets and rejects forbidden strategic/command fields (incl. nested `AffectedGroupDelta`); `src/bridge/runtime.ts` owns independent Work/Game slots without recursive projection; PR #67 (`6348a0f`), adversarial review r1 APPROVE, 84 tests | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
+| BL-BR-02 | Latest-value semantics | Spec §9 awareness only, never a queue | `src/bridge/latest-value.ts` keeps one latest value with a monotonic sequence; stale/duplicate updates are rejected without resurrecting old values; no history/queue/drain/subscription surface; PR #67 (`6348a0f`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
 | BL-BR-03 | ctx.systemPrompt.context provider delivery | Spec §9.1 DSH-native agent-scoped context | No evidence: provider registration/render/dedup behavior on pinned DSH unverified | NEEDS_SPIKE | Unknown DSH provider seam semantics | D (gate) | SPIKE |
 | BL-BR-04 | Cross-lane awareness / no raw transcript injection | Spec §12/§35 | Contract only; AGENTS frozen constraint | FOUNDATION_ONLY | Behavior | D | IMPLEMENTATION_TICKET |
 | BL-BR-05 | Bridge-only changes do not trigger evaluation wakes | Spec §9.1 | No code | NOT_IMPLEMENTED | Needs Attention linkage | D | IMPLEMENTATION_TICKET |
@@ -161,7 +161,7 @@ implementation Tickets:
 - packed-tarball profile installation (BL-PKG-05) — real `dsh plugin --profile add` verified
 - plugin mount in real Loader tree (BL-PKG-05) — fiber active verified
 - Foundation build/test (BL-PKG-04, BL-PKG-07) — typecheck + 4 tests + build verified
-- frozen core contracts (BL-RT-03, BL-BR-01, BL-CMP-04) — type-level tests
+- frozen core contracts (BL-RT-03, BL-CMP-04) — type-level tests
 - cooperative-yield feasibility (BL-RT-07) — 3/3 spike experiments pass
 - cooperative-yield executable evidence — `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`
 - cooperative-yield upgrade gate (BL-PKG-09) — real pinned-DSH AgentLoop gate
@@ -178,7 +178,6 @@ requires `ESCALATION_REQUIRED`:
 
 - `Lane`, `PendingFocusIntent`, `RuntimeFocusState` (BL-RT-03)
 - `RuntimeFocusState.pausedLane` state field (BL-RT-08)
-- `WorkSnapshot`, `GameNotice`, `AffectedGroupDelta`, `CompanionBridge` (BL-BR-01)
 - `AttentionMode` (BL-CMP-04)
 
 # VERIFIED FACT — NOT INTEGRATED
