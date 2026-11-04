@@ -34,8 +34,13 @@ export type GoNativeCapabilityKind = (typeof GO_NATIVE_CAPABILITY_KINDS)[number]
 export type GoForbiddenCapabilityKind = (typeof GO_FORBIDDEN_CAPABILITY_KINDS)[number]
 
 /**
- * Model-facing tool paths the Go lane may own (Spec §20 final surface:
+ * Model-facing tool path prefixes the Go lane may own (Spec §20 final surface:
  * eight `go.*` plus two `companion.*`). Phase A registers only `go.*`.
+ *
+ * This is a coarse prefix admission check on purpose, not a tool allowlist:
+ * `GoCapabilityGuard` only keeps the Go scope inside the lane's own path space
+ * (`go.arbitrary` passes here). The fine-grained 8 + 2 tool allowlist is the
+ * C-T01 registry, which decides which concrete tool paths may be minted at all.
  */
 export const GO_TOOL_PATH_PREFIXES = ['go.', 'companion.'] as const
 

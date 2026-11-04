@@ -7,9 +7,17 @@
  * the capability's kind. A caller that forges `kind: 'model-native'` is
  * rejected at registration and permanently denied at execution.
  *
- * Every `execute` call re-evaluates the frozen preset policy and throws before
- * the capability runs, so an aliased or accidentally registered capability can
- * never acquire authority.
+ * Enforcement is split along the two places a kind can actually appear:
+ *
+ * - registration sees the descriptor's *declared* kind, an untrusted claim.
+ *   It is consulted only to deny: a forbidden or unclassified kind is refused
+ *   by the frozen preset policy, an unminted native claim is refused as forged,
+ *   and either way the tool path is quarantined with the rejection reason;
+ * - execution admits only minted descriptors, re-checks the preset's tool-path
+ *   rule, and replays a quarantined path's recorded rejection. A forbidden
+ *   capability therefore cannot acquire authority even if it was accidentally
+ *   registered or aliased into the scope (Spec §19): its path fails at
+ *   execution with the same reason that refused it.
  */
 import {
   GO_PRESET,
@@ -53,6 +61,40 @@ export function nativeGoCapability(
 /** Whether a value is a descriptor minted by {@link nativeGoCapability}. */
 export function isNativeGoCapability(value: unknown): value is GoCapability {
   return typeof value === 'object' && value !== null && NATIVE_PROVENANCE.has(value)
+}
+
+/**
+ * Evaluate the frozen preset's capability-kind rule for one claimed kind.
+ *
+ * This is the single definition of which kinds the Go realm admits. It is pure
+ * and total, so tests exercise every branch directly, and `register()` calls it
+ * on the real admission path with the descriptor's declared kind — a claim that
+ * can only deny, never grant.
+ */
+export function goCapabilityKindViolation(
+  kind: string,
+): 'forbidden-kind' | 'unknown-kind' | undefined {
+  if ((GO_PRESET.forbiddenCapabilities as readonly string[]).includes(kind)) {
+    return 'forbidden-kind'
+  }
+  if (!(GO_PRESET.capabilityKinds as readonly string[]).includes(kind)) {
+    return 'unknown-kind'
+  }
+  return undefined
+}
+
+/**
+ * Evaluate the frozen preset's tool-path rule.
+ *
+ * This is a coarse prefix check on purpose: the fine-grained 8 + 2 tool
+ * allowlist is the C-T01 registry. Admission here only keeps the Go scope
+ * inside the lane's own path space, so a stray `fs.*` or `gonzo.*` descriptor
+ * can never execute even when it was minted.
+ */
+export function goToolPathViolation(toolPath: string): 'tool-path' | undefined {
+  return GO_PRESET.toolPathPrefixes.some(prefix => toolPath.startsWith(prefix))
+    ? undefined
+    : 'tool-path'
 }
 
 /** Why the Go execution authority refused one capability invocation. */
@@ -103,7 +145,10 @@ export class ForbiddenGoCapabilityError extends Error {
 export class GoCapabilityGuard {
   private readonly capabilities = new Map<string, GoCapability>()
   /** Paths whose registration was rejected; denied until a minted descriptor replaces them. */
-  private readonly forgedPaths = new Map<string, string>()
+  private readonly quarantined = new Map<
+    string,
+    { readonly declaredKind: string; readonly reason: GoCapabilityRejectionReason }
+  >()
 
   constructor(preset: unknown = GO_PRESET) {
     if (preset !== GO_PRESET) {
@@ -114,27 +159,39 @@ export class GoCapabilityGuard {
     }
   }
 
-  /** Record a minted capability; reject every forged or aliased descriptor. */
+  /** Record a minted capability; reject every forbidden, unknown or forged descriptor. */
   register(capability: unknown): void {
+    const { toolPath, declaredKind } = describeDeclaredCapability(capability)
+
+    // The declared kind is untrusted input: reading it can only deny, never
+    // admit. A descriptor naming a forbidden or unclassified capability is
+    // refused by the frozen preset policy before provenance is considered, so
+    // the refusal carries the policy reason instead of a generic forgery.
+    const kindViolation = goCapabilityKindViolation(declaredKind)
+    if (kindViolation !== undefined) {
+      this.quarantine(toolPath, declaredKind, kindViolation)
+      throw new ForbiddenGoCapabilityError(toolPath, declaredKind, kindViolation, GO_PRESET.id)
+    }
+
     if (!isNativeGoCapability(capability)) {
-      const { toolPath, declaredKind } = describeDeclaredCapability(capability)
-      this.forgedPaths.set(toolPath, declaredKind)
+      this.quarantine(toolPath, declaredKind, 'forged-descriptor')
       throw new ForgedGoCapabilityError(toolPath, declaredKind)
     }
+
     this.capabilities.set(capability.toolPath, capability)
-    this.forgedPaths.delete(capability.toolPath)
+    this.quarantined.delete(capability.toolPath)
   }
 
   /** Run one registered capability only when the frozen preset admits it right now. */
   execute(toolPath: string, args?: unknown): unknown {
     const capability = this.capabilities.get(toolPath)
     if (capability === undefined) {
-      const forgedKind = this.forgedPaths.get(toolPath)
-      if (forgedKind !== undefined) {
+      const quarantined = this.quarantined.get(toolPath)
+      if (quarantined !== undefined) {
         throw new ForbiddenGoCapabilityError(
           toolPath,
-          forgedKind,
-          'forged-descriptor',
+          quarantined.declaredKind,
+          quarantined.reason,
           GO_PRESET.id,
         )
       }
@@ -147,6 +204,20 @@ export class GoCapabilityGuard {
     }
     assertGoCapabilityAllowed(capability)
     return capability.run(args)
+  }
+
+  /** Drop every registration and quarantine record. Test seam; not for production wiring. */
+  clearForTest(): void {
+    this.capabilities.clear()
+    this.quarantined.clear()
+  }
+
+  private quarantine(
+    toolPath: string,
+    declaredKind: string,
+    reason: GoCapabilityRejectionReason,
+  ): void {
+    this.quarantined.set(toolPath, { declaredKind, reason })
   }
 }
 
@@ -163,17 +234,13 @@ export function assertGoCapabilityAllowed(capability: GoCapability): void {
   const { toolPath } = capability
   const kind = mintedKindOf(capability)
 
-  // The frozen policy gate stays in front of every execution. Minted
-  // capabilities are native by construction, so these two branches only fire
-  // if the provenance record ever admits another kind.
-  if ((GO_PRESET.forbiddenCapabilities as readonly string[]).includes(kind)) {
-    throw new ForbiddenGoCapabilityError(toolPath, kind, 'forbidden-kind', GO_PRESET.id)
-  }
-  if (!(GO_PRESET.capabilityKinds as readonly string[]).includes(kind)) {
-    throw new ForbiddenGoCapabilityError(toolPath, kind, 'unknown-kind', GO_PRESET.id)
-  }
-  if (!GO_PRESET.toolPathPrefixes.some(prefix => toolPath.startsWith(prefix))) {
-    throw new ForbiddenGoCapabilityError(toolPath, kind, 'tool-path', GO_PRESET.id)
+  // A minted kind is native by construction, so the kind rule is enforced where
+  // a kind can actually be claimed (register) and is not restated here as an
+  // unreachable branch. What execution still enforces is the tool-path rule,
+  // which a minted descriptor can genuinely violate (e.g. `fs.read`).
+  const pathViolation = goToolPathViolation(toolPath)
+  if (pathViolation !== undefined) {
+    throw new ForbiddenGoCapabilityError(toolPath, kind, pathViolation, GO_PRESET.id)
   }
 }
 
@@ -189,6 +256,16 @@ export const goCapabilityGuard = new GoCapabilityGuard()
 /** Resolve the single Go scope: the supported composition-root accessor. */
 export function resolveGoCapabilityGuard(): GoCapabilityGuard {
   return goCapabilityGuard
+}
+
+/**
+ * Hand the shared Go scope back empty.
+ *
+ * The singleton lives for the whole process, so a suite that registers into it
+ * would otherwise leak a capability into every later suite (review r2 P2).
+ */
+export function resetGoCapabilityGuardForTest(): void {
+  goCapabilityGuard.clearForTest()
 }
 
 /** Read the kind from the module-private record; never from the caller object. */

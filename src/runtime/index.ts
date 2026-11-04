@@ -38,8 +38,14 @@ export {
 
 export {
   ForbiddenGoCapabilityError,
+  ForgedGoCapabilityError,
   GoCapabilityGuard,
   assertGoCapabilityAllowed,
+  goCapabilityGuard,
+  isNativeGoCapability,
+  nativeGoCapability,
+  resetGoCapabilityGuardForTest,
+  resolveGoCapabilityGuard,
   type GoCapability,
   type GoCapabilityRejectionReason,
 } from './go-capability-guard.js'
