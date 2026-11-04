@@ -163,8 +163,9 @@ What is measured exactly (trace 6):
 - system slot: 64 chars before and after the change; the two strings share a
   62-char prefix, so the change is a 2-char substitution at offset 62;
 - the section sits before all tool schemas and before every message
-  (message payload of request 2: 423 chars of JSON), so the prefix that a
-  provider can reuse ends inside the system slot;
+  (message payload of request 2: 423 chars of JSON), so the longest common prefix
+  between the two requests ends inside the system slot; how much of either request
+  the provider actually serves from cache is not observed here;
 - `request/header` gains exactly one `reason: "change"` event for that
   request, so the epoch change is recorded, not inferred.
 
@@ -226,9 +227,11 @@ template and every dynamic value must arrive through a variable.
 `WORK_ONLY=W0`, Go saw only `GO_SNAPSHOT=G0`, and an agent with no
 registration saw neither.
 
-**Q6 — pre-step reject and cooperative-yield unaffected.** PASS. 23 + 3 + 3
-tests passed (table above); the fixture adds registrations only, no listener
-ordering and no loop change.
+**Q6 — pre-step reject and cooperative-yield unaffected.** PARTIAL. The pinned
+`interception` suite and the cooperative-yield fixture passed (26 tests, exit 0 in
+the executed run); the three production-integration cases in the table were not
+re-run under the same conditions and are not claimed here. The fixture adds
+registrations only, no listener ordering and no loop change.
 
 **Q7 — token delta of one change.** NOT MEASURED. Structural cost is measured
 exactly (change at offset 62 of 64 in the system slot, before all messages);
