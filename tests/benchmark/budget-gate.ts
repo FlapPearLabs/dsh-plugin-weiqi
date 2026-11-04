@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 
 /**
@@ -37,15 +39,22 @@ export const BENCHMARK_GATE_DEFAULTS = Object.freeze({
  * A live run (mode `'live'`) must pass the then-current approved DeepSeek
  * price schedule explicitly: omitting it throws instead of silently applying
  * these placeholder numbers.
+ *
+ * Cache reads/writes are priced separately when supplied; when omitted they
+ * fall back to the input rate, which over-estimates rather than under-counts.
  */
 export type BenchmarkPriceSchedule = Readonly<{
   inputUsdPerMillionTokens: number
   outputUsdPerMillionTokens: number
+  cacheReadUsdPerMillionTokens?: number
+  cacheWriteUsdPerMillionTokens?: number
 }>
 
 export const BENCHMARK_PLACEHOLDER_PRICES = Object.freeze({
   inputUsdPerMillionTokens: 1,
   outputUsdPerMillionTokens: 2,
+  cacheReadUsdPerMillionTokens: 0.5,
+  cacheWriteUsdPerMillionTokens: 1,
 } satisfies BenchmarkPriceSchedule)
 
 /**
@@ -96,6 +105,7 @@ export type BeginRequestDecision = Readonly<{
   readonly requestIndex: number
   readonly maxTokens: number
   readonly clamped: boolean
+  readonly reservedCostUsd: number
 }>
 
 export type CompleteRequestInput = Readonly<{
@@ -111,7 +121,11 @@ export type BenchmarkBudgetGateSnapshot = Readonly<{
   readonly requests: number
   readonly inputTokens: number
   readonly outputTokens: number
+  readonly cacheReadTokens: number
+  readonly cacheWriteTokens: number
   readonly estimatedCostUsd: number
+  readonly reservedCostUsd: number
+  readonly ledgerPath: string | null
   readonly stops: readonly BenchmarkBudgetStop[]
 }>
 
@@ -136,14 +150,27 @@ export function estimateRequestInputTokens(request: Readonly<{
   return Math.ceil(characters / 4)
 }
 
-function costOf(
-  inputTokens: number,
-  outputTokens: number,
-  pricing: BenchmarkPriceSchedule,
-): number {
-  const usd = (inputTokens * pricing.inputUsdPerMillionTokens)
-    + (outputTokens * pricing.outputUsdPerMillionTokens)
-  return Math.round((usd / 1_000_000) * 1e12) / 1e12
+function roundCost(value: number): number {
+  return Math.round(value * 1e12) / 1e12
+}
+
+type UsageCostInput = Readonly<{
+  readonly inputTokens: number
+  readonly outputTokens: number
+  readonly cacheReadTokens?: number
+  readonly cacheWriteTokens?: number
+}>
+
+function costOf(usage: UsageCostInput, pricing: BenchmarkPriceSchedule): number {
+  const cacheReadPrice = pricing.cacheReadUsdPerMillionTokens
+    ?? pricing.inputUsdPerMillionTokens
+  const cacheWritePrice = pricing.cacheWriteUsdPerMillionTokens
+    ?? pricing.inputUsdPerMillionTokens
+  const usd = (usage.inputTokens * pricing.inputUsdPerMillionTokens)
+    + (usage.outputTokens * pricing.outputUsdPerMillionTokens)
+    + ((usage.cacheReadTokens ?? 0) * cacheReadPrice)
+    + ((usage.cacheWriteTokens ?? 0) * cacheWritePrice)
+  return roundCost(usd / 1_000_000)
 }
 
 function assertNonNegativeInteger(value: number, field: string): void {
@@ -155,6 +182,118 @@ function assertNonNegativeInteger(value: number, field: string): void {
 function assertNonNegativeFinite(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new RangeError(`Benchmark gate ${field} must be a non-negative finite number: ${String(value)}`)
+  }
+}
+
+export type BenchmarkSpendLedgerState = Readonly<{
+  readonly version: 1
+  readonly requests: number
+  readonly inputTokens: number
+  readonly outputTokens: number
+  readonly cacheReadTokens: number
+  readonly cacheWriteTokens: number
+  readonly settledCostUsd: number
+  readonly reservedCostUsd: number
+}>
+
+export const EMPTY_BENCHMARK_SPEND_LEDGER: BenchmarkSpendLedgerState = Object.freeze({
+  version: 1,
+  requests: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  settledCostUsd: 0,
+  reservedCostUsd: 0,
+})
+
+export class BenchmarkSpendLedgerError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'BenchmarkSpendLedgerError'
+  }
+}
+
+function readLedgerInteger(record: Record<string, unknown>, field: string, path: string): number {
+  const value = record[field]
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new BenchmarkSpendLedgerError(
+      `Benchmark spend ledger ${path} field ${field} must be a non-negative integer: ${String(value)}`,
+    )
+  }
+  return value
+}
+
+function readLedgerAmount(record: Record<string, unknown>, field: string, path: string): number {
+  const value = record[field]
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    throw new BenchmarkSpendLedgerError(
+      `Benchmark spend ledger ${path} field ${field} must be a non-negative finite number: ${String(value)}`,
+    )
+  }
+  return value
+}
+
+/**
+ * Durable spend/request counters for one benchmark session.
+ *
+ * Written before dispatch (with the worst-case reservation) and again after
+ * settlement. A process restart loads the same numbers, so cumulative spend
+ * cannot reset to zero — and a crash between dispatch and settlement leaves
+ * the reservation counted rather than forgotten. A corrupt or unreadable file
+ * throws instead of silently starting over.
+ */
+export class BenchmarkSpendLedger {
+  readonly path: string
+
+  constructor(path: string) {
+    if (path.trim() === '') {
+      throw new BenchmarkSpendLedgerError('Benchmark spend ledger path must be non-empty')
+    }
+    this.path = path
+  }
+
+  load(): BenchmarkSpendLedgerState {
+    if (!existsSync(this.path)) return EMPTY_BENCHMARK_SPEND_LEDGER
+
+    let raw: unknown
+    try {
+      raw = JSON.parse(readFileSync(this.path, 'utf8'))
+    } catch (error) {
+      throw new BenchmarkSpendLedgerError(
+        `Benchmark spend ledger ${this.path} is not readable JSON`,
+        { cause: error },
+      )
+    }
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      throw new BenchmarkSpendLedgerError(
+        `Benchmark spend ledger ${this.path} must contain a JSON object`,
+      )
+    }
+    const record = raw as Record<string, unknown>
+    if (record.version !== 1) {
+      throw new BenchmarkSpendLedgerError(
+        `Benchmark spend ledger ${this.path} has unsupported version ${String(record.version)}`,
+      )
+    }
+
+    return Object.freeze({
+      version: 1,
+      requests: readLedgerInteger(record, 'requests', this.path),
+      inputTokens: readLedgerInteger(record, 'inputTokens', this.path),
+      outputTokens: readLedgerInteger(record, 'outputTokens', this.path),
+      cacheReadTokens: readLedgerInteger(record, 'cacheReadTokens', this.path),
+      cacheWriteTokens: readLedgerInteger(record, 'cacheWriteTokens', this.path),
+      settledCostUsd: readLedgerAmount(record, 'settledCostUsd', this.path),
+      reservedCostUsd: readLedgerAmount(record, 'reservedCostUsd', this.path),
+    })
+  }
+
+  save(state: BenchmarkSpendLedgerState): void {
+    mkdirSync(dirname(this.path), { recursive: true })
+    const temporary = `${this.path}.tmp-${process.pid}`
+    writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8')
+    renameSync(temporary, this.path)
   }
 }
 
@@ -172,14 +311,20 @@ export class BenchmarkBudgetGate {
   private requestCount = 0
   private inputTokenCount = 0
   private outputTokenCount = 0
+  private cacheReadTokenCount = 0
+  private cacheWriteTokenCount = 0
   private costUsd = 0
+  private reservedCostUsd = 0
   private lastStep: number | undefined
   private readonly stopLog: BenchmarkBudgetStop[] = []
+  private readonly reservations = new Map<number, number>()
+  private readonly ledger: BenchmarkSpendLedger | undefined
 
   constructor(
     config: Partial<BenchmarkGateConfig> = {},
     pricing?: BenchmarkPriceSchedule,
     mode: BenchmarkGateMode = 'scripted',
+    ledger?: BenchmarkSpendLedger,
   ) {
     if (mode === 'live' && pricing === undefined) {
       throw new RangeError(
@@ -201,16 +346,48 @@ export class BenchmarkBudgetGate {
     }
     assertNonNegativeFinite(this.pricing.inputUsdPerMillionTokens, 'pricing.inputUsdPerMillionTokens')
     assertNonNegativeFinite(this.pricing.outputUsdPerMillionTokens, 'pricing.outputUsdPerMillionTokens')
+    if (this.pricing.cacheReadUsdPerMillionTokens !== undefined) {
+      assertNonNegativeFinite(
+        this.pricing.cacheReadUsdPerMillionTokens,
+        'pricing.cacheReadUsdPerMillionTokens',
+      )
+    }
+    if (this.pricing.cacheWriteUsdPerMillionTokens !== undefined) {
+      assertNonNegativeFinite(
+        this.pricing.cacheWriteUsdPerMillionTokens,
+        'pricing.cacheWriteUsdPerMillionTokens',
+      )
+    }
+
+    this.ledger = ledger
+    if (ledger !== undefined) {
+      const persisted = ledger.load()
+      this.requestCount = persisted.requests
+      this.inputTokenCount = persisted.inputTokens
+      this.outputTokenCount = persisted.outputTokens
+      this.cacheReadTokenCount = persisted.cacheReadTokens
+      this.cacheWriteTokenCount = persisted.cacheWriteTokens
+      this.costUsd = persisted.settledCostUsd
+      this.reservedCostUsd = persisted.reservedCostUsd
+    }
   }
 
   beginTurn(): void {
     this.lastStep = undefined
   }
 
+  get ledgerPath(): string | null {
+    return this.ledger?.path ?? null
+  }
+
   /**
    * Admit or refuse one provider request before dispatch. The order is fixed
    * so the first violated gate becomes the recorded reason: forbidden tools,
-   * retry, request count, input tokens, projected cost.
+   * retry, request count, input tokens, then the worst-case cost reservation.
+   *
+   * The reservation is added to the session budget before dispatch and only
+   * released when `completeRequest` settles the real usage, so a crashed or
+   * failed request can never free budget it may already have spent.
    */
   beginRequest(input: BeginRequestInput): BeginRequestDecision {
     const forbidden = input.toolNames.find(isForbiddenBenchmarkTool)
@@ -256,11 +433,16 @@ export class BenchmarkBudgetGate {
     }
 
     const maxTokens = Math.min(input.proposedMaxTokens, this.config.maxOutputTokensPerRequest)
-    const projected = this.costUsd + costOf(input.estimatedInputTokens, maxTokens, this.pricing)
+    const reservation = costOf(
+      { inputTokens: input.estimatedInputTokens, outputTokens: maxTokens },
+      this.pricing,
+    )
+    const projected = roundCost(this.costUsd + this.reservedCostUsd + reservation)
     if (projected > this.config.maxEstimatedCostUsd) {
       throw this.stop(
         'estimated-cost',
-        `projected session cost $${projected} exceeds $${this.config.maxEstimatedCostUsd}`,
+        `projected session cost $${projected} (including $${reservation} reservation) `
+        + `exceeds $${this.config.maxEstimatedCostUsd}`,
         input.step,
         projected,
         this.config.maxEstimatedCostUsd,
@@ -268,28 +450,44 @@ export class BenchmarkBudgetGate {
     }
 
     this.requestCount += 1
+    this.reservedCostUsd = roundCost(this.reservedCostUsd + reservation)
+    this.reservations.set(input.step, reservation)
+    this.persist()
+
     return {
       requestIndex: this.requestCount,
       maxTokens,
       clamped: maxTokens < input.proposedMaxTokens,
+      reservedCostUsd: reservation,
     }
   }
 
   /**
-   * Record reported usage, then stop when it breaks a per-request cap or the
-   * session budget even if the provider ignored the requested `maxTokens`.
+   * Record reported usage, release this request's reservation, then stop when
+   * usage breaks a per-request cap or the session budget even if the provider
+   * ignored the requested `maxTokens`.
    *
    * Usage is accumulated BEFORE any check throws: the request that trips a cap
    * was still dispatched and still costs money, so the snapshot must contain
    * its real usage and the stop must be recorded in the same call.
    */
   completeRequest(input: CompleteRequestInput): void {
+    const reservation = this.reservations.get(input.step)
+    if (reservation === undefined) {
+      throw new Error(
+        `Benchmark request step ${input.step} completed without an admitted reservation`,
+      )
+    }
+    this.reservations.delete(input.step)
+    this.reservedCostUsd = roundCost(Math.max(0, this.reservedCostUsd - reservation))
+
     const { usage } = input
     this.inputTokenCount += usage.inputTokens
     this.outputTokenCount += usage.outputTokens
-    this.costUsd = Math.round(
-      (this.costUsd + costOf(usage.inputTokens, usage.outputTokens, this.pricing)) * 1e12,
-    ) / 1e12
+    this.cacheReadTokenCount += usage.cacheReadTokens ?? 0
+    this.cacheWriteTokenCount += usage.cacheWriteTokens ?? 0
+    this.costUsd = roundCost(this.costUsd + costOf(usage, this.pricing))
+    this.persist()
 
     if (usage.inputTokens > this.config.maxInputTokensPerRequest) {
       throw this.stop(
@@ -310,12 +508,13 @@ export class BenchmarkBudgetGate {
       )
     }
 
-    if (this.costUsd > this.config.maxEstimatedCostUsd) {
+    if (this.costUsd + this.reservedCostUsd > this.config.maxEstimatedCostUsd) {
       throw this.stop(
         'estimated-cost',
-        `reported session cost $${this.costUsd} exceeds $${this.config.maxEstimatedCostUsd}`,
+        `reported session cost $${roundCost(this.costUsd + this.reservedCostUsd)} `
+        + `exceeds $${this.config.maxEstimatedCostUsd}`,
         input.step,
-        this.costUsd,
+        roundCost(this.costUsd + this.reservedCostUsd),
         this.config.maxEstimatedCostUsd,
       )
     }
@@ -342,8 +541,25 @@ export class BenchmarkBudgetGate {
       requests: this.requestCount,
       inputTokens: this.inputTokenCount,
       outputTokens: this.outputTokenCount,
+      cacheReadTokens: this.cacheReadTokenCount,
+      cacheWriteTokens: this.cacheWriteTokenCount,
       estimatedCostUsd: this.costUsd,
+      reservedCostUsd: this.reservedCostUsd,
+      ledgerPath: this.ledgerPath,
       stops: Object.freeze([...this.stopLog]),
+    })
+  }
+
+  private persist(): void {
+    this.ledger?.save({
+      version: 1,
+      requests: this.requestCount,
+      inputTokens: this.inputTokenCount,
+      outputTokens: this.outputTokenCount,
+      cacheReadTokens: this.cacheReadTokenCount,
+      cacheWriteTokens: this.cacheWriteTokenCount,
+      settledCostUsd: this.costUsd,
+      reservedCostUsd: this.reservedCostUsd,
     })
   }
 

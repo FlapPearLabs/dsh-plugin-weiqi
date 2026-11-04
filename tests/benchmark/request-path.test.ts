@@ -2,13 +2,17 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, expect, it } from 'vitest'
 import {
+  CallId,
   LlmAdapter,
   LlmError,
+  createAssistantMessage,
   createUserMessage,
   isAgentLoopRequest,
   type GenerateOptions,
   type StreamChunk,
+  type ToolSchema,
 } from '@deepseek-ai/dsh-llm'
+import { GO_TOOL_DEFINITIONS, GO_TOOL_NAMES } from '../../src/tools/go/go-tools.js'
 import {
   BenchmarkBudgetGate,
   BenchmarkBudgetStopError,
@@ -21,6 +25,12 @@ import {
   type BenchmarkRequestInput,
 } from './llm-request-path.js'
 import { getBenchmarkFixture } from './fixtures.js'
+import { SCRIPTED_MODEL_ID } from './scripted-model.js'
+import {
+  PROVIDER_TOOL_NAME_PATTERN,
+  fromProviderToolName,
+  toProviderToolName,
+} from './tool-name-mapping.js'
 
 function requestInput(step: number, maxTokens = 256): BenchmarkRequestInput {
   return {
@@ -143,6 +153,33 @@ describe('benchmark request path enforces the spend gate (WAVE-C-T10)', () => {
     expect(provider.physicalCalls).toBe(0)
   })
 
+  it('stops a request that declares a forbidden search tool before dispatch', async () => {
+    const gate = new BenchmarkBudgetGate()
+    const provider = new ScriptedLlmProvider(
+      getBenchmarkFixture('opening-spread'),
+      'forbidden-tool',
+    )
+    const path = await openBenchmarkRequestPath(provider, gate)
+
+    try {
+      const forbidden: ToolSchema = {
+        name: 'web_search',
+        description: 'search the web',
+        parameters: { type: 'object' },
+      }
+      await expect(path.request({
+        ...requestInput(1),
+        tools: [forbidden],
+      })).rejects.toBeInstanceOf(BenchmarkBudgetStopError)
+
+      expect(gate.snapshot().stops.at(-1)?.gate).toBe('search-fetch-forbidden')
+      expect(gate.snapshot().requests).toBe(0)
+      expect(provider.physicalCalls).toBe(0)
+    } finally {
+      await path.dispose()
+    }
+  })
+
   it('admits and records every request inside the path, and refuses a repeated step', async () => {
     const gate = new BenchmarkBudgetGate()
     const provider = new ScriptedLlmProvider(getBenchmarkFixture('opening-spread'), 'gated-path')
@@ -163,6 +200,65 @@ describe('benchmark request path enforces the spend gate (WAVE-C-T10)', () => {
       expect(gate.snapshot().requests).toBe(2)
       expect(provider.physicalCalls).toBe(2)
       expect(gate.snapshot().stops.at(-1)?.gate).toBe('retries-forbidden')
+    } finally {
+      await path.dispose()
+    }
+  })
+
+  it('maps every outbound tool name to the provider alphabet and restores tool calls', async () => {
+    const gate = new BenchmarkBudgetGate()
+    const provider = new ScriptedLlmProvider(
+      getBenchmarkFixture('opening-spread'),
+      'tool-name-round-trip',
+    )
+    const path = await openBenchmarkRequestPath(provider, gate)
+
+    const tools: ToolSchema[] = GO_TOOL_DEFINITIONS.map(definition => ({
+      name: definition.name,
+      description: definition.description,
+      parameters: { ...definition.parameters },
+    }))
+    const input = requestInput(1)
+
+    try {
+      const response = await path.request({
+        ...input,
+        tools,
+        messages: [
+          ...input.messages,
+          createAssistantMessage({
+            content: [{
+              type: 'tool-call',
+              id: CallId('prior-call'),
+              name: 'go.state',
+              arguments: '{}',
+            }],
+            source: { provider: 'benchmark-scripted', model: SCRIPTED_MODEL_ID },
+          }),
+        ],
+      })
+
+      const observed = provider.observedToolNames
+      expect(observed).toHaveLength(tools.length)
+      for (const name of observed) {
+        expect(name).toMatch(PROVIDER_TOOL_NAME_PATTERN)
+      }
+      expect(observed).toContain('go_state')
+      expect(observed).not.toContain('go.state')
+
+      expect(provider.observedMessageToolCallNames).toEqual(['go_state'])
+
+      expect(response.toolCalls.map(call => call.name)).toEqual([
+        'go.state',
+        'go.inspect_region',
+        'go.try_move',
+      ])
+      for (const call of response.toolCalls) {
+        expect(fromProviderToolName(toProviderToolName(call.name))).toBe(call.name)
+        expect(GO_TOOL_NAMES).toContain(call.name)
+      }
+      expect(response.reportedModel).toBe(SCRIPTED_MODEL_ID)
+      expect(response.modelDrift).toBe(false)
     } finally {
       await path.dispose()
     }

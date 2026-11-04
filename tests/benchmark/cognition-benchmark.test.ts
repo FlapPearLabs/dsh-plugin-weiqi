@@ -54,9 +54,10 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
       expect(metrics.remainingTurnTokens).toBe(
         CANDIDATE_BUDGET.maxTurnTokens - metrics.turnTokens,
       )
-      expect(metrics.requestPath).toEqual({
+      expect(metrics.requestPath).toMatchObject({
         provider: 'benchmark-scripted',
         model: 'scripted-legal-move-adapter-v1',
+        configuredModel: 'scripted-legal-move-adapter-v1',
         seam: 'dsh-llm-runtime',
         llmRequests: fixture.steps.length,
         transportAttempts: fixture.steps.length,
@@ -66,6 +67,8 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
         streamSeamRequests: fixture.steps.length,
         retryPolicy: { mode: 'normal', maxRetries: 0 },
       })
+      expect(metrics.requestPath.reportedModels).toEqual(['scripted-legal-move-adapter-v1'])
+      expect(metrics.requestPath.failures).toEqual([])
     }
   })
 

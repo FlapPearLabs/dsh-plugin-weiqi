@@ -11,6 +11,7 @@ import {
   createScriptedModelAdapter,
   type ScriptedModelAdapter,
 } from './scripted-model.js'
+import { PROVIDER_TOOL_NAME_PATTERN, toProviderToolName } from './tool-name-mapping.js'
 
 /**
  * Zero-network stand-in for the DeepSeek provider (WAVE-C-T10).
@@ -25,7 +26,9 @@ import {
  * - transport: no HTTP fetch, no `attributionHeaders`, no serialization;
  * - usage: scripted synthetic counts instead of provider-reported usage;
  * - `maxTokens`: ignored on purpose (it reports the scripted output anyway), so
- *   the post-request gate is proven not to trust the request field.
+ *   the post-request gate is proven not to trust the request field;
+ * - tool names: it emits the provider-safe names it received (`go_play`), like a
+ *   real model echoing its tool catalog, so inbound restoration is exercised.
  */
 export const BENCHMARK_PROVIDER_ID = 'benchmark-scripted'
 
@@ -65,16 +68,37 @@ export type ProviderRequestRecord = Readonly<{
   readonly loopMarked: boolean
 }>
 
+function wireToolNameOf(original: string): string {
+  if (original === 'web_search') return original
+  return toProviderToolName(original)
+}
+
 export class ScriptedLlmProvider extends LlmAdapter {
   private readonly adapter: ScriptedModelAdapter
   private readonly gameId: string
   private readonly requestLog: ProviderRequestRecord[] = []
+  private readonly observedToolNameLog: string[] = []
+  private readonly observedMessageToolNameLog: string[] = []
+  private readonly reportedModelOverride: string | undefined
   private loopMarkedCount = 0
 
-  constructor(fixture: BenchmarkFixture, gameId: string) {
+  constructor(fixture: BenchmarkFixture, gameId: string, reportedModel?: string) {
     super()
     this.adapter = createScriptedModelAdapter(fixture)
     this.gameId = gameId
+    this.reportedModelOverride = reportedModel
+  }
+
+  get observedToolNames(): readonly string[] {
+    return this.observedToolNameLog
+  }
+
+  get observedMessageToolCallNames(): readonly string[] {
+    return this.observedMessageToolNameLog
+  }
+
+  get reportedModel(): string {
+    return this.reportedModelOverride ?? SCRIPTED_MODEL_ID
   }
 
   get stepCount(): number {
@@ -117,23 +141,36 @@ export class ScriptedLlmProvider extends LlmAdapter {
     }))
     if (loopMarked) this.loopMarkedCount += 1
 
+    for (const tool of options.tools ?? []) {
+      if (!PROVIDER_TOOL_NAME_PATTERN.test(tool.name)) {
+        throw new Error(`Benchmark provider received a non-compliant tool name: ${tool.name}`)
+      }
+      this.observedToolNameLog.push(tool.name)
+    }
+    for (const message of options.messages) {
+      for (const block of message.content) {
+        if (block.type === 'tool-call') this.observedMessageToolNameLog.push(block.name)
+      }
+    }
+
     for (let index = 0; index < step.calls.length; index += 1) {
       const call = step.calls[index]
       if (call === undefined) continue
       const id = CallId(`benchmark-${step.index}-${index}`)
+      const wireName = wireToolNameOf(call.tool)
       const rawArguments = JSON.stringify(benchmarkToolArguments(this.gameId, call))
       yield { type: 'block-start', index, blockType: 'tool-call' }
       yield {
         type: 'tool-call-delta',
         index,
         id,
-        name: call.tool,
+        name: wireName,
         argumentsDelta: rawArguments,
       }
       yield {
         type: 'block-end',
         index,
-        block: { type: 'tool-call', id, name: call.tool, arguments: rawArguments },
+        block: { type: 'tool-call', id, name: wireName, arguments: rawArguments },
       }
     }
 
@@ -144,6 +181,7 @@ export class ScriptedLlmProvider extends LlmAdapter {
     yield {
       type: 'finish',
       reason: step.calls.length > 0 ? { kind: 'tool-calls' } : { kind: 'stop' },
+      replayState: { response: { model: this.reportedModel } },
     }
   }
 }

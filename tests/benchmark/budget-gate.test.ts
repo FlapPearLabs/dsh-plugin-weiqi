@@ -264,6 +264,51 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     expect(gate.snapshot().requests).toBe(0)
   })
 
+  it('reserves the worst-case maxTokens cost before dispatch and settles by real usage', () => {
+    const gate = new BenchmarkBudgetGate(
+      { maxEstimatedCostUsd: 0.5, maxInputTokensPerRequest: 1_000_000 },
+      { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
+    )
+
+    const decision = gate.beginRequest({
+      step: 1,
+      estimatedInputTokens: 10,
+      proposedMaxTokens: 1_000,
+      toolNames: ['go.state'],
+    })
+    expect(decision.reservedCostUsd).toBeCloseTo(0.001, 12)
+    expect(gate.snapshot().estimatedCostUsd).toBe(0)
+    expect(gate.snapshot().reservedCostUsd).toBeCloseTo(0.001, 12)
+
+    gate.completeRequest({ step: 1, usage: { inputTokens: 10, outputTokens: 50 } })
+    expect(gate.snapshot().estimatedCostUsd).toBeCloseTo(0.00005, 12)
+    expect(gate.snapshot().reservedCostUsd).toBe(0)
+  })
+
+  it('stops before dispatch when the reservation alone would exceed the budget', () => {
+    const gate = new BenchmarkBudgetGate(
+      { maxEstimatedCostUsd: 0.001, maxInputTokensPerRequest: 1_000_000 },
+      { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
+    )
+
+    let caught: unknown
+    try {
+      gate.beginRequest({
+        step: 1,
+        estimatedInputTokens: 10,
+        proposedMaxTokens: 2_000,
+        toolNames: ['go.state'],
+      })
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(BenchmarkBudgetStopError)
+    expect((caught as BenchmarkBudgetStopError).stop.gate).toBe('estimated-cost')
+    expect(gate.snapshot().requests).toBe(0)
+    expect(gate.snapshot().reservedCostUsd).toBe(0)
+  })
+
   it('accumulates reported cost and stops before a request that would exceed the budget', () => {
     const gate = new BenchmarkBudgetGate(
       { maxEstimatedCostUsd: 0.5, maxInputTokensPerRequest: 1_000_000 },

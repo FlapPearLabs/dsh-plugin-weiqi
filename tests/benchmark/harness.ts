@@ -35,9 +35,11 @@ import {
 } from './budget-gate.js'
 import {
   openBenchmarkRequestPath,
+  type BenchmarkBillingBasis,
   type BenchmarkRequestPathStats,
 } from './llm-request-path.js'
 import { SCRIPTED_MODEL_ID, SCRIPTED_PROPOSED_MAX_TOKENS } from './scripted-model.js'
+import { BENCHMARK_TOOL_NAME_TABLE, PROVIDER_TOOL_NAME_PATTERN } from './tool-name-mapping.js'
 
 /**
  * WAVE-C-T10 §38 harness.
@@ -584,6 +586,15 @@ export type BenchmarkRecord = {
     /** The seam the runs actually left through, observed from their request-path stats. */
     readonly requestPath: string
     readonly isDeepSeek: false
+    /** Model the adapter envelope reported for this round; null when it reported none. */
+    readonly reportedModel: string | null
+    /** Every distinct reported model seen across runs. */
+    readonly reportedModels: readonly string[]
+    readonly billingBasis: BenchmarkBillingBasis
+    readonly toolNameMapping: Readonly<{
+      readonly pattern: string
+      readonly table: readonly { readonly original: string; readonly provider: string }[]
+    }>
     readonly disclosure: string
   }
   readonly budgetUnderTest: GoTurnBudget & {
@@ -638,6 +649,8 @@ export async function buildBenchmarkRecord(
 
   const classes: ClassRecord[] = []
   const observedRequestPaths = new Set<string>()
+  const reportedModels = new Set<string>()
+  let billingBasis: BenchmarkBillingBasis | undefined
   for (const fixtureClass of SPEC_38_CLASSES) {
     const classFixtures = fixtures.filter(fixture => fixture.class === fixtureClass)
     const records: FixtureRecord[] = []
@@ -650,6 +663,8 @@ export async function buildBenchmarkRecord(
           ...(options.clock === undefined ? {} : { clock: options.clock }),
         })
         observedRequestPaths.add(metrics.requestPath.seam)
+        for (const model of metrics.requestPath.reportedModels) reportedModels.add(model)
+        billingBasis ??= metrics.requestPath.billingBasis
         runs.push(metrics)
       }
       records.push({
@@ -663,6 +678,10 @@ export async function buildBenchmarkRecord(
     classes.push({ class: fixtureClass, fixtures: records })
   }
 
+  if (billingBasis === undefined) {
+    throw new Error('benchmark record cannot be built without at least one run')
+  }
+
   return {
     recordKind: 'cognition-benchmark',
     specSection: '§38',
@@ -674,6 +693,13 @@ export async function buildBenchmarkRecord(
       provider: BENCHMARK_PROVIDER_ID,
       requestPath: observedRequestPathOf(observedRequestPaths),
       isDeepSeek: false,
+      reportedModel: reportedModels.size === 1 ? [...reportedModels][0] ?? null : null,
+      reportedModels: Object.freeze([...reportedModels]),
+      billingBasis,
+      toolNameMapping: Object.freeze({
+        pattern: PROVIDER_TOOL_NAME_PATTERN.source,
+        table: BENCHMARK_TOOL_NAME_TABLE,
+      }),
       disclosure:
         'Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime '
         + '(provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, '
@@ -681,8 +707,9 @@ export async function buildBenchmarkRecord(
         + 'The dsh-agent-loop package is not installed in this repository, so the '
         + 'step/turn driver is a documented stand-in for it. Token counts and moves are '
         + 'scripted synthetic values, never DeepSeek usage; latency is local harness '
-        + 'wall-clock. These numbers cannot calibrate production token caps; a real '
-        + 'DeepSeek run still needs owner approval, credentials, and a real price schedule.',
+        + 'wall-clock. The reported model is the local adapter envelope value, not a '
+        + 'live DeepSeek response. These numbers cannot calibrate production token caps; '
+        + 'a real DeepSeek run still needs owner approval, credentials, and a real price schedule.',
     },
     budgetUnderTest: {
       ...budget,
