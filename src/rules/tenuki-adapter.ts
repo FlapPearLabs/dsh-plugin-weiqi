@@ -36,12 +36,18 @@ const FROZEN_RULES = {
 type GameRecord = {
   readonly config: GameConfig
   readonly colors: PlayerColors
-  readonly game: Game
+  readonly history: HistoryMove[]
+  game: Game
   status: GameStatus
   consecutivePasses: number
   lastMove: LastMove | null
   outcome: GameOutcome | null
 }
+
+/** Accepted actions in order; the only input used to rebuild the engine. */
+type HistoryMove =
+  | { readonly type: 'play'; readonly by: Player; readonly point: Point }
+  | { readonly type: 'pass'; readonly by: Player }
 
 const otherPlayer = (player: Player): Player => (player === 'user' ? 'deepseek' : 'user')
 
@@ -116,6 +122,7 @@ export class TenukiAdapter implements GoRulesPort {
     const record: GameRecord = {
       config: frozenConfig,
       colors: frozenConfig.colors,
+      history: [],
       game: new Game({
         boardSize: frozenConfig.boardSize,
         scoring: FROZEN_RULES.scoring,
@@ -158,6 +165,7 @@ export class TenukiAdapter implements GoRulesPort {
     const captured = before.filter(stone => !surviving.has(pointKey(stone.point)))
 
     record.consecutivePasses = 0
+    record.history.push({ type: 'play', by, point: copyPoint(point) })
     record.lastMove = {
       type: 'play',
       by,
@@ -176,12 +184,18 @@ export class TenukiAdapter implements GoRulesPort {
       return this.rejected(record, 'out-of-turn')
     }
     if (!record.game.pass({ render: false })) {
-      // Tenuki is already at two consecutive passes (settlement was rejected),
-      // so only a board play can resume the position.
-      return this.rejected(record, 'game-over')
+      // Tenuki refuses any pass while its own trailing pass pair stands, but
+      // that ending was never settled: Spec §25 resume-play applies, so the
+      // pair is rolled back and this pass is taken from the last uncontested
+      // position instead of being reported as `game-over`.
+      this.rollbackDisputedEnding(record)
+      if (!record.game.pass({ render: false })) {
+        throw new Error(`tenuki rejected a pass the adapter accepted: ${gameId}`)
+      }
     }
 
     record.consecutivePasses += 1
+    record.history.push({ type: 'pass', by })
     record.lastMove = { type: 'pass', by, moveNumber: record.game.moveNumber() }
     return { ok: true, state: this.snapshot(record), captured: Object.freeze([]) }
   }
@@ -245,8 +259,21 @@ export class TenukiAdapter implements GoRulesPort {
     }
   }
 
+  /**
+   * The frozen `ScoreResult` shape carries a board winner and breakdown, so it
+   * cannot represent a resignation. Rather than report a board score that can
+   * contradict a terminal `state.outcome`, a resigned game is rejected here;
+   * callers render a resignation from `state.outcome`. A game settled on score
+   * still answers consistently.
+   */
   score(gameId: string): ScoreResult {
-    return this.scoreFor(this.requireGame(gameId))
+    const record = this.requireGame(gameId)
+    if (record.outcome?.reason === 'resignation') {
+      throw new Error(
+        `score is undefined after a resignation (game ${gameId}: ${record.outcome.winner} wins by resignation); read state.outcome instead`,
+      )
+    }
+    return this.scoreFor(record)
   }
 
   settle(gameId: string, confirmation: SettlementConfirmation): SettlementResult {
@@ -258,6 +285,7 @@ export class TenukiAdapter implements GoRulesPort {
       return { settled: false, reason: 'not-two-passes', state: this.snapshot(record) }
     }
     if (!confirmation.agreed) {
+      this.rollbackDisputedEnding(record)
       return { settled: false, reason: 'disagreement', state: this.snapshot(record) }
     }
 
@@ -293,6 +321,55 @@ export class TenukiAdapter implements GoRulesPort {
       lastMove: record.lastMove,
       outcome: record.outcome,
     })
+  }
+
+  /**
+   * Spec §25: disagreement -> resume play. Tenuki treats the trailing pass
+   * pair as its own terminal state and refuses a further `pass`, so the
+   * disputed ending is rolled back: the engine is rebuilt from the accepted
+   * actions without those two passes, and play resumes from the last
+   * uncontested position (same board, same player to move, no pass count).
+   * The ending can therefore be replayed and settled again.
+   */
+  private rollbackDisputedEnding(record: GameRecord): void {
+    const first = record.history[record.history.length - 2]
+    const second = record.history[record.history.length - 1]
+    if (first?.type !== 'pass' || second?.type !== 'pass') {
+      throw new Error(`no trailing pass pair to roll back: ${record.config.gameId}`)
+    }
+
+    record.history.length -= 2
+    record.game = this.replayHistory(record)
+    record.consecutivePasses = 0
+    record.lastMove = this.lastMoveFromHistory(record)
+  }
+
+  private replayHistory(record: GameRecord): Game {
+    const game = new Game({
+      boardSize: record.config.boardSize,
+      scoring: FROZEN_RULES.scoring,
+      koRule: FROZEN_RULES.koRule,
+      komi: FROZEN_RULES.komi,
+    })
+    record.history.forEach((move, index) => {
+      const accepted =
+        move.type === 'play'
+          ? game.playAt(move.point.y, move.point.x, { render: false })
+          : game.pass({ render: false })
+      if (!accepted) {
+        throw new Error(`failed to replay move ${index + 1} of ${record.config.gameId}`)
+      }
+    })
+    return game
+  }
+
+  private lastMoveFromHistory(record: GameRecord): LastMove | null {
+    const last = record.history[record.history.length - 1]
+    if (last === undefined) return null
+    const moveNumber = record.history.length
+    return last.type === 'play'
+      ? { type: 'play', by: last.by, point: copyPoint(last.point), moveNumber }
+      : { type: 'pass', by: last.by, moveNumber }
   }
 
   private scoreFor(record: GameRecord): ScoreResult {

@@ -144,6 +144,56 @@ describe('TenukiAdapter settlement disagreement (Spec §25: disagreement -> resu
     expect(resumed.state.toPlay).toBe('deepseek')
     expect(resumed.state.stones).toEqual([{ point: { x: 4, y: 4 }, color: 'black' }])
   })
+  it('restores the uncontested position when a settled ending is disowned', () => {
+    const port = createTenukiGoRulesPort()
+    port.createGame(gameConfig('disagree-replay'))
+    expect(port.play('disagree-replay', 'user', { x: 2, y: 2 }).ok).toBe(true)
+    expect(port.play('disagree-replay', 'deepseek', { x: 6, y: 6 }).ok).toBe(true)
+    const beforeEnding = port.getState('disagree-replay')
+    expect(port.pass('disagree-replay', 'user').ok).toBe(true)
+    expect(port.pass('disagree-replay', 'deepseek').ok).toBe(true)
+
+    const disagreed = port.settle('disagree-replay', { deadStones: [], agreed: false })
+    if (disagreed.settled) throw new Error('disagreement settled the game')
+    // The rebuilt engine reproduces the pre-ending snapshot exactly, including
+    // the move history needed by positional superko.
+    expect(disagreed.state).toEqual(beforeEnding)
+    expect(disagreed.state.moveNumber).toBe(2)
+    expect(disagreed.state.lastMove).toEqual({
+      type: 'play',
+      by: 'deepseek',
+      point: { x: 6, y: 6 },
+      moveNumber: 2,
+    })
+
+    const resumed = port.play('disagree-replay', 'user', { x: 4, y: 4 })
+    if (!resumed.ok) throw new Error(`play after disagreement rejected: ${resumed.reason}`)
+    expect(resumed.state.moveNumber).toBe(3)
+    expect(resumed.state.lastMove).toEqual({
+      type: 'play',
+      by: 'user',
+      point: { x: 4, y: 4 },
+      moveNumber: 3,
+    })
+  })
+
+  it('accepts a third pass before any settlement instead of reporting game-over', () => {
+    const port = createTenukiGoRulesPort()
+    port.createGame(gameConfig('third-pass'))
+    expect(port.pass('third-pass', 'user').ok).toBe(true)
+    expect(port.pass('third-pass', 'deepseek').ok).toBe(true)
+
+    const third = port.pass('third-pass', 'user')
+    if (!third.ok) throw new Error(`third pass rejected: ${third.reason}`)
+    expect(third.state.status).toBe('playing')
+    expect(third.state.consecutivePasses).toBe(1)
+    expect(third.state.toPlay).toBe('deepseek')
+
+    expect(port.pass('third-pass', 'deepseek').ok).toBe(true)
+    const settled = port.settle('third-pass', { deadStones: [], agreed: true })
+    if (!settled.settled) throw new Error(`settlement rejected: ${settled.reason}`)
+    expect(settled.state.status).toBe('over')
+  })
 })
 
 describe('TenukiAdapter terminal score boundary (Spec §25 resignation rule)', () => {
