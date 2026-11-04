@@ -5,14 +5,15 @@
  * `inspectGroup`, mutations go to `play` / `pass` / `resign`, and no tool ever
  * keeps board truth of its own. Budget accounting happens at the actual
  * execution (§22.3): `go.inspect_*` and `go.try_move` charge before touching
- * the port, `go.request_deep_think` records one bounded request, and an
- * accepted play/pass/resign commits the turn through C-T07's enforcement.
+ * the port, `go.request_deep_think` grants the bounded §23 boost through the
+ * enforcement boundary, and an accepted play/pass/resign commits the turn
+ * through C-T07's enforcement.
  *
  * Two deliberate limits:
  * - `go.try_move` reports local board observations only; ko / positional
  *   superko stay authoritative in `go.play`.
- * - `go.request_deep_think` records a request marker; the bounded §23 boost is
- *   WAVE-C-T08's policy and is never claimed here.
+ * - `go.request_deep_think` grants exactly one additional model step per turn;
+ *   it never raises the per-request token cap or the overall turn ceiling.
  */
 import type { GoTurnEnforcement } from '../../budget/enforcement.js'
 import type { GameNotice } from '../../contracts/bridge.js'
@@ -181,7 +182,7 @@ function runResign(args: unknown, runtime: GoToolRuntime): GoResignResult {
 function runRequestDeepThink(args: unknown, runtime: GoToolRuntime): GoDeepThinkResult {
   readArguments('go.request_deep_think', args, [])
   runtime.enforcement.beginDeepThink()
-  return { ok: true, requested: true, applied: false }
+  return { ok: true, requested: true, applied: true }
 }
 
 export const GO_TOOL_DEFINITIONS: readonly GoToolDefinition[] = Object.freeze([
@@ -255,8 +256,9 @@ export const GO_TOOL_DEFINITIONS: readonly GoToolDefinition[] = Object.freeze([
   {
     name: 'go.request_deep_think',
     description:
-      'Request one bounded deep-think boost for this turn. Records the request; '
-      + 'the boost policy decides whether to apply it.',
+      'Request this turn\'s single bounded deep-think boost: one additional '
+      + 'model step. The per-request token cap and the overall turn ceiling are '
+      + 'unchanged, and a second request in the same turn is rejected.',
     parameters: parameters({}, []),
     run: runRequestDeepThink,
   },

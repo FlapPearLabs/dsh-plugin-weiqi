@@ -3,6 +3,7 @@ import type { GameNotice } from '../../contracts/bridge.js'
 import type { GameConfig, GameState, GoRulesPort } from '../../contracts/rules.js'
 import type { GoTurnBudget } from '../../contracts/budget.js'
 import {
+  GoDeepThinkAlreadyRequestedError,
   GoTurnAnalysisEndedError,
   GoTurnBudgetExhaustedError,
   createGoTurnEnforcement,
@@ -566,14 +567,40 @@ describe('go.resign', () => {
 })
 
 describe('go.request_deep_think', () => {
-  it('records one bounded request and applies no boost itself', () => {
+  it('grants the turn\'s bounded boost and reports that it was applied', () => {
     const harness = createHarness()
     const result = invoke<GoDeepThinkResult>(harness.registry, 'go.request_deep_think')
 
-    expect(result).toEqual({ ok: true, requested: true, applied: false })
+    expect(result).toEqual({ ok: true, requested: true, applied: true })
     expect(lastSnapshot(harness.enforcement)).toMatchObject({
       deepThinkRequests: 1,
       committedAction: undefined,
+      deepThinkBoost: { pendingModelSteps: 1, grantedModelSteps: 1, consumedModelSteps: 0 },
+    })
+  })
+
+  it('rejects a second request in the same turn', () => {
+    const harness = createHarness()
+    invoke<GoDeepThinkResult>(harness.registry, 'go.request_deep_think')
+
+    expect(() => invoke(harness.registry, 'go.request_deep_think')).toThrowError(
+      GoDeepThinkAlreadyRequestedError,
+    )
+    expect(lastSnapshot(harness.enforcement).deepThinkRequests).toBe(1)
+  })
+
+  it('grants exactly one extra model step through the shared enforcement', () => {
+    const harness = createHarness({ budget: { maxModelSteps: 1 } })
+    harness.enforcement.beginModelStep()
+
+    invoke<GoDeepThinkResult>(harness.registry, 'go.request_deep_think')
+    harness.enforcement.beginModelStep()
+
+    expect(() => harness.enforcement.beginModelStep()).toThrowError(GoTurnBudgetExhaustedError)
+    expect(lastSnapshot(harness.enforcement)).toMatchObject({
+      modelSteps: 2,
+      deepThinkRequests: 1,
+      deepThinkBoost: { pendingModelSteps: 0, consumedModelSteps: 1 },
     })
   })
 

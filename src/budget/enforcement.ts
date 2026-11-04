@@ -53,6 +53,14 @@ export class GoTurnAnalysisEndedError extends Error {
   }
 }
 
+/** Raised when the single §23 deep-think boost was already requested this turn. */
+export class GoDeepThinkAlreadyRequestedError extends Error {
+  constructor() {
+    super('Go deep-think boost was already requested in this turn')
+    this.name = 'GoDeepThinkAlreadyRequestedError'
+  }
+}
+
 /** Raised when a reported model-step usage cannot be accounted safely. */
 export type GoTurnUsageIssue = 'not-a-non-negative-integer' | 'already-recorded'
 
@@ -84,6 +92,22 @@ export type GoModelStep = Readonly<{
   complete: (usage: GoModelStepUsage) => void
 }>
 
+/** The bounded §23 boost: exactly one additional model step, consumed at most once. */
+export type GoDeepThinkBoost = Readonly<{
+  /** Additional model steps granted but not yet used (0 or 1). */
+  pendingModelSteps: number
+  /** Additional model steps granted by deep-think in this turn (0 or 1). */
+  grantedModelSteps: number
+  /** Additional model steps already used (0 or 1). */
+  consumedModelSteps: number
+}>
+
+/** The single grant one `go.request_deep_think` returns. */
+export type GoDeepThinkGrant = Readonly<{
+  readonly granted: true
+  readonly modelSteps: 1
+}>
+
 /** Read-only view of the turn's enforced limits and consumed budget. */
 export type GoTurnBudgetSnapshot = Readonly<{
   limits: Readonly<GoTurnBudget>
@@ -91,6 +115,7 @@ export type GoTurnBudgetSnapshot = Readonly<{
   inspectCalls: number
   tryMoves: number
   deepThinkRequests: number
+  deepThinkBoost: GoDeepThinkBoost
   turnTokens: number
   committedAction: GoTurnCommit | undefined
   gameTerminal: boolean
@@ -109,7 +134,7 @@ export type GoTurnEnforcement = Readonly<{
   beginModelStep: () => GoModelStep
   beginInspect: () => void
   beginTryMove: () => void
-  beginDeepThink: () => void
+  beginDeepThink: () => GoDeepThinkGrant
   recordCommittedAction: (action: GoTurnCommit) => void
 }>
 
@@ -118,16 +143,30 @@ export type GoTurnEnforcement = Readonly<{
  *
  * Every actual execution must pass through `beginModelStep`, `beginInspect`,
  * `beginTryMove`, or `beginDeepThink`; charging happens before the execution so
- * no outer wrapper can hide multiple calls. The deep-think bound itself is
- * C-T08's; this boundary only records the request and enforces §24.
+ * no outer wrapper can hide multiple calls.
+ *
+ * §23 boost: `beginDeepThink` grants exactly one additional model step for the
+ * turn, consumed by the first model step that would otherwise exceed
+ * `maxModelSteps`. It never raises `perRequestMaxTokens` or `maxTurnTokens`, so
+ * a boosted request stays capped and the overall turn ceiling is unchanged;
+ * one boost per turn means no unlimited mode.
  */
 export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement {
   const limits: Readonly<GoTurnBudget> = Object.freeze({ ...loadGoTurnBudget(budget) })
+
+  /**
+   * The §23 boost size. A structural increment, not a calibrated token amount:
+   * production numbers stay owned by BL-BUD-06 / WAVE-C-T10.
+   */
+  const DEEP_THINK_BOOST_MODEL_STEPS = 1
 
   let modelSteps = 0
   let inspectCalls = 0
   let tryMoves = 0
   let deepThinkRequests = 0
+  let boostGrantedModelSteps = 0
+  let boostPendingModelSteps = 0
+  let boostConsumedModelSteps = 0
   let turnTokens = 0
   let committedAction: GoTurnCommit | undefined
   let gameTerminal = false
@@ -150,8 +189,19 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
 
   function beginModelStep(): GoModelStep {
     assertAnalysisOpen('model_step')
-    assertBelow('maxModelSteps', limits.maxModelSteps, modelSteps)
+    // A granted boost raises the turn's model-step ceiling by exactly one; the
+    // step that needs it consumes it, so the boost can never be reused.
+    assertBelow(
+      'maxModelSteps',
+      limits.maxModelSteps + boostGrantedModelSteps,
+      modelSteps,
+    )
     assertBelow('maxTurnTokens', limits.maxTurnTokens, turnTokens)
+
+    if (boostPendingModelSteps > 0 && modelSteps >= limits.maxModelSteps) {
+      boostPendingModelSteps -= 1
+      boostConsumedModelSteps += 1
+    }
 
     modelSteps += 1
     const index = modelSteps
@@ -187,12 +237,17 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
     tryMoves += 1
   }
 
-  function beginDeepThink(): void {
+  function beginDeepThink(): GoDeepThinkGrant {
     assertAnalysisOpen('deep_think')
     // §22.4: once the turn budget is exhausted, no inspect/try/model step
     // (including a deep-think request) may start.
     assertBelow('maxTurnTokens', limits.maxTurnTokens, turnTokens)
+    if (boostGrantedModelSteps > 0) throw new GoDeepThinkAlreadyRequestedError()
+
+    boostGrantedModelSteps = DEEP_THINK_BOOST_MODEL_STEPS
+    boostPendingModelSteps = DEEP_THINK_BOOST_MODEL_STEPS
     deepThinkRequests += 1
+    return { granted: true, modelSteps: DEEP_THINK_BOOST_MODEL_STEPS }
   }
 
   function recordCommittedAction(action: GoTurnCommit): void {
@@ -208,6 +263,11 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
       inspectCalls,
       tryMoves,
       deepThinkRequests,
+      deepThinkBoost: {
+        pendingModelSteps: boostPendingModelSteps,
+        grantedModelSteps: boostGrantedModelSteps,
+        consumedModelSteps: boostConsumedModelSteps,
+      },
       turnTokens,
       committedAction,
       gameTerminal,
