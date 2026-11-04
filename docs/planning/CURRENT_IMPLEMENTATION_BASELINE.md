@@ -119,7 +119,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-CMP-01 | CompanionState contract | Spec §13 | `src/contracts/companion.ts` generic `CompanionState<TCompiledPersona, TMoodState>`; test asserts internals intentionally unfrozen | FOUNDATION_ONLY | Persistence + behavior | D | IMPLEMENTATION_TICKET |
+| BL-CMP-01 | CompanionState contract | Spec §13 | `src/contracts/companion.ts` generic `CompanionState<TCompiledPersona, TMoodState>`; `src/companion/state.ts` `CompanionStateHolder` keeps exactly one latest state (latest-wins, no history, no mood reducer); `src/companion/persistence.ts` saves/loads the latest `{version,state}` snapshot with temp-file + rename, no journal; 8 new tests (56 total) + mutation analysis; merged PR #66 (`19cb97f`), adversarial review r1 APPROVE | IMPLEMENTED_VERIFIED | None | D | NO_ACTION |
 | BL-CMP-02 | Persona / Persona Compiler | Spec §15 | No code (schema intentionally generic) | NOT_IMPLEMENTED | Compiler + schema freeze decision | D | IMPLEMENTATION_TICKET |
 | BL-CMP-03 | Mood (bounded deltas, clamp, baseline return) | Spec §14 | No code | NOT_IMPLEMENTED | Reducer | D | IMPLEMENTATION_TICKET |
 | BL-CMP-04 | Attention modes (Mofish / Normal / Strict / Manual) | Spec §16 | Only `AttentionMode` type; V4 presents UI only | FOUNDATION_ONLY | Runtime semantics | D | IMPLEMENTATION_TICKET |
@@ -161,7 +161,7 @@ implementation Tickets:
 - packed-tarball profile installation (BL-PKG-05) — real `dsh plugin --profile add` verified
 - plugin mount in real Loader tree (BL-PKG-05) — fiber active verified
 - Foundation build/test (BL-PKG-04, BL-PKG-07) — typecheck + 4 tests + build verified
-- frozen core contracts (BL-RT-03, BL-BR-01, BL-CMP-01, BL-CMP-04) — type-level tests
+- frozen core contracts (BL-RT-03, BL-BR-01, BL-CMP-04) — type-level tests
 - cooperative-yield feasibility (BL-RT-07) — 3/3 spike experiments pass
 - cooperative-yield executable evidence — `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`
 - cooperative-yield upgrade gate (BL-PKG-09) — real pinned-DSH AgentLoop gate
@@ -179,7 +179,7 @@ requires `ESCALATION_REQUIRED`:
 - `Lane`, `PendingFocusIntent`, `RuntimeFocusState` (BL-RT-03)
 - `RuntimeFocusState.pausedLane` state field (BL-RT-08)
 - `WorkSnapshot`, `GameNotice`, `AffectedGroupDelta`, `CompanionBridge` (BL-BR-01)
-- `CompanionState`, `AttentionMode` (BL-CMP-01, BL-CMP-04)
+- `AttentionMode` (BL-CMP-04)
 
 # VERIFIED FACT — NOT INTEGRATED
 
