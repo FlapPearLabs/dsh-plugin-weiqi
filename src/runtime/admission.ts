@@ -25,19 +25,36 @@ export type InactiveLaneAdmission = Readonly<{
 
 export type InactiveLaneAdmissionRejection =
   | 'invalid-target'
+  | 'already-active-lane'
   | 'missing-source-session'
   | 'not-user-message'
   | 'empty-message'
+  | 'mutable-message'
 
 export type FocusIntentArbitration = (
   state: RuntimeFocusState,
   incoming: PendingFocusIntent,
 ) => FocusIntentTransition
 
+/**
+ * The exact user-command intent created for one inactive-lane admission.
+ *
+ * `sourceMessage` is required here: unlike a generic `PendingFocusIntent`, an
+ * inactive-lane user message always carries the DSH message that produced it.
+ */
+export type InactiveLaneUserCommandIntent = Readonly<{
+  target: Lane
+  origin: 'user_command'
+  sourceMessage: Readonly<{
+    sourceSessionId: string
+    message: UserMessage
+  }>
+}>
+
 export type InactiveLaneAdmissionResult =
   | Readonly<{
     kind: 'submitted'
-    intent: PendingFocusIntent
+    intent: InactiveLaneUserCommandIntent
     disposition: FocusIntentDisposition
     state: RuntimeFocusState
   }>
@@ -52,16 +69,26 @@ export type InactiveLaneAdmissionResult =
  * Creates exactly one `PendingFocusIntent` with `origin: "user_command"` and
  * submits it once through `submitFocusIntent`. Invalid or empty input is
  * rejected before any intent exists, so arbitration is never called.
+ *
+ * `admission.target` must be the inactive lane: the active lane is the lane the
+ * user is already watching, so a same-lane target would occupy the single
+ * pending slot with an intent the §5 boundary can never consume (it skips
+ * `intent.target === activeLane`) and would deadlock every later cross-lane
+ * user command as `retained-existing`.
+ *
+ * The message is stored by exact reference, so it must already be deeply frozen
+ * by the DSH `createUserMessage` contract. A mutable message is rejected rather
+ * than freezing the caller's object or copying its text.
  */
 export function admitInactiveLaneUserMessage(
   state: RuntimeFocusState,
   admission: InactiveLaneAdmission,
   arbitrate: FocusIntentArbitration = submitFocusIntent,
 ): InactiveLaneAdmissionResult {
-  const reason = rejectionReason(admission)
+  const reason = rejectionReason(state, admission)
   if (reason !== undefined) return Object.freeze({ kind: 'rejected' as const, reason })
 
-  const intent: PendingFocusIntent = Object.freeze({
+  const intent: InactiveLaneUserCommandIntent = Object.freeze({
     target: admission.target,
     origin: 'user_command' as const,
     sourceMessage: Object.freeze({
@@ -80,12 +107,15 @@ export function admitInactiveLaneUserMessage(
 }
 
 function rejectionReason(
+  state: RuntimeFocusState,
   admission: InactiveLaneAdmission,
 ): InactiveLaneAdmissionRejection | undefined {
   if (admission.target !== 'work' && admission.target !== 'go') return 'invalid-target'
+  if (admission.target === state.activeLane) return 'already-active-lane'
   if (!isNonBlankString(admission.sourceSessionId)) return 'missing-source-session'
   if (!isUserMessage(admission.message)) return 'not-user-message'
   if (!hasMeaningfulContent(admission.message.content)) return 'empty-message'
+  if (!isDeeplyFrozenUserMessage(admission.message)) return 'mutable-message'
   return undefined
 }
 
@@ -99,6 +129,20 @@ function isUserMessage(message: UserMessage): boolean {
 
 function hasMeaningfulContent(content: readonly ContentBlock[]): boolean {
   if (!Array.isArray(content) || content.length === 0) return false
-  return content.some(block =>
-    block.type !== 'text' || (typeof block.text === 'string' && block.text.trim() !== ''))
+  return content.some(block => {
+    if (block == null) return false
+    return block.type !== 'text' || (typeof block.text === 'string' && block.text.trim() !== '')
+  })
+}
+
+/**
+ * The stored message is the exact caller reference, never a copy, so its
+ * immutability must come from DSH `createUserMessage` deep-freezing. Check the
+ * message, its content array, and every block before publishing that reference.
+ */
+function isDeeplyFrozenUserMessage(message: UserMessage): boolean {
+  return Object.isFrozen(message)
+    && Array.isArray(message.content)
+    && Object.isFrozen(message.content)
+    && message.content.every(block => block != null && Object.isFrozen(block))
 }

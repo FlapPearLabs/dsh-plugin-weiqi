@@ -23,6 +23,7 @@ export {
   type InactiveLaneAdmission,
   type InactiveLaneAdmissionRejection,
   type InactiveLaneAdmissionResult,
+  type InactiveLaneUserCommandIntent,
 } from './admission.js'
 
 export {
