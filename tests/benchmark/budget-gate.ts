@@ -16,7 +16,15 @@ export type BenchmarkGateConfig = Readonly<{
   maxRequests: number
   maxInputTokensPerRequest: number
   maxOutputTokensPerRequest: number
-  maxEstimatedCostUsd: number
+  /**
+   * Session spend cap in CNY (the approved currency for this benchmark).
+   * Internal accounting stays in USD; the cap is compared after converting at
+   * `usdToCnyRate`, and the rate the comparison used is recorded in the
+   * snapshot.
+   */
+  maxEstimatedCostCny: number
+  /** CNY per USD used for every cap comparison and for the recorded estimate. */
+  usdToCnyRate: number
   allowRetries: boolean
   allowSearchFetch: boolean
 }>
@@ -27,7 +35,10 @@ export const BENCHMARK_GATE_DEFAULTS = Object.freeze({
   maxRequests: 120,
   maxInputTokensPerRequest: 8_000,
   maxOutputTokensPerRequest: 4_000,
-  maxEstimatedCostUsd: 1,
+  // The owner approved ¥6.66 for the live benchmark, at the recorded 7.1
+  // CNY/USD rate (≈ $0.94). The scripted run costs placeholder cents.
+  maxEstimatedCostCny: 6.66,
+  usdToCnyRate: 7.1,
   allowRetries: false,
   allowSearchFetch: false,
 } satisfies BenchmarkGateConfig)
@@ -74,6 +85,7 @@ export type BenchmarkBudgetStopGate =
   | 'retries-forbidden'
   | 'search-fetch-forbidden'
   | 'invalid-usage'
+  | 'missing-reservation'
 
 export type BenchmarkBudgetStop = Readonly<{
   readonly kind: 'budget_stop'
@@ -124,8 +136,15 @@ export type BenchmarkBudgetGateSnapshot = Readonly<{
   readonly outputTokens: number
   readonly cacheReadTokens: number
   readonly cacheWriteTokens: number
+  /** Settled session spend in USD (the unit the provider schedule uses). */
   readonly estimatedCostUsd: number
+  /** Settled session spend converted to the cap currency. */
+  readonly estimatedCostCny: number
+  /** Worst-case reservations still held, in USD and CNY. */
   readonly reservedCostUsd: number
+  readonly reservedCostCny: number
+  readonly maxEstimatedCostCny: number
+  readonly usdToCnyRate: number
   readonly ledgerPath: string | null
   readonly stops: readonly BenchmarkBudgetStop[]
 }>
@@ -140,11 +159,20 @@ export function isForbiddenBenchmarkTool(name: string): boolean {
  * leaves the process. The authoritative count is the provider's reported
  * `usage.inputTokens`, checked again after the request completes.
  *
- * The estimate must never under-count: CJK characters are charged at >= 1 token
- * per UTF-16 unit and everything else at >= 0.25 tokens per UTF-16 unit. A flat
- * 4-characters-per-token rule put 8000 Han characters at ~2000 tokens, so a
- * Chinese request could clear the 8000 cap on the pre-dispatch check and only
- * be caught after it had already been paid for.
+ * The estimate must never under-count, so every weight sits above the measured
+ * tokenizer ratio it stands for:
+ *
+ * - CJK code points: 1.25 tokens per UTF-16 unit (reference rate 1.0/char);
+ * - JSON structural punctuation (`{}[]",:;`): 0.5 token per unit, matching the
+ *   measured dense-JSON rate instead of the generic ASCII rate;
+ * - every other non-CJK character: 0.4 token per UTF-16 unit (the official
+ *   rate is ~0.3, and the previous 0.25 under-counted mixed text);
+ * - a fixed per-message / per-tool / system-template overhead, because chat
+ *   templates add special tokens that are not in the text itself.
+ *
+ * A flat 4-characters-per-token rule put 8000 Han characters at ~2000 tokens,
+ * so a Chinese request could clear the 8000 cap on the pre-dispatch check and
+ * only be caught after it had already been paid for.
  */
 export function estimateRequestInputTokens(request: Readonly<{
   readonly system?: string
@@ -157,12 +185,29 @@ export function estimateRequestInputTokens(request: Readonly<{
   let weighted = 0
   for (const character of text) {
     const codePoint = character.codePointAt(0) ?? 0
-    // `character.length` is the UTF-16 width: a BMP CJK character is charged 1
-    // token, an astral-plane one is charged 2.
-    weighted += isCjkCodePoint(codePoint) ? character.length : character.length / 4
+    // `character.length` is the UTF-16 width: a BMP CJK character is charged
+    // 1.25 tokens, an astral-plane one 2.5.
+    if (isCjkCodePoint(codePoint)) {
+      weighted += character.length * CJK_TOKENS_PER_UNIT
+    } else if (JSON_PUNCTUATION.has(character)) {
+      weighted += character.length * JSON_PUNCTUATION_TOKENS_PER_UNIT
+    } else {
+      weighted += character.length * ASCII_TOKENS_PER_UNIT
+    }
   }
   return Math.ceil(weighted)
+    + (request.system === undefined || request.system.trim() === '' ? 0 : SYSTEM_OVERHEAD_TOKENS)
+    + request.messages.length * MESSAGE_OVERHEAD_TOKENS
+    + (request.tools?.length ?? 0) * TOOL_OVERHEAD_TOKENS
 }
+
+const CJK_TOKENS_PER_UNIT = 1.25
+const ASCII_TOKENS_PER_UNIT = 0.4
+const JSON_PUNCTUATION_TOKENS_PER_UNIT = 0.5
+const JSON_PUNCTUATION = new Set(['{', '}', '[', ']', '"', ',', ':', ';'])
+const SYSTEM_OVERHEAD_TOKENS = 8
+const MESSAGE_OVERHEAD_TOKENS = 8
+const TOOL_OVERHEAD_TOKENS = 16
 
 function isCjkCodePoint(codePoint: number): boolean {
   return (codePoint >= 0x2e80 && codePoint <= 0x2fff) // CJK radicals, Kangxi
@@ -364,9 +409,14 @@ export class BenchmarkBudgetGate {
     assertNonNegativeInteger(this.config.maxRequests, 'maxRequests')
     assertNonNegativeInteger(this.config.maxInputTokensPerRequest, 'maxInputTokensPerRequest')
     assertNonNegativeInteger(this.config.maxOutputTokensPerRequest, 'maxOutputTokensPerRequest')
-    if (!Number.isFinite(this.config.maxEstimatedCostUsd) || this.config.maxEstimatedCostUsd < 0) {
+    if (!Number.isFinite(this.config.maxEstimatedCostCny) || this.config.maxEstimatedCostCny < 0) {
       throw new RangeError(
-        `Benchmark gate maxEstimatedCostUsd must be a non-negative finite number: ${String(this.config.maxEstimatedCostUsd)}`,
+        `Benchmark gate maxEstimatedCostCny must be a non-negative finite number: ${String(this.config.maxEstimatedCostCny)}`,
+      )
+    }
+    if (!Number.isFinite(this.config.usdToCnyRate) || this.config.usdToCnyRate <= 0) {
+      throw new RangeError(
+        `Benchmark gate usdToCnyRate must be a positive finite number: ${String(this.config.usdToCnyRate)}`,
       )
     }
     assertNonNegativeFinite(this.pricing.inputUsdPerMillionTokens, 'pricing.inputUsdPerMillionTokens')
@@ -410,9 +460,11 @@ export class BenchmarkBudgetGate {
    * so the first violated gate becomes the recorded reason: forbidden tools,
    * retry, request count, input tokens, then the worst-case cost reservation.
    *
-   * The reservation is added to the session budget before dispatch and only
-   * released when `completeRequest` settles the real usage, so a crashed or
-   * failed request can never free budget it may already have spent.
+   * The reservation is added to the session budget before dispatch and is
+   * released when `completeRequest` settles the real usage, or explicitly via
+   * `releaseRequest` when a dispatched request failed or was cancelled before
+   * it produced usage. Re-entering the same step drops any stale reservation
+   * first, so a retried step can never be counted twice.
    */
   beginRequest(input: BeginRequestInput): BeginRequestDecision {
     const forbidden = input.toolNames.find(isForbiddenBenchmarkTool)
@@ -458,19 +510,26 @@ export class BenchmarkBudgetGate {
     }
 
     const maxTokens = Math.min(input.proposedMaxTokens, this.config.maxOutputTokensPerRequest)
+    // A repeated step must not double-count: replace any reservation still held
+    // for this step (a previous failed or cancelled attempt) instead of adding
+    // a second one on top of it.
+    this.releaseReservation(input.step)
     const reservation = costOf(
       { inputTokens: input.estimatedInputTokens, outputTokens: maxTokens },
       this.pricing,
     )
-    const projected = roundCost(this.costUsd + this.reservedCostUsd + reservation)
-    if (projected > this.config.maxEstimatedCostUsd) {
+    const rate = this.config.usdToCnyRate
+    const projectedUsd = roundCost(this.costUsd + this.reservedCostUsd + reservation)
+    const projectedCny = roundCost(projectedUsd * rate)
+    if (projectedCny > this.config.maxEstimatedCostCny) {
       throw this.stop(
         'estimated-cost',
-        `projected session cost $${projected} (including $${reservation} reservation) `
-        + `exceeds $${this.config.maxEstimatedCostUsd}`,
+        `projected session cost ¥${projectedCny} ($${projectedUsd} at ¥${rate}/USD, `
+        + `including ¥${roundCost(reservation * rate)} reservation) `
+        + `exceeds ¥${this.config.maxEstimatedCostCny}`,
         input.step,
-        projected,
-        this.config.maxEstimatedCostUsd,
+        projectedCny,
+        this.config.maxEstimatedCostCny,
       )
     }
 
@@ -499,11 +558,10 @@ export class BenchmarkBudgetGate {
   completeRequest(input: CompleteRequestInput): void {
     const { usage } = input
 
-    // Validate before anything is accumulated or the reservation is released.
-    // A negative or non-finite count would flow into the session totals, turn
-    // the cost negative, and leave the budget permanently under its ceiling.
-    // The reservation stays held on this stop: the request was dispatched and
-    // its real spend is unknown, so the budget stays conservatively consumed.
+    // Validate before anything is accumulated. A negative or non-finite count
+    // would flow into the session totals, turn the cost negative, and leave the
+    // budget permanently under its ceiling. A malformed response is a failed
+    // request, so its worst-case reservation is released before stopping.
     const counts: readonly (readonly [string, number | undefined])[] = [
       ['usage.inputTokens', usage.inputTokens],
       ['usage.outputTokens', usage.outputTokens],
@@ -513,6 +571,7 @@ export class BenchmarkBudgetGate {
     for (const [field, value] of counts) {
       if (value === undefined) continue
       if (!Number.isFinite(value) || value < 0) {
+        this.releaseRequest(input.step)
         throw this.stop(
           'invalid-usage',
           `${field} must be a non-negative finite number: ${String(value)}`,
@@ -525,8 +584,12 @@ export class BenchmarkBudgetGate {
 
     const reservation = this.reservations.get(input.step)
     if (reservation === undefined) {
-      throw new Error(
-        `Benchmark request step ${input.step} completed without an admitted reservation`,
+      throw this.stop(
+        'missing-reservation',
+        `request step ${input.step} completed without an admitted reservation`, 
+        input.step,
+        null,
+        null,
       )
     }
     this.reservations.delete(input.step)
@@ -558,16 +621,38 @@ export class BenchmarkBudgetGate {
       )
     }
 
-    if (this.costUsd + this.reservedCostUsd > this.config.maxEstimatedCostUsd) {
+    const spentUsd = roundCost(this.costUsd + this.reservedCostUsd)
+    const spentCny = roundCost(spentUsd * this.config.usdToCnyRate)
+    if (spentCny > this.config.maxEstimatedCostCny) {
       throw this.stop(
         'estimated-cost',
-        `reported session cost $${roundCost(this.costUsd + this.reservedCostUsd)} `
-        + `exceeds $${this.config.maxEstimatedCostUsd}`,
+        `reported session cost ¥${spentCny} ($${spentUsd} at ¥${this.config.usdToCnyRate}/USD) `
+        + `exceeds ¥${this.config.maxEstimatedCostCny}`,
         input.step,
-        roundCost(this.costUsd + this.reservedCostUsd),
-        this.config.maxEstimatedCostUsd,
+        spentCny,
+        this.config.maxEstimatedCostCny,
       )
     }
+  }
+
+  /**
+   * Release the worst-case reservation of one dispatched request that failed or
+   * was cancelled before producing usage. Returns false when no reservation was
+   * held, so the caller can tell a clean release from a bookkeeping bug.
+   */
+  releaseRequest(step: number): boolean {
+    const released = this.releaseReservation(step)
+    if (released === undefined) return false
+    this.persist()
+    return true
+  }
+
+  private releaseReservation(step: number): number | undefined {
+    const reservation = this.reservations.get(step)
+    if (reservation === undefined) return undefined
+    this.reservations.delete(step)
+    this.reservedCostUsd = roundCost(Math.max(0, this.reservedCostUsd - reservation))
+    return reservation
   }
 
   assertToolCallAllowed(name: string, step: number): void {
@@ -594,7 +679,11 @@ export class BenchmarkBudgetGate {
       cacheReadTokens: this.cacheReadTokenCount,
       cacheWriteTokens: this.cacheWriteTokenCount,
       estimatedCostUsd: this.costUsd,
+      estimatedCostCny: roundCost(this.costUsd * this.config.usdToCnyRate),
       reservedCostUsd: this.reservedCostUsd,
+      reservedCostCny: roundCost(this.reservedCostUsd * this.config.usdToCnyRate),
+      maxEstimatedCostCny: this.config.maxEstimatedCostCny,
+      usdToCnyRate: this.config.usdToCnyRate,
       ledgerPath: this.ledgerPath,
       stops: Object.freeze([...this.stopLog]),
     })

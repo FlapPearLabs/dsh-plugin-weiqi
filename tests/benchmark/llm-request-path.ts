@@ -351,10 +351,33 @@ export async function openBenchmarkRequestPath(
       })
 
       const assembler = new BlockAssembler()
+      const settle = (reported: TokenUsage): void => {
+        gate.completeRequest({ step: input.step, usage: reported })
+      }
       let sawFinish = false
-      for await (const chunk of prepared.stream(request)) {
-        if (chunk.type === 'finish') sawFinish = true
-        assembler.push(chunk)
+      try {
+        for await (const chunk of prepared.stream(request)) {
+          if (chunk.type === 'finish') sawFinish = true
+          assembler.push(chunk)
+        }
+      } catch (error) {
+        // The adapter threw instead of yielding a finish chunk. Any usage it
+        // already streamed is real spend and is settled; without usage the
+        // worst-case reservation is released instead of leaking into the rest
+        // of the session.
+        const partialUsage = assembler.usage
+        if (partialUsage === undefined) {
+          gate.releaseRequest(input.step)
+        } else {
+          settle(partialUsage)
+        }
+        recordFailure({
+          kind: 'provider-error',
+          step: input.step,
+          detail: error instanceof Error ? error.message : String(error),
+          reportedModel: reportedModelOf(assembler),
+        })
+        throw error
       }
 
       const finish = assembler.finish
@@ -368,12 +391,12 @@ export async function openBenchmarkRequestPath(
         drifted: modelDrift,
       }))
 
-      const settle = (reported: TokenUsage): void => {
-        gate.completeRequest({ step: input.step, usage: reported })
-      }
-
       if (finish.kind === 'error' || finish.kind === 'aborted') {
-        if (usage !== undefined) settle(usage)
+        if (usage !== undefined) {
+          settle(usage)
+        } else {
+          gate.releaseRequest(input.step)
+        }
         const kind = failureKindOf(finish)
         recordFailure({
           kind,
@@ -385,7 +408,11 @@ export async function openBenchmarkRequestPath(
       }
 
       if (!sawFinish) {
-        if (usage !== undefined) settle(usage)
+        if (usage !== undefined) {
+          settle(usage)
+        } else {
+          gate.releaseRequest(input.step)
+        }
         recordFailure({
           kind: 'truncated-stream',
           step: input.step,
@@ -396,6 +423,9 @@ export async function openBenchmarkRequestPath(
       }
 
       if (usage === undefined) {
+        // A response without usage cannot be billed, and the request is a
+        // failure: release its reservation instead of holding budget forever.
+        gate.releaseRequest(input.step)
         recordFailure({
           kind: 'missing-usage',
           step: input.step,

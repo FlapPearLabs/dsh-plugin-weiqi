@@ -148,7 +148,9 @@ describe('benchmark fail-closed response handling (WAVE-C-T10)', () => {
       expect(gate.snapshot().requests).toBe(1)
       expect(gate.snapshot().inputTokens).toBe(0)
       expect(gate.snapshot().outputTokens).toBe(0)
-      expect(gate.snapshot().reservedCostUsd).toBeGreaterThan(0)
+      // A failed request that produced no usage releases its worst-case
+      // reservation instead of leaking it into the session budget.
+      expect(gate.snapshot().reservedCostUsd).toBe(0)
     })
   })
 
@@ -169,6 +171,7 @@ describe('benchmark fail-closed response handling (WAVE-C-T10)', () => {
       expect(gate.snapshot().requests).toBe(1)
       expect(gate.snapshot().inputTokens).toBe(0)
       expect(gate.snapshot().outputTokens).toBe(0)
+      expect(gate.snapshot().reservedCostUsd).toBe(0)
     })
   })
 
@@ -190,6 +193,7 @@ describe('benchmark fail-closed response handling (WAVE-C-T10)', () => {
       expect(path.stats().retryAttempts).toBe(0)
       expect(gate.snapshot().requests).toBe(1)
       expect(gate.snapshot().inputTokens).toBe(0)
+      expect(gate.snapshot().reservedCostUsd).toBe(0)
     })
   })
 

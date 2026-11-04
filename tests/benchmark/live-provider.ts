@@ -12,7 +12,7 @@ import {
   type ToolSchema,
 } from '@deepseek-ai/dsh-llm'
 import type { BenchmarkPriceSchedule } from './budget-gate.js'
-import { fromProviderToolName, toProviderToolName } from './tool-name-mapping.js'
+import { fromProviderToolName, isKnownToolName, toProviderToolName } from './tool-name-mapping.js'
 
 /**
  * Live benchmark provider entry (WAVE-C-T10).
@@ -565,15 +565,27 @@ async function* chunksFromSse(response: Response): AsyncGenerator<StreamChunk> {
       }
       const fn = asRecord(record.function)
       const nameChunk = asString(fn?.name)
-      if (nameChunk !== null && !open.rawName.endsWith(nameChunk)) open.rawName += nameChunk
+      if (nameChunk !== null) {
+        // Providers either stream the name in fragments (`go_` then `play`) or
+        // repeat the name accumulated so far on every delta. Replace only when
+        // the new chunk extends the accumulator, otherwise append. Mapping
+        // happens below, once the accumulated name is known.
+        open.rawName = nameChunk.startsWith(open.rawName) ? nameChunk : open.rawName + nameChunk
+      }
       open.id = asString(record.id) ?? open.id
       const argumentChunk = typeof fn?.arguments === 'string' ? fn.arguments : ''
       open.arguments += argumentChunk
+      // A fragment (`go_`) is not a tool name: emitting it would either throw or
+      // guess. Only a complete table name is mapped and emitted mid-stream; an
+      // unknown or still-incomplete name fails at block end instead.
+      const completeName = isKnownToolName(open.rawName)
+        ? fromProviderToolName(open.rawName)
+        : null
       yield {
         type: 'tool-call-delta',
         index: open.index,
         id: CallId(open.id ?? `call-${providerIndex}`),
-        ...(open.rawName === '' ? {} : { name: fromProviderToolName(open.rawName) }),
+        ...(completeName === null ? {} : { name: completeName }),
         argumentsDelta: argumentChunk,
       }
     }

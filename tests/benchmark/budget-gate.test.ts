@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { LlmError, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import { GO_TOOL_DEFINITIONS } from '../../src/tools/go/go-tools.js'
 import {
   BENCHMARK_GATE_DEFAULTS,
   BENCHMARK_PLACEHOLDER_PRICES,
@@ -32,6 +33,33 @@ function budgetStopOf(metrics: { budgetStop: BenchmarkBudgetStop | null }): Benc
   const stop = metrics.budgetStop
   if (stop === null) throw new Error('expected a recorded budget_stop')
   return stop
+}
+
+/**
+ * Fixed reference tokenizer used only by the estimate test. Its per-character
+ * rates are the reviewer-measured ones (CJK 1.0, ASCII 0.35, JSON punctuation
+ * 0.5), so an estimate built on higher weights can never fall below it.
+ */
+const REFERENCE_JSON_PUNCTUATION = new Set(['{', '}', '[', ']', '"', ',', ':', ';'])
+
+function referenceTokens(text: string): number {
+  let weighted = 0
+  for (const character of text) {
+    const codePoint = character.codePointAt(0) ?? 0
+    const cjk = (codePoint >= 0x2e80 && codePoint <= 0x2fff)
+      || (codePoint >= 0x3000 && codePoint <= 0x303f)
+      || (codePoint >= 0x3040 && codePoint <= 0x30ff)
+      || (codePoint >= 0x3400 && codePoint <= 0x4dbf)
+      || (codePoint >= 0x4e00 && codePoint <= 0x9fff)
+      || (codePoint >= 0xf900 && codePoint <= 0xfaff)
+      || (codePoint >= 0xff00 && codePoint <= 0xffef)
+      || (codePoint >= 0x20000 && codePoint <= 0x2fa1f)
+    const rate = cjk
+      ? 1
+      : REFERENCE_JSON_PUNCTUATION.has(character) ? 0.5 : 0.35
+    weighted += character.length * rate
+  }
+  return Math.ceil(weighted)
 }
 
 function searchAttemptFixture(): BenchmarkFixture {
@@ -72,7 +100,8 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
       maxRequests: 120,
       maxInputTokensPerRequest: 8_000,
       maxOutputTokensPerRequest: 4_000,
-      maxEstimatedCostUsd: 1,
+      maxEstimatedCostCny: 6.66,
+      usdToCnyRate: 7.1,
       allowRetries: false,
       allowSearchFetch: false,
     })
@@ -91,8 +120,13 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     const snapshot = gate.snapshot()
     const expectedRequests = BENCHMARK_FIXTURES.reduce((sum, fixture) => sum + fixture.steps.length, 0)
     expect(snapshot.requests).toBe(expectedRequests)
-    expect(snapshot.estimatedCostUsd).toBeGreaterThan(0)
-    expect(snapshot.estimatedCostUsd).toBeLessThan(BENCHMARK_GATE_DEFAULTS.maxEstimatedCostUsd)
+    expect(snapshot.estimatedCostCny).toBeGreaterThan(0)
+    expect(snapshot.estimatedCostCny).toBeLessThan(BENCHMARK_GATE_DEFAULTS.maxEstimatedCostCny)
+    expect(snapshot.usdToCnyRate).toBe(BENCHMARK_GATE_DEFAULTS.usdToCnyRate)
+    expect(snapshot.estimatedCostCny).toBeCloseTo(
+      snapshot.estimatedCostUsd * BENCHMARK_GATE_DEFAULTS.usdToCnyRate,
+      9,
+    )
     expect(snapshot.stops).toEqual([])
   })
 
@@ -253,7 +287,7 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
   })
 
   it('stops before the first request when the projected cost cannot fit the budget', async () => {
-    const gate = new BenchmarkBudgetGate({ maxEstimatedCostUsd: 0 })
+    const gate = new BenchmarkBudgetGate({ maxEstimatedCostCny: 0 })
     const metrics = await runFixture(getBenchmarkFixture('opening-spread'), {
       gate,
       clock: monotonicClock().clock,
@@ -261,13 +295,14 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     const stop = budgetStopOf(metrics)
 
     expect(stop.gate).toBe('estimated-cost')
+    expect(stop.limit).toBe(0)
     expect(metrics.requestPath.llmRequests).toBe(0)
     expect(gate.snapshot().requests).toBe(0)
   })
 
   it('reserves the worst-case maxTokens cost before dispatch and settles by real usage', () => {
     const gate = new BenchmarkBudgetGate(
-      { maxEstimatedCostUsd: 0.5, maxInputTokensPerRequest: 1_000_000 },
+      { maxEstimatedCostCny: 0.5, usdToCnyRate: 1, maxInputTokensPerRequest: 1_000_000 },
       { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
     )
 
@@ -288,7 +323,7 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
 
   it('stops before dispatch when the reservation alone would exceed the budget', () => {
     const gate = new BenchmarkBudgetGate(
-      { maxEstimatedCostUsd: 0.001, maxInputTokensPerRequest: 1_000_000 },
+      { maxEstimatedCostCny: 0.001, usdToCnyRate: 1, maxInputTokensPerRequest: 1_000_000 },
       { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
     )
 
@@ -312,7 +347,7 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
 
   it('accumulates reported cost and stops before a request that would exceed the budget', () => {
     const gate = new BenchmarkBudgetGate(
-      { maxEstimatedCostUsd: 0.5, maxInputTokensPerRequest: 1_000_000 },
+      { maxEstimatedCostCny: 0.5, usdToCnyRate: 1, maxInputTokensPerRequest: 1_000_000 },
       { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 0 },
     )
 
@@ -344,7 +379,7 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
 
   it('stops when reported usage pushes cost over the budget after a request', () => {
     const gate = new BenchmarkBudgetGate(
-      { maxEstimatedCostUsd: 0.5, maxInputTokensPerRequest: 1_000_000 },
+      { maxEstimatedCostCny: 0.5, usdToCnyRate: 1, maxInputTokensPerRequest: 1_000_000 },
       { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 0 },
     )
     gate.beginRequest({
@@ -491,39 +526,70 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
       expect(snapshot.outputTokens, testCase.label).toBe(0)
       expect(snapshot.cacheReadTokens, testCase.label).toBe(0)
       expect(snapshot.stops.map(entry => entry.gate), testCase.label).toEqual(['invalid-usage'])
-      // The dispatched request's real spend is unknown, so its reservation is
-      // kept rather than refunded.
-      expect(snapshot.reservedCostUsd, testCase.label).toBeGreaterThan(0)
+      // A malformed response is a failed request: its worst-case reservation is
+      // released so it cannot leak into the rest of the session.
+      expect(snapshot.reservedCostUsd, testCase.label).toBe(0)
     }
   })
 
-  it('estimates Chinese and mixed input at or above the reference reported usage', () => {
-    // Fixed reference usage for the same text (CJK: 1 token/char, ASCII: 4
-    // chars/token). The estimate is a lower bound that must never fall short.
+  it('estimates Chinese, mixed and dense-JSON input at or above the fixed reference usage', () => {
+    // Fixed reference rates, deliberately the rates the reviewer measured:
+    // CJK 1.0 token/char, ASCII 0.35 token/char, JSON punctuation 0.5. The
+    // estimate must never fall below it, including chat-template overhead.
     const samples = [
-      { label: 'Han only', text: '中'.repeat(8_000), referenceTokens: 8_000 },
-      { label: 'ASCII only', text: 'a'.repeat(8_000), referenceTokens: 2_000 },
       {
-        label: 'mixed',
-        text: '中'.repeat(4_000) + 'a'.repeat(8_000),
-        referenceTokens: 6_000,
+        label: 'pure Chinese 8000 chars',
+        request: { system: '中'.repeat(8_000), messages: [], tools: [] },
+      },
+      {
+        label: 'mixed Chinese and English',
+        request: {
+          system: '中'.repeat(4_000)
+            + 'The model reads the position and commits exactly one move. '.repeat(142),
+          messages: [],
+          tools: [],
+        },
+      },
+      {
+        label: 'dense JSON tool schema',
+        request: {
+          system: 'You are the DeepSeek Go lane of a companion Go game.',
+          messages: [{
+            role: 'user',
+            content: [{ type: 'text', text: 'Read the position and commit one move.' }],
+          }],
+          tools: GO_TOOL_DEFINITIONS,
+        },
       },
     ]
 
     for (const sample of samples) {
-      const estimate = estimateRequestInputTokens({
-        system: sample.text,
-        messages: [],
-        tools: [],
-      })
-      expect(estimate, sample.label).toBeGreaterThanOrEqual(sample.referenceTokens)
+      const text = (sample.request.system ?? '')
+        + JSON.stringify(sample.request.messages)
+        + JSON.stringify(sample.request.tools)
+      const estimate = estimateRequestInputTokens(sample.request)
+      expect(estimate, sample.label).toBeGreaterThanOrEqual(referenceTokens(text))
     }
+  })
+
+  it('charges CJK, ASCII and JSON punctuation at or above the measured floors', () => {
+    const cjk = estimateRequestInputTokens({ system: '中'.repeat(1_000), messages: [] })
+    const ascii = estimateRequestInputTokens({ system: 'a'.repeat(1_000), messages: [] })
+    const punctuation = estimateRequestInputTokens({ system: '{}[]",:;'.repeat(100), messages: [] })
+
+    expect(cjk).toBeGreaterThanOrEqual(600)
+    expect(ascii).toBeGreaterThanOrEqual(350)
+    expect(punctuation).toBeGreaterThanOrEqual(350)
+    // The weights are strictly above the floors, so a real tokenizer at the
+    // reference rate cannot exceed the estimate.
+    expect(cjk).toBeGreaterThan(1_000)
+    expect(ascii).toBeGreaterThan(350)
   })
 
   it('stops an 8000-character Chinese request the flat 4-chars/token estimate admitted', () => {
     const system = '中'.repeat(8_000)
     const estimate = estimateRequestInputTokens({ system, messages: [], tools: [] })
-    expect(estimate).toBeGreaterThan(Math.ceil((8_000 + 4) / 4))
+    expect(estimate).toBeGreaterThan(8_000)
 
     const gate = new BenchmarkBudgetGate()
     expect(() => gate.beginRequest({
@@ -535,5 +601,90 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
 
     expect(gate.snapshot().requests).toBe(0)
     expect(gate.snapshot().stops.map(entry => entry.gate)).toEqual(['request-input-tokens'])
+  })
+
+  it('releases a failed request reservation and never counts the same step twice', () => {
+    const gate = new BenchmarkBudgetGate(
+      {
+        allowRetries: true,
+        maxEstimatedCostCny: 10,
+        usdToCnyRate: 1,
+        maxInputTokensPerRequest: 1_000_000,
+      },
+      { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
+    )
+    const input = { step: 1, estimatedInputTokens: 10, proposedMaxTokens: 1_000, toolNames: [] }
+
+    gate.beginRequest(input)
+    expect(gate.snapshot().reservedCostUsd).toBeCloseTo(0.001, 12)
+
+    expect(gate.releaseRequest(1)).toBe(true)
+    expect(gate.snapshot().reservedCostUsd).toBe(0)
+    expect(gate.releaseRequest(1)).toBe(false)
+
+    gate.beginTurn()
+    gate.beginRequest(input)
+    expect(gate.snapshot().reservedCostUsd).toBeCloseTo(0.001, 12)
+
+    // Re-entering the same step without an explicit release replaces the stale
+    // reservation instead of stacking a second one.
+    gate.beginTurn()
+    gate.beginRequest(input)
+    expect(gate.snapshot().reservedCostUsd).toBeCloseTo(0.001, 12)
+    expect(gate.snapshot().requests).toBe(3)
+
+    gate.completeRequest({ step: 1, usage: { inputTokens: 10, outputTokens: 50 } })
+    expect(gate.snapshot().reservedCostUsd).toBe(0)
+    expect(gate.snapshot().estimatedCostUsd).toBeCloseTo(0.00005, 12)
+  })
+
+  it('stops with a budget_stop when a request completes without a reservation', () => {
+    const gate = new BenchmarkBudgetGate()
+
+    let caught: unknown
+    try {
+      gate.completeRequest({ step: 9, usage: { inputTokens: 10, outputTokens: 10 } })
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(BenchmarkBudgetStopError)
+    expect((caught as BenchmarkBudgetStopError).stop.gate).toBe('missing-reservation')
+    expect(gate.snapshot().stops.map(entry => entry.gate)).toEqual(['missing-reservation'])
+  })
+
+  it('caps spend in CNY using the recorded USD/CNY rate, before dispatch', () => {
+    const gate = new BenchmarkBudgetGate(
+      { maxEstimatedCostCny: 7.1, usdToCnyRate: 7.1, maxInputTokensPerRequest: 1_000_000 },
+      { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1_000 },
+    )
+
+    const decision = gate.beginRequest({
+      step: 1,
+      estimatedInputTokens: 10,
+      proposedMaxTokens: 1_000,
+      toolNames: [],
+    })
+    expect(decision.reservedCostUsd).toBeCloseTo(1, 12)
+    expect(gate.snapshot().reservedCostCny).toBeCloseTo(7.1, 12)
+    expect(gate.snapshot().maxEstimatedCostCny).toBe(7.1)
+    expect(gate.snapshot().usdToCnyRate).toBe(7.1)
+
+    let caught: unknown
+    try {
+      gate.beginRequest({
+        step: 2,
+        estimatedInputTokens: 10,
+        proposedMaxTokens: 1_000,
+        toolNames: [],
+      })
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBeInstanceOf(BenchmarkBudgetStopError)
+    expect((caught as BenchmarkBudgetStopError).stop.gate).toBe('estimated-cost')
+    expect((caught as BenchmarkBudgetStopError).stop.limit).toBe(7.1)
+    expect(gate.snapshot().requests).toBe(1)
   })
 })

@@ -204,6 +204,45 @@ describe('live benchmark provider entry (WAVE-C-T10)', () => {
     }
   })
 
+  it('waits for the complete streamed tool name before mapping it', async () => {
+    // Two provider habits at once: fragments (`go_` + `play`) and a cumulative
+    // name repeated on every delta (`go_` then `go_pass`). Mapping the first
+    // fragment would throw and fail the whole turn.
+    const sse = [
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-split","function":{"name":"go_","arguments":""}}]}}]}',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"play","arguments":"{\\"gameId\\":\\"g\\",\\"point\\":{\\"x\\":2,\\"y\\":4}}"}}]}}]}',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"id":"call-cumulative","function":{"name":"go_","arguments":""}}]}}]}',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"function":{"name":"go_pass","arguments":"{\\"gameId\\":\\"g\\"}"}}]}}]}',
+      'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":30,"completion_tokens":8}}',
+      'data: [DONE]',
+      '',
+    ].join('\n\n')
+
+    const provider = new LiveBenchmarkProvider(liveConfig(), {
+      fetch: async () => new Response(sse, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      }),
+    })
+
+    const nameDeltas: string[] = []
+    const blocks = []
+    for await (const chunk of provider.stream({
+      provider: BENCHMARK_LIVE_PROVIDER_ID,
+      model: STUB_MODEL,
+      messages: [userMessage()],
+      tools: [...goToolSchemas()],
+    })) {
+      if (chunk.type === 'tool-call-delta' && chunk.name !== undefined) nameDeltas.push(chunk.name)
+      if (chunk.type === 'block-end') blocks.push(chunk.block)
+    }
+
+    // A partial fragment is never emitted, so no mapping error can escape.
+    expect(nameDeltas).toEqual(['go.play', 'go.pass'])
+    const toolBlocks = blocks.filter(block => block.type === 'tool-call')
+    expect(toolBlocks.map(block => (block as { name: string }).name)).toEqual(['go.play', 'go.pass'])
+  })
+
   it('reports usage exactly as the server returned it', async () => {
     const sse = [
       'data: {"model":"stub-deepseek-chat","choices":[{"delta":{"content":"reading"}}]}',

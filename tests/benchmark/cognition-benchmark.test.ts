@@ -182,10 +182,15 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
       maxRequests: 120,
       maxInputTokensPerRequest: 8_000,
       maxOutputTokensPerRequest: 4_000,
-      maxEstimatedCostUsd: 1,
+      maxEstimatedCostCny: 6.66,
+      usdToCnyRate: 7.1,
       allowRetries: false,
       allowSearchFetch: false,
     })
+    expect(record.budgetGate.estimatedCostCny).toBeCloseTo(
+      record.budgetGate.estimatedCostUsd * record.budgetGate.usdToCnyRate,
+      9,
+    )
     expect(record.budgetGate.stops).toEqual([])
   })
 })

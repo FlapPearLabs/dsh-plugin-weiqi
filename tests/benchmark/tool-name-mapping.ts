@@ -108,6 +108,15 @@ const BY_PROVIDER = new Map<string, string>(
 )
 
 /**
+ * True when `name` is a complete provider tool name (or an already-product
+ * name). Used to defer streaming-name mapping until the fragments form a name
+ * the table knows; it never throws.
+ */
+export function isKnownToolName(name: string): boolean {
+  return BY_PROVIDER.has(name) || BY_ORIGINAL.has(name)
+}
+
+/**
  * Outbound mapping. A name already carrying its provider form is returned
  * unchanged (idempotent), so mapping a message twice cannot double-encode it.
  * Anything outside the table is refused.
