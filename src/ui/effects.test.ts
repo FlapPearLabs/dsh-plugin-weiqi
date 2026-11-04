@@ -123,6 +123,7 @@ describe('§32 row 10 — minimal stone sound without audio assets', () => {
     sound.playPlacement()
 
     expect(calls).toEqual([
+      ['frequency.setValueAtTime', 220, 10],
       ['gain.setValueAtTime', 0.0001, 10],
       ['gain.ramp', 0.12, 10.01],
       ['gain.ramp', 0.0001, 10.09],

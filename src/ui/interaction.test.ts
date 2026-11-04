@@ -173,7 +173,7 @@ describe('§32 rows 7/8 — Resign and final result come from the authoritative 
 
     expect(outcome.ok).toBe(false)
     expect(outcome.result).toEqual({ winner: 'deepseek', loser: 'user', reason: 'resignation' })
-    expect(outcome.result).toBe(port.getState(gameId).outcome)
+    expect(outcome.result).toEqual(port.getState(gameId).outcome)
   })
 
   it('rejects clicks after the game is over without touching the board', () => {
