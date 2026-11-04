@@ -234,9 +234,17 @@ function reportedModelOf(assembler: BlockAssembler): string | null {
   return typeof model === 'string' && model !== '' ? model : null
 }
 
+export type BenchmarkRequestPathOptions = Readonly<{
+  /** Registered provider route; the scripted stand-in unless a live run overrides it. */
+  readonly providerId?: string
+  /** Configured model id the adapter must report; the scripted model unless overridden. */
+  readonly model?: string
+}>
+
 export async function openBenchmarkRequestPath(
   provider: LlmAdapter,
   gate: BenchmarkBudgetGate,
+  options: BenchmarkRequestPathOptions = {},
 ): Promise<BenchmarkRequestPath> {
   if (!(gate instanceof BenchmarkBudgetGate)) {
     throw new TypeError(
@@ -245,9 +253,12 @@ export async function openBenchmarkRequestPath(
     )
   }
 
+  const providerId = options.providerId ?? BENCHMARK_PROVIDER_ID
+  const model = options.model ?? SCRIPTED_MODEL_ID
+
   const ctx = new Context()
   await ctx.plugin(LlmRuntime)
-  ctx.llm.registerAdapter([BENCHMARK_PROVIDER_ID], provider)
+  ctx.llm.registerAdapter([providerId], provider)
 
   let streamSeamRequests = 0
   ctx.on('llm/stream', (options, next) => {
@@ -258,7 +269,7 @@ export async function openBenchmarkRequestPath(
     return next()
   })
 
-  const retryPolicy = ctx.llm.providerRetryPolicy(BENCHMARK_PROVIDER_ID)
+  const retryPolicy = ctx.llm.providerRetryPolicy(providerId)
   const retryFacts: BenchmarkRetryPolicyFacts = Object.freeze({
     mode: retryPolicy.mode,
     maxRetries: retryPolicy.mode === 'normal' ? retryPolicy.maxRetries : null,
@@ -301,13 +312,13 @@ export async function openBenchmarkRequestPath(
       admittedRequests += 1
 
       const prepared = await ctx.llm.prepareCall({
-        provider: BENCHMARK_PROVIDER_ID,
-        model: SCRIPTED_MODEL_ID,
+        provider: providerId,
+        model,
         maxTokens: decision.maxTokens,
       })
       const request = markAgentLoopRequest({
-        provider: BENCHMARK_PROVIDER_ID,
-        model: SCRIPTED_MODEL_ID,
+        provider: providerId,
+        model,
         maxTokens: decision.maxTokens,
         messages: providerMessages,
         system: input.system,
@@ -325,10 +336,10 @@ export async function openBenchmarkRequestPath(
       const finish = assembler.finish
       const usage = assembler.usage
       const reportedModel = reportedModelOf(assembler)
-      const modelDrift = reportedModel !== null && reportedModel !== SCRIPTED_MODEL_ID
+      const modelDrift = reportedModel !== null && reportedModel !== model
       modelObservations.push(Object.freeze({
         step: input.step,
-        configured: SCRIPTED_MODEL_ID,
+        configured: model,
         reported: reportedModel,
         drifted: modelDrift,
       }))
@@ -376,10 +387,10 @@ export async function openBenchmarkRequestPath(
         recordFailure({
           kind: 'model-alias-drift',
           step: input.step,
-          detail: `configured ${SCRIPTED_MODEL_ID}, provider reported ${String(reportedModel)}`,
+          detail: `configured ${model}, provider reported ${String(reportedModel)}`,
           reportedModel,
         })
-        throw new BenchmarkModelAliasDriftError(SCRIPTED_MODEL_ID, String(reportedModel))
+        throw new BenchmarkModelAliasDriftError(model, String(reportedModel))
       }
 
       const toolCalls: BenchmarkToolCall[] = []
@@ -432,9 +443,9 @@ export async function openBenchmarkRequestPath(
       )]
 
       return Object.freeze({
-        provider: BENCHMARK_PROVIDER_ID,
-        model: SCRIPTED_MODEL_ID,
-        configuredModel: SCRIPTED_MODEL_ID,
+        provider: providerId,
+        model,
+        configuredModel: model,
         seam: 'dsh-llm-runtime',
         llmRequests: physicalCallsOf(provider),
         transportAttempts,
