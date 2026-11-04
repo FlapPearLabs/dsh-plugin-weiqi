@@ -230,6 +230,56 @@ describe('TenukiAdapter terminal score boundary (Spec §25 resignation rule)', (
   })
 })
 
+const sortPoints = (points: readonly Point[]): string[] =>
+  points.map(point => `${point.x},${point.y}`).sort()
+
+function playBlock(port: ReturnType<typeof createTenukiGoRulesPort>, gameId: string, block: readonly Point[]): void {
+  port.createGame(gameConfig(gameId))
+  for (const point of block) {
+    expect(port.play(gameId, 'user', point).ok).toBe(true)
+    expect(port.pass(gameId, 'deepseek').ok).toBe(true)
+  }
+}
+
+describe('TenukiAdapter inspectGroup connectivity (Spec §29)', () => {
+  it('reports each stone of a cyclic 2x2 group once, with its liberties', () => {
+    const port = createTenukiGoRulesPort()
+    const block: readonly Point[] = [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+      { x: 1, y: 0 },
+    ]
+    playBlock(port, 'group-2x2', block)
+
+    const info = port.inspectGroup('group-2x2', { x: 0, y: 0 })
+    if (info === null) throw new Error('inspectGroup returned null for a live stone')
+
+    expect(info.color).toBe('black')
+    expect(info.stones.length).toBe(4)
+    expect(new Set(sortPoints(info.stones)).size).toBe(4)
+    expect(sortPoints(info.stones)).toEqual(sortPoints(block))
+    expect(sortPoints(info.liberties)).toEqual(['0,2', '1,2', '2,0', '2,1'])
+  })
+
+  it('reports each stone of a cyclic 3x3 group once', () => {
+    const port = createTenukiGoRulesPort()
+    const block: Point[] = []
+    for (let y = 0; y < 3; y += 1) {
+      for (let x = 0; x < 3; x += 1) block.push({ x, y })
+    }
+    playBlock(port, 'group-3x3', block)
+
+    const info = port.inspectGroup('group-3x3', { x: 1, y: 1 })
+    if (info === null) throw new Error('inspectGroup returned null for a live stone')
+
+    expect(info.stones.length).toBe(9)
+    expect(new Set(sortPoints(info.stones)).size).toBe(9)
+    expect(sortPoints(info.stones)).toEqual(sortPoints(block))
+    expect(sortPoints(info.liberties)).toEqual(['0,3', '1,3', '2,3', '3,0', '3,1', '3,2'])
+  })
+})
+
 describe('TenukiAdapter snapshot boundary', () => {
   it('returns only frozen contract-shaped snapshots, with no engine objects', () => {
     const port = createTenukiGoRulesPort()
