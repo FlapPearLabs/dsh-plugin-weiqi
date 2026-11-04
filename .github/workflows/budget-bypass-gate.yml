@@ -9,6 +9,8 @@ on:
       - package.json
       - pnpm-lock.yaml
       - src/budget/**
+      - src/contracts/**
+      - src/preset/go-preset.ts
       - src/tools/go/**
       - src/runtime/go-capability-guard.ts
       - tests/budget/**
