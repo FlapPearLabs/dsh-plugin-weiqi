@@ -4,6 +4,8 @@
 - 分支：`work/c-t09-budget-bypass`
 - 基线 BASE_SHA：`40e5a20`（`origin/main`，C-T08 合并后）
 - 测试 + CI commit：`c64d906`（`test: add the Spec §39.4 budget bypass suite (WAVE-C-T09)`）
+- §24 顺序回归红测试 commit：`52d8332`（`test: pin post-commit rejection before the port (WAVE-C-T09)`）
+- §24 顺序修复 commit：`3b75c05`（`fix: reject post-commit go actions before the port (WAVE-C-T09)`）
 - 本 handoff 以 `docs:` 单独提交
 - 遵循契约：`~/.agents/engineering/CONTRACT.md`
 
@@ -15,7 +17,7 @@
   2. 有专门的 CI job；
   3. `pnpm verify` 退出码 0；
   4. 无真实绕过；若发现，记录精确复现。
-- **本票只加测试与 CI，不改任何产品源码**（`git diff --stat -- src` 为空）。
+- **预算套件本身只加测试与 CI**；follow-up 的 §24 P1 修复经主人明确授权，只改 `src/tools/go/go-tools.ts`（见下 “§24 顺序缺陷”）。
 
 ## 改动清单
 
@@ -29,8 +31,12 @@
   - 独立 job 跑 `pnpm exec vitest run tests/budget --reporter=verbose`；
   - 固定 Node 24.11.1 / pnpm 11.7.0，与 anti-cheat、request-token-hard-cap 门禁一致；
   - 触发路径覆盖本 suite、`src/budget/**`、`src/tools/go/**`、workflow 自身。
+- `tests/budget/post-commit-ordering.test.ts`（4 个用例）
+  - §24 follow-up：play/pass 之后再 resign（以及 play↔pass 互换）必须在触达 `GoRulesPort` 之前抛 `GoTurnAnalysisEndedError`；断言 port 调用数、权威状态与 enforcement snapshot 全部不变。
+- `src/tools/go/go-tools.ts`（P1 修复）
+  - 18 insertions / 1 deletion：值导入 `GoTurnAnalysisEndedError`，新增本地 `assertCommitOpen` 预检，`runPlay` / `runPass` / `runResign` 各在 port 调用前执行一次。
 
-未改：`src/**`、`package.json`、`pnpm-lock.yaml`、主检出、其他票据范围。
+未改：`src/budget/**`、`src/contracts/**`、`package.json`、`pnpm-lock.yaml`、主检出、其他票据范围。
 
 ## §39.4 绕过矩阵与逐条结果
 
@@ -64,25 +70,25 @@ Fixture 预算（测试注入值，非生产标定；BL-BUD-06 / WAVE-C-T10 拥�
 
 ## 红 / 绿证据
 
-本票是给已合并实现补对抗测试（C-T07/C-T08 已绿），所以“红”由**活体变异**证明，而不是先写一个产品侧红测试。
+本票的 §39.4 套件是给已合并实现补对抗测试（C-T07/C-T08 已绿），所以“红”由**活体变异**证明；§24 顺序 follow-up 则是先写红测试、再修复。
 
 新增套件（工作树）：
 
 ```text
 pnpm exec vitest run tests/budget --reporter=verbose
-Test Files  1 passed (1)
-     Tests  26 passed (26)
+  tests/budget/go-turn-budget-bypass.test.ts  26 passed
+  tests/budget/post-commit-ordering.test.ts    4 passed
 exit 0
 ```
 
-全量校验（工作树）：
+全量校验（工作树，含 follow-up）：
 
 ```text
 pnpm verify
 $ tsc -p tsconfig.json --noEmit
 $ vitest run
-Test Files  32 passed (32)
-     Tests  429 passed (429)
+Test Files  33 passed (33)
+     Tests  433 passed (433)
 $ clean && tsc -p tsconfig.build.json
 exit 0
 ```
@@ -100,28 +106,45 @@ exit 0
 - 变异 B 中 `fails closed on a non-finite or negative contributor proposal` 仍绿，符合预期：该分支走的是 `Number.isFinite` 回落路径，不经过被改掉的 `Math.min`。
 - 三处变异都在 `/tmp` 副本内，工作树 `src/` 无改动（`git diff --stat -- src` 为空），副本跑完即弃。
 
-## 范围外发现：committed 之后的 `go.resign` 会先改权威状态再抛错（不是预算绕过）
+## §24 顺序缺陷（P1，已修复：`3b75c05`）
 
-这不是 §39.4 的预算绕过（没有多花任何预算），但属于同一道 commit 门禁的顺序问题，按“不得隐藏”原则记录精确复现，交由 C-T02/C-T07 的 owner 与审查者判断。
+原始缺陷（C-T09 首轮发现）：`runPlay` / `runPass` / `runResign` 先执行 `runtime.port.*`，再 `enforcement.recordCommittedAction(...)`。同一 turn 内 play/pass 之后再 `go.resign` 时，port 已把棋局改成 `over`（resignation），随后才抛 `GoTurnAnalysisEndedError`，且 `publishGameNotice` 没有执行，Bridge 收不到终局通知，port 与 runtime/Bridge 视图分叉（对标 §40 `state drift = 0`）。
 
-复现（真实未变异源码，`GoRulesPort` 为 `tests/rules/stub-port.ts`，`deepseek` 执黑先行）：
+修复前复现（真实源码 + `tests/rules/stub-port.ts`，deepseek 执黑先行）：
 
 ```text
-预算：maxModelSteps 5 / maxInspectCalls 5 / maxTryMoves 5 / perRequestMaxTokens 300 / maxTurnTokens 1000
-go.play({gameId:'probe', point:{x:4,y:4}})   -> { ok: true }，状态 playing、moveNumber 1、toPlay user
-go.resign({gameId:'probe'})                 -> 抛出 GoTurnAnalysisEndedError: "...committed play; commit is not permitted"
-但 port.getState('probe') 已经变成：
-  status: 'over'
-  outcome: { winner: 'user', loser: 'deepseek', reason: 'resignation' }
-enforcement.snapshot() 仍是：
-  committedAction: 'play', gameTerminal: false
+go.play({point:{x:4,y:4}}) -> ok；状态 playing、moveNumber 1、toPlay user
+go.resign()                -> 抛 GoTurnAnalysisEndedError
+但 port.getState() 已是 status 'over'、outcome resignation
+snapshot 仍是 committedAction 'play'、gameTerminal false
 ```
 
-机制：`src/tools/go/go-tools.ts` 的 `runPlay` / `runPass` / `runResign` 都是**先** `runtime.port.*` 执行，**再** `enforcement.recordCommittedAction(...)`；因此门禁能拒绝返回值，却挡不住第二次权威动作已经落到 port。`runResign` 里 `publishGameNotice` 在 `recordCommittedAction` 之后，所以 Bridge 也收不到这次终局通知，port 状态与 Bridge/runtime 视图出现分叉（对标 §40 `state drift = 0`）。
+红测试（`52d8332`，修复前）：
 
-- 影响面：同一 Go turn 内 play/pass 之后再 resign（resign 在规则上任何时候都合法，port 会接受）；其他“再落子/再 pass”会被 port 的 turn 校验挡住。
-- 归属：C-T02 的工具执行顺序 + C-T07 的 commit 门禁集成；**不属于 C-T09 的预算测试范围，本票按约束不改产品源码、不新增失败测试**。
-- 建议：由 owner 在 `runPlay`/`runPass`/`runResign` 执行 port 之前调用 `assertAnalysisOpen('commit')` 等价的准入检查（或先 `recordCommittedAction` 的预检），并补一条“第二次 commit 不触碰 port”的回归测试。
+```text
+pnpm exec vitest run tests/budget/post-commit-ordering.test.ts
+ ❯ tests/budget/post-commit-ordering.test.ts (4 tests | 4 failed) 5ms
+   × does not let a resign after a committed play reach the port
+   × does not let a resign after a committed pass reach the port
+   × does not let a pass after a committed play reach the port
+   × does not let a play after a committed pass reach the port
+AssertionError: expected 4 to be 3            // resign 已经到达 port
+Error: ordering: the post-commit action was admitted   // port 拒绝结果代替了 Ended
+exit 1
+```
+
+修复（`3b75c05`，只改 `src/tools/go/go-tools.ts`）：
+
+- 值导入 `GoTurnAnalysisEndedError`；
+- 新增本地 `assertCommitOpen(enforcement)`：读既有 snapshot，若 `committedAction !== undefined` 且非终局，抛与下游完全相同的 `GoTurnAnalysisEndedError('commit', ...)`；
+- `runPlay` / `runPass` / `runResign` 在 `port.*` 之前各调用一次；
+- 下游 `recordCommittedAction` 门禁保持不变，没有重构 gate。
+
+为什么保留终局例外：既有 C-T02 契约要求“resign 之后再 resign 返回 port 的 `{ok:false, reason:'game-over'}`”（`src/tools/go/go-tools.test.ts` 固定）。终局（`gameTerminal: true`）继续交给 port 报 game-over，它不产生任何状态变更；非终局（play/pass 之后）一律在 port 之前抛错，满足本次要求。
+
+绿：`pnpm exec vitest run tests/budget src/tools/go src/budget` → 8 files / 141 tests 全绿，既有 second-resign 用例未改；`pnpm verify` → 33 files / 433 tests，exit 0。
+
+Diff surface 精确：`src/tools/go/go-tools.ts` 单文件，18 insertions / 1 deletion；无其他 `src/` 改动。残留风险：终局后 `go.play` / `go.pass` 仍会到达 port 并拿到 game-over 拒绝（无状态变更），这是既有契约的保持，不是本缺陷的回归。
 
 ## 未验证项
 
@@ -135,13 +158,13 @@ enforcement.snapshot() 仍是：
 
 | ID | 级别 | 说明 | 状态 |
 | --- | --- | --- | --- |
-| OUT-1 | P1（范围外，归属 C-T02/C-T07） | 已 commit 后 `go.resign` 先改 port 状态再抛 `GoTurnAnalysisEndedError`，Bridge 收不到终局通知 | 已复现并记录，本票不修 |
+| OUT-1 | P1（已修复：`3b75c05`） | 已 commit 后 `go.resign` 先改 port 状态再抛 `GoTurnAnalysisEndedError`，Bridge 收不到终局通知 | 修复：`assertCommitOpen` 在 port 之前预检；红测试 `52d8332`（4 例）→ 绿 |
 | N-1 | 说明 | 请求 seam 在 commit 之后仍返回 clamp 过的 config（不抛错）；admission 由 `beginModelStep` 拒绝 | 设计如此（§22.2 拒绝归 begin*），套件已断言两侧行为 |
 | N-2 | 说明 | 变异 B 下“非有限提案”用例仍绿 | 预期，走的是不同的失败回落路径 |
 
 ## 不要做什么
 
-- 不要为了让 OUT-1 变绿而顺手改 `go-tools.ts` 的执行顺序（本票约束：不改产品源码；应开新票或并入 owner 的修复）。
+- 不要把 `assertCommitOpen` 预检撤回到 port 之后；不要把终局分支也改成抛错而不先同步修改既有 second-resign 契约测试。
 - 不要削弱、跳过或删除本套件的断言来让门禁变绿；不要新增“预期绕过”的白名单分支。
 - 不要引入新依赖或改动 `package.json` / `pnpm-lock.yaml`。
 - 不要 `git add .`；不要 push / PR / merge。
@@ -149,6 +172,6 @@ enforcement.snapshot() 仍是：
 ## 下一步（审查者 / 合并后）
 
 - 审查：Standards（只新增 `tests/budget/` 与一个 workflow；无源码改动；无新依赖；断言有牙）+ Spec（§22.1-22.4、§23、§24、§39.4 逐条覆盖，边界值精确，无绕过）。
-- 重点复核 OUT-1：确认它确实在 C-T09 范围外，并把它转给 C-T02/C-T07 的 owner 或新开票。
+- 重点复核 §24 修复：预检位置、错误类型/消息是否与下游一致、既有 second-resign 契约是否仍绿；确认 `assertCommitOpen` 只读 snapshot、不引入新状态。
 - 合并后按流程同步 `docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md` 的 BL-BUD-05 行为 IMPLEMENTED_VERIFIED（本票不直接改 Baseline）。
 - F-T04 Phase A Exit Gate 可把本套件与 `budget-bypass-gate.yml` 作为“budget bypass tests pass”的证据输入（与 CI 实际运行结果一起引用）。
