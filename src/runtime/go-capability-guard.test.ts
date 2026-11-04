@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   GO_FORBIDDEN_CAPABILITY_KINDS,
   GO_PRESET,
@@ -15,6 +15,16 @@ import {
   resolveGoCapabilityGuard,
   type GoCapability,
 } from './go-capability-guard.js'
+import * as guardModule from './go-capability-guard.js'
+import * as runtimeBarrel from './index.js'
+
+/**
+ * Read a binding a module namespace may not export yet, so a missing export
+ * fails as an assertion instead of aborting the whole file at link time.
+ */
+function exportedFrom<T>(moduleNamespace: object, name: string): T | undefined {
+  return (moduleNamespace as Record<string, unknown>)[name] as T | undefined
+}
 
 describe('Go preset declaration', () => {
   it('declares a native-only capability realm for the Go lane', () => {
@@ -62,8 +72,13 @@ describe('Go execution-time capability guard', () => {
     const guard = new GoCapabilityGuard()
     const run = vi.fn(() => 'shell output')
 
-    expect(() => guard.register({ toolPath: 'go.shell', kind: 'bash', run }))
-      .toThrow(ForgedGoCapabilityError)
+    try {
+      guard.register({ toolPath: 'go.shell', kind: 'bash', run })
+      expect.fail('a forbidden capability kind must not register')
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenGoCapabilityError)
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('forbidden-kind')
+    }
 
     expect(() => guard.execute('go.shell', { command: 'ls' }))
       .toThrow(ForbiddenGoCapabilityError)
@@ -74,7 +89,7 @@ describe('Go execution-time capability guard', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(ForbiddenGoCapabilityError)
       const rejection = error as ForbiddenGoCapabilityError
-      expect(rejection.reason).toBe('forged-descriptor')
+      expect(rejection.reason).toBe('forbidden-kind')
       expect(rejection.toolPath).toBe('go.shell')
       expect(rejection.kind).toBe('bash')
       expect(rejection.presetId).toBe(GO_PRESET_ID)
@@ -89,7 +104,7 @@ describe('Go execution-time capability guard', () => {
       toolPath: 'go.helpers.run',
       kind: 'general-execution',
       run,
-    })).toThrow(ForgedGoCapabilityError)
+    })).toThrow(ForbiddenGoCapabilityError)
 
     expect(() => guard.execute('go.helpers.run')).toThrow(ForbiddenGoCapabilityError)
     expect(run).not.toHaveBeenCalled()
@@ -101,9 +116,17 @@ describe('Go execution-time capability guard', () => {
       const run = vi.fn(() => kind)
       const toolPath = `go.alias.${kind}`
 
-      expect(() => guard.register({ toolPath, kind, run })).toThrow(ForgedGoCapabilityError)
+      expect(() => guard.register({ toolPath, kind, run })).toThrow(ForbiddenGoCapabilityError)
       expect(() => guard.execute(toolPath)).toThrow(ForbiddenGoCapabilityError)
       expect(run).not.toHaveBeenCalled()
+
+      try {
+        guard.execute(toolPath)
+      } catch (error) {
+        const rejection = error as ForbiddenGoCapabilityError
+        expect(rejection.reason).toBe('forbidden-kind')
+        expect(rejection.kind).toBe(kind)
+      }
     }
   })
 
@@ -111,14 +134,22 @@ describe('Go execution-time capability guard', () => {
     const guard = new GoCapabilityGuard()
     const run = vi.fn(() => 'unclassified')
 
-    expect(() => guard.register({
-      toolPath: 'go.mystery',
-      kind: 'some-new-transport',
-      run,
-    })).toThrow(ForgedGoCapabilityError)
+    try {
+      guard.register({ toolPath: 'go.mystery', kind: 'some-new-transport', run })
+      expect.fail('an unclassified capability kind must not register')
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenGoCapabilityError)
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('unknown-kind')
+    }
 
     expect(() => guard.execute('go.mystery')).toThrow(ForbiddenGoCapabilityError)
     expect(run).not.toHaveBeenCalled()
+
+    try {
+      guard.execute('go.mystery')
+    } catch (error) {
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('unknown-kind')
+    }
   })
 
   it('rejects a minted capability outside the Go lane tool paths at execution', () => {
@@ -246,6 +277,12 @@ describe('Go preset authority is not caller-supplied', () => {
 })
 
 describe('Single shared Go scope', () => {
+  // The scope is process-wide: every case must hand it back clean so later
+  // files (C-T02, C-T05) never inherit a registration from this one.
+  afterEach(() => {
+    exportedFrom<() => void>(guardModule, 'resetGoCapabilityGuardForTest')?.()
+  })
+
   it('resolves one guard for every consumer', () => {
     expect(resolveGoCapabilityGuard()).toBe(goCapabilityGuard)
     expect(resolveGoCapabilityGuard()).toBe(resolveGoCapabilityGuard())
@@ -255,5 +292,104 @@ describe('Single shared Go scope', () => {
     consumerA.register(nativeGoCapability('go.shared-scope', () => 'shared'))
 
     expect(consumerB.execute('go.shared-scope')).toBe('shared')
+  })
+
+  it('can be reset for tests so one suite never leaks into the next', () => {
+    const reset = exportedFrom<() => void>(guardModule, 'resetGoCapabilityGuardForTest')
+    expect(typeof reset, 'go-capability-guard must expose resetGoCapabilityGuardForTest')
+      .toBe('function')
+
+    goCapabilityGuard.register(nativeGoCapability('go.shared-reset', () => 'shared'))
+    expect(goCapabilityGuard.execute('go.shared-reset')).toBe('shared')
+
+    reset?.()
+
+    expect(() => resolveGoCapabilityGuard().execute('go.shared-reset'))
+      .toThrow(ForbiddenGoCapabilityError)
+    try {
+      goCapabilityGuard.execute('go.shared-reset')
+    } catch (error) {
+      expect((error as ForbiddenGoCapabilityError).reason).toBe('unregistered')
+    }
+  })
+})
+
+describe('Go preset policy evaluation', () => {
+  it('rejects forbidden and unclassified capability kinds', () => {
+    const kindViolation = exportedFrom<(kind: string) => string | undefined>(
+      guardModule,
+      'goCapabilityKindViolation',
+    )
+    expect(typeof kindViolation, 'go-capability-guard must expose goCapabilityKindViolation')
+      .toBe('function')
+
+    expect(kindViolation?.('model-native')).toBeUndefined()
+    for (const kind of GO_FORBIDDEN_CAPABILITY_KINDS) {
+      expect(kindViolation?.(kind)).toBe('forbidden-kind')
+    }
+    expect(kindViolation?.('some-new-transport')).toBe('unknown-kind')
+  })
+
+  it('rejects tool paths outside the Go lane prefixes', () => {
+    const pathViolation = exportedFrom<(toolPath: string) => string | undefined>(
+      guardModule,
+      'goToolPathViolation',
+    )
+    expect(typeof pathViolation, 'go-capability-guard must expose goToolPathViolation')
+      .toBe('function')
+
+    expect(pathViolation?.('go.state')).toBeUndefined()
+    expect(pathViolation?.('companion.handoff')).toBeUndefined()
+    expect(pathViolation?.('fs.read')).toBe('tool-path')
+    expect(pathViolation?.('gonzo.state')).toBe('tool-path')
+  })
+})
+
+describe('Runtime barrel contract', () => {
+  it('re-exports the guard API downstream consumers need to mint and resolve', () => {
+    const names = [
+      'ForbiddenGoCapabilityError',
+      'ForgedGoCapabilityError',
+      'GoCapabilityGuard',
+      'assertGoCapabilityAllowed',
+      'goCapabilityGuard',
+      'isNativeGoCapability',
+      'nativeGoCapability',
+      'resetGoCapabilityGuardForTest',
+      'resolveGoCapabilityGuard',
+    ] as const
+
+    for (const name of names) {
+      const barrelValue = exportedFrom<unknown>(runtimeBarrel, name)
+      expect(barrelValue, 'src/runtime/index.ts must export ' + name).toBeDefined()
+      expect(barrelValue, 'src/runtime/index.ts must re-export the module binding ' + name)
+        .toBe(exportedFrom<unknown>(guardModule, name))
+    }
+  })
+
+  it('lets a downstream consumer mint and execute through the barrel alone', () => {
+    const mint = exportedFrom<(toolPath: string, run: (args?: unknown) => unknown) => GoCapability>(
+      runtimeBarrel,
+      'nativeGoCapability',
+    )
+    const resolve = exportedFrom<() => GoCapabilityGuard>(runtimeBarrel, 'resolveGoCapabilityGuard')
+    const GuardError = exportedFrom<new (...args: never[]) => Error>(
+      runtimeBarrel,
+      'ForgedGoCapabilityError',
+    )
+
+    expect(typeof resolve).toBe('function')
+    expect(typeof GuardError).toBe('function')
+    // The scope stays untouched here: a fresh guard proves the barrel's
+    // minted descriptor is the admissible one, without polluting the singleton.
+    expect(resolve?.()).toBe(goCapabilityGuard)
+
+    const capability = mint?.('go.barrel', () => 'barrel')
+    expect(capability).toBeDefined()
+    expect(isNativeGoCapability(capability)).toBe(true)
+
+    const guard = new GoCapabilityGuard()
+    guard.register(capability)
+    expect(guard.execute('go.barrel')).toBe('barrel')
   })
 })
