@@ -93,6 +93,11 @@ export class ScriptedLlmProvider extends LlmAdapter {
     return this.requestLog
   }
 
+  /** The no-network adapter sends exactly one transport attempt per stream(). */
+  get transportAttempts(): number {
+    return this.requestLog.length
+  }
+
   override providerInfo(provider: string): { id: string; name: string } {
     return { id: provider, name: 'Benchmark scripted provider (local, no network)' }
   }

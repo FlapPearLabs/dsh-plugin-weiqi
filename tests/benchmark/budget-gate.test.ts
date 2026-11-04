@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { LlmError, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import {
   BENCHMARK_GATE_DEFAULTS,
+  BENCHMARK_PLACEHOLDER_PRICES,
   BenchmarkBudgetGate,
   BenchmarkBudgetStopError,
   type BenchmarkBudgetStop,
@@ -57,10 +58,17 @@ class AlwaysFailingProvider extends ScriptedLlmProvider {
   }
 }
 
+class OversizedInputProvider extends ScriptedLlmProvider {
+  override async *stream(_options: GenerateOptions): AsyncIterable<StreamChunk> {
+    yield { type: 'usage', usage: { inputTokens: 9_000, outputTokens: 10 } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+}
+
 describe('benchmark spend/request gates (WAVE-C-T10)', () => {
   it('exposes the agreed defaults', () => {
     expect(BENCHMARK_GATE_DEFAULTS).toEqual({
-      maxRequests: 96,
+      maxRequests: 120,
       maxInputTokensPerRequest: 8_000,
       maxOutputTokensPerRequest: 4_000,
       maxEstimatedCostUsd: 1,
@@ -87,12 +95,14 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     expect(snapshot.stops).toEqual([])
   })
 
-  it('covers a full record (8 classes x 3 runs) within the 96-request default', async () => {
+  it('covers a full record (8 classes x 3 runs x 4 steps) with headroom in the 120-request default', async () => {
     const gate = new BenchmarkBudgetGate()
     const record = await buildBenchmarkRecord({ runs: 3, gate, clock: monotonicClock().clock })
 
     const maxSteps = Math.max(...BENCHMARK_FIXTURES.map(fixture => fixture.steps.length))
-    expect(SPEC_38_CLASSES.length * 3 * maxSteps).toBeLessThanOrEqual(
+    expect(SPEC_38_CLASSES.length * 3 * maxSteps).toBe(96)
+    expect(BENCHMARK_GATE_DEFAULTS.maxRequests).toBe(120)
+    expect(SPEC_38_CLASSES.length * 3 * maxSteps).toBeLessThan(
       BENCHMARK_GATE_DEFAULTS.maxRequests,
     )
     expect(record.budgetGate.requests).toBeLessThanOrEqual(BENCHMARK_GATE_DEFAULTS.maxRequests)
@@ -164,6 +174,81 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     expect(metrics.requestPath.llmRequests).toBe(1)
     expect(metrics.modelSteps).toBe(1)
     expect(metrics.committedAction).toBeNull()
+  })
+
+  it('records the triggering request usage before stopping on the reported output cap', async () => {
+    const gate = new BenchmarkBudgetGate({ maxOutputTokensPerRequest: 100 })
+    const metrics = await runFixture(getBenchmarkFixture('opening-spread'), {
+      gate,
+      clock: monotonicClock().clock,
+    })
+    const stop = budgetStopOf(metrics)
+    const snapshot = gate.snapshot()
+
+    expect(metrics.outcome).toBe('budget_stop')
+    expect(stop.gate).toBe('request-output-tokens')
+    expect(stop.observed).toBe(192)
+
+    expect(snapshot.outputTokens).toBe(192)
+    expect(snapshot.inputTokens).toBeGreaterThan(0)
+    expect(snapshot.requests).toBe(1)
+    expect(snapshot.estimatedCostUsd).toBeCloseTo(
+      (snapshot.inputTokens * gate.pricing.inputUsdPerMillionTokens
+        + 192 * gate.pricing.outputUsdPerMillionTokens) / 1_000_000,
+      12,
+    )
+    expect(snapshot.stops.map(entry => entry.gate)).toEqual(['request-output-tokens'])
+  })
+
+  it('stops when the provider reports more input tokens than the per-request cap', async () => {
+    const gate = new BenchmarkBudgetGate({ maxInputTokensPerRequest: 8_000 })
+    const metrics = await runFixture(getBenchmarkFixture('opening-spread'), {
+      gate,
+      clock: monotonicClock().clock,
+      createProvider: (fixture, gameId) => new OversizedInputProvider(fixture, gameId),
+    })
+    const stop = budgetStopOf(metrics)
+    const snapshot = gate.snapshot()
+
+    expect(metrics.outcome).toBe('budget_stop')
+    expect(stop.gate).toBe('request-input-tokens')
+    expect(stop.observed).toBe(9_000)
+    expect(stop.limit).toBe(8_000)
+    expect(snapshot.inputTokens).toBe(9_000)
+    expect(snapshot.outputTokens).toBe(10)
+    expect(snapshot.requests).toBe(1)
+    expect(snapshot.stops.map(entry => entry.gate)).toEqual(['request-input-tokens'])
+  })
+
+  it('requires an explicit price schedule in live mode and never applies the placeholder', () => {
+    expect(() => new BenchmarkBudgetGate({}, undefined, 'live')).toThrow(RangeError)
+    expect(() => new BenchmarkBudgetGate({}, undefined, 'live')).toThrow(/price schedule/)
+
+    const live = new BenchmarkBudgetGate(
+      {},
+      { inputUsdPerMillionTokens: 0.28, outputUsdPerMillionTokens: 0.42 },
+      'live',
+    )
+    expect(live.mode).toBe('live')
+    expect(live.pricingSource).toBe('explicit')
+    expect(live.pricing).toEqual({
+      inputUsdPerMillionTokens: 0.28,
+      outputUsdPerMillionTokens: 0.42,
+    })
+
+    const scripted = new BenchmarkBudgetGate()
+    expect(scripted.mode).toBe('scripted')
+    expect(scripted.pricingSource).toBe('placeholder')
+    expect(scripted.pricing).toEqual(BENCHMARK_PLACEHOLDER_PRICES)
+  })
+
+  it('fails before the first request when the harness asks for live mode without prices', async () => {
+    await expect(
+      runFixture(getBenchmarkFixture('opening-spread'), {
+        gateMode: 'live',
+        clock: monotonicClock().clock,
+      }),
+    ).rejects.toThrow(/price schedule/)
   })
 
   it('stops before the first request when the projected cost cannot fit the budget', async () => {

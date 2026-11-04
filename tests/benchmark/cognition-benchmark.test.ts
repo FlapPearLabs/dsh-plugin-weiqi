@@ -57,7 +57,11 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
       expect(metrics.requestPath).toEqual({
         provider: 'benchmark-scripted',
         model: 'scripted-legal-move-adapter-v1',
+        seam: 'dsh-llm-runtime',
         llmRequests: fixture.steps.length,
+        transportAttempts: fixture.steps.length,
+        admittedRequests: fixture.steps.length,
+        retryAttempts: 0,
         loopMarkedRequests: fixture.steps.length,
         streamSeamRequests: fixture.steps.length,
         retryPolicy: { mode: 'normal', maxRetries: 0 },
@@ -166,10 +170,13 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
     expect(record.model.isDeepSeek).toBe(false)
     expect(record.model.kind).toBe('scripted-deterministic')
     expect(record.model.requestPath).toBe('dsh-llm-runtime')
+    expect(record.model.requestPath).toBe(
+      record.classes[0]?.fixtures[0]?.runs[0]?.requestPath.seam,
+    )
     expect(record.model.provider).toBe('benchmark-scripted')
     expect(record.budgetUnderTest.status).toBe('candidate-not-applied')
     expect(record.budgetGate.config).toMatchObject({
-      maxRequests: 96,
+      maxRequests: 120,
       maxInputTokensPerRequest: 8_000,
       maxOutputTokensPerRequest: 4_000,
       maxEstimatedCostUsd: 1,

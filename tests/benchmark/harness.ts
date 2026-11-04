@@ -28,7 +28,6 @@ import {
   BENCHMARK_PLACEHOLDER_PRICES,
   BenchmarkBudgetGate,
   BenchmarkBudgetStopError,
-  estimateRequestInputTokens,
   type BenchmarkBudgetGateSnapshot,
   type BenchmarkBudgetStop,
   type BenchmarkGateConfig,
@@ -112,6 +111,8 @@ export type RunFixtureOptions = {
   readonly gate?: BenchmarkBudgetGate
   readonly gates?: Partial<BenchmarkGateConfig>
   readonly pricing?: BenchmarkPriceSchedule
+  /** `'live'` spends real money and therefore requires an explicit price schedule. */
+  readonly gateMode?: 'scripted' | 'live'
   readonly createProvider?: (fixture: BenchmarkFixture, gameId: string) => ScriptedLlmProvider
 }
 
@@ -271,10 +272,11 @@ export async function runFixture(
   const budget: GoTurnBudget = { ...CANDIDATE_BUDGET, ...options.budget }
   const enforcement = (options.createEnforcement ?? createGoTurnEnforcement)(budget)
   const registry = registerGoTools({ port, enforcement, guard: new GoCapabilityGuard() })
-  const gate = options.gate ?? new BenchmarkBudgetGate(options.gates, options.pricing)
+  const gate = options.gate
+    ?? new BenchmarkBudgetGate(options.gates, options.pricing, options.gateMode ?? 'scripted')
   gate.beginTurn()
   const provider = (options.createProvider ?? defaultProvider)(fixture, gameId)
-  const path = await openBenchmarkRequestPath(provider)
+  const path = await openBenchmarkRequestPath(provider, gate)
   const clock = options.clock ?? (() => performance.now())
   const tools = toolSchemas()
   const messages: Message[] = [
@@ -308,38 +310,26 @@ export async function runFixture(
           maxTokens: SCRIPTED_PROPOSED_MAX_TOKENS,
         }),
       )
-      const proposedMaxTokens = resolvedRequest.maxTokens ?? 0
-      const decision = gate.beginRequest({
-        step: modelStep.index,
-        estimatedInputTokens: estimateRequestInputTokens({
-          system: BENCHMARK_SYSTEM_PROMPT,
-          messages,
-          tools,
-        }),
-        proposedMaxTokens,
-        toolNames: tools.map(tool => tool.name),
-      })
-      requestCaps.push(decision.maxTokens)
-      if (decision.maxTokens < SCRIPTED_PROPOSED_MAX_TOKENS) oversizedProposalsClamped += 1
-      if (decision.maxTokens > budget.perRequestMaxTokens) {
-        throw new CognitionBenchmarkBypassError(
-          'agent/request',
-          `token cap ${decision.maxTokens} exceeds perRequestMaxTokens ${budget.perRequestMaxTokens}`,
-        )
-      }
-
       const response = await path.request({
         fixture: fixture.name,
         step: modelStep.index,
-        maxTokens: decision.maxTokens,
+        maxTokens: resolvedRequest.maxTokens ?? 0,
         system: BENCHMARK_SYSTEM_PROMPT,
         messages,
         tools,
       })
+      requestCaps.push(response.maxTokens)
+      if (response.maxTokens < SCRIPTED_PROPOSED_MAX_TOKENS) oversizedProposalsClamped += 1
+      if (response.maxTokens > budget.perRequestMaxTokens) {
+        throw new CognitionBenchmarkBypassError(
+          'agent/request',
+          `token cap ${response.maxTokens} exceeds perRequestMaxTokens ${budget.perRequestMaxTokens}`,
+        )
+      }
+
       inputTokens += response.usage.inputTokens
       outputTokens += response.usage.outputTokens
       modelStep.complete({ tokens: response.usage.inputTokens + response.usage.outputTokens })
-      gate.completeRequest({ step: modelStep.index, usage: response.usage })
 
       const toolResults: { callId: (typeof response.toolCalls)[number]['id']; result: unknown; rejected: boolean }[] = []
 
@@ -394,6 +384,14 @@ export async function runFixture(
   } finally {
     requestPathStats = path.stats()
     await path.dispose()
+  }
+
+  if (requestPathStats.retryAttempts > 0) {
+    throw new CognitionBenchmarkBypassError(
+      'request_path',
+      `adapter made ${requestPathStats.transportAttempts} transport attempts for `
+      + `${requestPathStats.admittedRequests} admitted requests; retries are forbidden`,
+    )
   }
 
   const latencyMs = clock() - startedAt
@@ -583,7 +581,8 @@ export type BenchmarkRecord = {
     readonly kind: 'scripted-deterministic'
     readonly id: typeof SCRIPTED_MODEL_ID
     readonly provider: typeof BENCHMARK_PROVIDER_ID
-    readonly requestPath: 'dsh-llm-runtime'
+    /** The seam the runs actually left through, observed from their request-path stats. */
+    readonly requestPath: string
     readonly isDeepSeek: false
     readonly disclosure: string
   }
@@ -606,6 +605,17 @@ export type BuildRecordOptions = {
   readonly gate?: BenchmarkBudgetGate
   readonly gates?: Partial<BenchmarkGateConfig>
   readonly pricing?: BenchmarkPriceSchedule
+  readonly gateMode?: 'scripted' | 'live'
+}
+
+function observedRequestPathOf(observed: ReadonlySet<string>): string {
+  if (observed.size === 0) return 'none'
+  if (observed.size > 1) {
+    throw new Error(
+      `benchmark runs left through mixed request paths: ${[...observed].join(', ')}`,
+    )
+  }
+  return [...observed][0] ?? 'none'
 }
 
 const HARD_CAPS = Object.freeze([
@@ -623,20 +633,24 @@ export async function buildBenchmarkRecord(
   const now = options.now ?? (() => new Date())
   const fixtures = options.fixtures ?? BENCHMARK_FIXTURES
   const budget = options.budget ?? CANDIDATE_BUDGET
-  const gate = options.gate ?? new BenchmarkBudgetGate(options.gates, options.pricing)
+  const gate = options.gate
+    ?? new BenchmarkBudgetGate(options.gates, options.pricing, options.gateMode ?? 'scripted')
 
   const classes: ClassRecord[] = []
+  const observedRequestPaths = new Set<string>()
   for (const fixtureClass of SPEC_38_CLASSES) {
     const classFixtures = fixtures.filter(fixture => fixture.class === fixtureClass)
     const records: FixtureRecord[] = []
     for (const fixture of classFixtures) {
       const runs: BenchmarkRunMetrics[] = []
       for (let run = 0; run < runsPerFixture; run += 1) {
-        runs.push(await runFixture(fixture, {
+        const metrics = await runFixture(fixture, {
           budget,
           gate,
           ...(options.clock === undefined ? {} : { clock: options.clock }),
-        }))
+        })
+        observedRequestPaths.add(metrics.requestPath.seam)
+        runs.push(metrics)
       }
       records.push({
         fixture: fixture.name,
@@ -658,7 +672,7 @@ export async function buildBenchmarkRecord(
       kind: 'scripted-deterministic',
       id: SCRIPTED_MODEL_ID,
       provider: BENCHMARK_PROVIDER_ID,
-      requestPath: 'dsh-llm-runtime',
+      requestPath: observedRequestPathOf(observedRequestPaths),
       isDeepSeek: false,
       disclosure:
         'Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime '

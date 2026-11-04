@@ -11,6 +11,7 @@ import LlmRuntime, {
   type ToolSchema,
 } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
+import { BenchmarkBudgetGate, estimateRequestInputTokens } from './budget-gate.js'
 import { BENCHMARK_PROVIDER_ID } from './fake-provider.js'
 import { SCRIPTED_MODEL_ID } from './scripted-model.js'
 
@@ -27,6 +28,12 @@ import { SCRIPTED_MODEL_ID } from './scripted-model.js'
  * surface, so the step/turn driver lives in the harness and is a documented
  * stand-in; everything below the loop (adapter registry, retry-policy capture,
  * waterfall, chunk assembly) is the pinned real implementation.
+ *
+ * The spend gate lives HERE, not in the harness. `openBenchmarkRequestPath`
+ * requires a `BenchmarkBudgetGate`, refuses an adapter whose retry policy
+ * allows retries, and admits/records every request through the gate itself, so
+ * a caller holding the path object cannot dispatch a request without being
+ * counted. Passing no gate is a type error and throws at runtime.
  */
 
 export type BenchmarkRequestInput = Readonly<{
@@ -48,6 +55,11 @@ export type BenchmarkResponse = Readonly<{
   readonly usage: TokenUsage
   readonly toolCalls: readonly BenchmarkToolCall[]
   readonly finish: FinishReason
+  /** 1-based index of this request inside the benchmark session gate. */
+  readonly requestIndex: number
+  /** `maxTokens` the gate admitted (the requested value, clamped to its cap). */
+  readonly maxTokens: number
+  readonly clamped: boolean
 }>
 
 export type BenchmarkRetryPolicyFacts = Readonly<{
@@ -58,7 +70,16 @@ export type BenchmarkRetryPolicyFacts = Readonly<{
 export type BenchmarkRequestPathStats = Readonly<{
   readonly provider: string
   readonly model: string
+  /** The seam the observed requests actually left through. */
+  readonly seam: 'dsh-llm-runtime'
+  /** Adapter stream invocations (prepared calls dispatched). */
   readonly llmRequests: number
+  /** Attempts the adapter itself reported for those invocations. */
+  readonly transportAttempts: number
+  /** Requests the spend gate admitted. */
+  readonly admittedRequests: number
+  /** Transport attempts beyond admitted requests: retries the gate never saw. */
+  readonly retryAttempts: number
   readonly loopMarkedRequests: number
   readonly streamSeamRequests: number
   readonly retryPolicy: BenchmarkRetryPolicyFacts
@@ -74,7 +95,28 @@ export class BenchmarkProviderFailureError extends Error {
   }
 }
 
+/**
+ * Raised before any request leaves when the registered adapter declares a
+ * retry policy the gate does not allow: an adapter-internal retry would spend
+ * money without an admitted request behind it.
+ */
+export class BenchmarkRetryPolicyError extends Error {
+  readonly mode: 'normal' | 'always'
+  readonly maxRetries: number | null
+
+  constructor(mode: 'normal' | 'always', maxRetries: number | null) {
+    super(
+      `Benchmark provider retry policy is forbidden (mode=${mode}, maxRetries=${String(maxRetries)}); `
+      + 'an adapter that retries would spend without a gated request',
+    )
+    this.name = 'BenchmarkRetryPolicyError'
+    this.mode = mode
+    this.maxRetries = maxRetries
+  }
+}
+
 export type BenchmarkRequestPath = Readonly<{
+  /** Admit one gated request and dispatch it through the real runtime. */
   request(input: BenchmarkRequestInput): Promise<BenchmarkResponse>
   stats(): BenchmarkRequestPathStats
   dispose(): Promise<void>
@@ -82,7 +124,15 @@ export type BenchmarkRequestPath = Readonly<{
 
 export async function openBenchmarkRequestPath(
   provider: LlmAdapter,
+  gate: BenchmarkBudgetGate,
 ): Promise<BenchmarkRequestPath> {
+  if (!(gate instanceof BenchmarkBudgetGate)) {
+    throw new TypeError(
+      'openBenchmarkRequestPath requires a BenchmarkBudgetGate; '
+      + 'dispatching benchmark requests without the spend gate is forbidden',
+    )
+  }
+
   const ctx = new Context()
   await ctx.plugin(LlmRuntime)
   ctx.llm.registerAdapter([BENCHMARK_PROVIDER_ID], provider)
@@ -101,18 +151,38 @@ export async function openBenchmarkRequestPath(
     mode: retryPolicy.mode,
     maxRetries: retryPolicy.mode === 'normal' ? retryPolicy.maxRetries : null,
   })
+  if (!gate.config.allowRetries && (retryPolicy.mode === 'always' || retryPolicy.maxRetries > 0)) {
+    await ctx.fiber.dispose()
+    throw new BenchmarkRetryPolicyError(retryFacts.mode, retryFacts.maxRetries)
+  }
+
+  let admittedRequests = 0
+  let disposed = false
 
   return Object.freeze({
     async request(input: BenchmarkRequestInput): Promise<BenchmarkResponse> {
+      if (disposed) throw new Error('benchmark request path is disposed')
+      const decision = gate.beginRequest({
+        step: input.step,
+        estimatedInputTokens: estimateRequestInputTokens({
+          system: input.system,
+          messages: input.messages,
+          tools: input.tools,
+        }),
+        proposedMaxTokens: input.maxTokens,
+        toolNames: input.tools.map(tool => tool.name),
+      })
+      admittedRequests += 1
+
       const prepared = await ctx.llm.prepareCall({
         provider: BENCHMARK_PROVIDER_ID,
         model: SCRIPTED_MODEL_ID,
-        maxTokens: input.maxTokens,
+        maxTokens: decision.maxTokens,
       })
       const request = markAgentLoopRequest({
         provider: BENCHMARK_PROVIDER_ID,
         model: SCRIPTED_MODEL_ID,
-        maxTokens: input.maxTokens,
+        maxTokens: decision.maxTokens,
         messages: [...input.messages],
         system: input.system,
         tools: [...input.tools],
@@ -131,6 +201,8 @@ export async function openBenchmarkRequestPath(
         throw new Error(`benchmark provider returned no usage chunk (step ${input.step})`)
       }
 
+      gate.completeRequest({ step: input.step, usage })
+
       const toolCalls: BenchmarkToolCall[] = []
       for (const block of assembler.blocks()) {
         if (block.type === 'tool-call') {
@@ -142,14 +214,26 @@ export async function openBenchmarkRequestPath(
         }
       }
 
-      return Object.freeze({ usage: Object.freeze({ ...usage }), toolCalls: Object.freeze(toolCalls), finish })
+      return Object.freeze({
+        usage: Object.freeze({ ...usage }),
+        toolCalls: Object.freeze(toolCalls),
+        finish,
+        requestIndex: decision.requestIndex,
+        maxTokens: decision.maxTokens,
+        clamped: decision.clamped,
+      })
     },
 
     stats(): BenchmarkRequestPathStats {
+      const transportAttempts = transportAttemptsOf(provider)
       return Object.freeze({
         provider: BENCHMARK_PROVIDER_ID,
         model: SCRIPTED_MODEL_ID,
+        seam: 'dsh-llm-runtime',
         llmRequests: physicalCallsOf(provider),
+        transportAttempts,
+        admittedRequests,
+        retryAttempts: Math.max(0, transportAttempts - admittedRequests),
         loopMarkedRequests: loopMarkedCallsOf(provider),
         streamSeamRequests,
         retryPolicy: retryFacts,
@@ -157,6 +241,7 @@ export async function openBenchmarkRequestPath(
     },
 
     async dispose(): Promise<void> {
+      disposed = true
       await ctx.fiber.dispose()
     },
   })
@@ -165,6 +250,7 @@ export async function openBenchmarkRequestPath(
 type ProviderCounters = {
   readonly physicalCalls: number
   readonly loopMarkedRequests: number
+  readonly transportAttempts?: number
 }
 
 function providerCounters(provider: LlmAdapter): ProviderCounters | undefined {
@@ -180,4 +266,15 @@ function physicalCallsOf(provider: LlmAdapter): number {
 
 function loopMarkedCallsOf(provider: LlmAdapter): number {
   return providerCounters(provider)?.loopMarkedRequests ?? -1
+}
+
+/**
+ * Attempts the adapter reports for its own transport (an HTTP adapter counts
+ * requests it actually sent). An adapter that does not expose the counter is
+ * measured by its stream invocations.
+ */
+function transportAttemptsOf(provider: LlmAdapter): number {
+  const counters = providerCounters(provider)
+  if (counters === undefined) return -1
+  return typeof counters.transportAttempts === 'number' ? counters.transportAttempts : counters.physicalCalls
 }

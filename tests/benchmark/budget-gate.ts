@@ -20,7 +20,9 @@ export type BenchmarkGateConfig = Readonly<{
 }>
 
 export const BENCHMARK_GATE_DEFAULTS = Object.freeze({
-  maxRequests: 96,
+  // 8 §38 classes x 3 runs x up to 4 model steps = 96, plus headroom. The
+  // token caps still bound real spend; this cap only bounds request count.
+  maxRequests: 120,
   maxInputTokensPerRequest: 8_000,
   maxOutputTokensPerRequest: 4_000,
   maxEstimatedCostUsd: 1,
@@ -30,8 +32,11 @@ export const BENCHMARK_GATE_DEFAULTS = Object.freeze({
 
 /**
  * PLACEHOLDER prices, not a DeepSeek quote. The fake provider is local and
- * free, so the schedule only has to make the cost gate executable; a real run
- * must pass the then-current approved DeepSeek price schedule instead.
+ * free, so the schedule only has to make the cost gate executable.
+ *
+ * A live run (mode `'live'`) must pass the then-current approved DeepSeek
+ * price schedule explicitly: omitting it throws instead of silently applying
+ * these placeholder numbers.
  */
 export type BenchmarkPriceSchedule = Readonly<{
   inputUsdPerMillionTokens: number
@@ -42,6 +47,15 @@ export const BENCHMARK_PLACEHOLDER_PRICES = Object.freeze({
   inputUsdPerMillionTokens: 1,
   outputUsdPerMillionTokens: 2,
 } satisfies BenchmarkPriceSchedule)
+
+/**
+ * `'scripted'` runs a local free adapter and may fall back to the documented
+ * placeholder prices. `'live'` spends real money and must supply a price
+ * schedule, so a silent placeholder can never govern a paid run.
+ */
+export type BenchmarkGateMode = 'scripted' | 'live'
+
+export type BenchmarkPricingSource = 'placeholder' | 'explicit'
 
 export type BenchmarkBudgetStopGate =
   | 'max-requests'
@@ -91,7 +105,9 @@ export type CompleteRequestInput = Readonly<{
 
 export type BenchmarkBudgetGateSnapshot = Readonly<{
   readonly config: BenchmarkGateConfig
+  readonly mode: BenchmarkGateMode
   readonly pricing: BenchmarkPriceSchedule
+  readonly pricingSource: BenchmarkPricingSource
   readonly requests: number
   readonly inputTokens: number
   readonly outputTokens: number
@@ -136,6 +152,12 @@ function assertNonNegativeInteger(value: number, field: string): void {
   }
 }
 
+function assertNonNegativeFinite(value: number, field: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`Benchmark gate ${field} must be a non-negative finite number: ${String(value)}`)
+  }
+}
+
 /**
  * One gate instance owns one benchmark session: request and spend counters are
  * cumulative across fixtures and repeated runs, while `beginTurn()` resets only
@@ -143,7 +165,9 @@ function assertNonNegativeInteger(value: number, field: string): void {
  */
 export class BenchmarkBudgetGate {
   readonly config: BenchmarkGateConfig
+  readonly mode: BenchmarkGateMode
   readonly pricing: BenchmarkPriceSchedule
+  readonly pricingSource: BenchmarkPricingSource
 
   private requestCount = 0
   private inputTokenCount = 0
@@ -154,10 +178,19 @@ export class BenchmarkBudgetGate {
 
   constructor(
     config: Partial<BenchmarkGateConfig> = {},
-    pricing: BenchmarkPriceSchedule = BENCHMARK_PLACEHOLDER_PRICES,
+    pricing?: BenchmarkPriceSchedule,
+    mode: BenchmarkGateMode = 'scripted',
   ) {
+    if (mode === 'live' && pricing === undefined) {
+      throw new RangeError(
+        'Benchmark gate live mode requires an explicit approved price schedule; '
+        + 'the placeholder prices are forbidden for a paid run',
+      )
+    }
     this.config = Object.freeze({ ...BENCHMARK_GATE_DEFAULTS, ...config })
-    this.pricing = Object.freeze({ ...pricing })
+    this.mode = mode
+    this.pricingSource = pricing === undefined ? 'placeholder' : 'explicit'
+    this.pricing = Object.freeze({ ...(pricing ?? BENCHMARK_PLACEHOLDER_PRICES) })
     assertNonNegativeInteger(this.config.maxRequests, 'maxRequests')
     assertNonNegativeInteger(this.config.maxInputTokensPerRequest, 'maxInputTokensPerRequest')
     assertNonNegativeInteger(this.config.maxOutputTokensPerRequest, 'maxOutputTokensPerRequest')
@@ -166,6 +199,8 @@ export class BenchmarkBudgetGate {
         `Benchmark gate maxEstimatedCostUsd must be a non-negative finite number: ${String(this.config.maxEstimatedCostUsd)}`,
       )
     }
+    assertNonNegativeFinite(this.pricing.inputUsdPerMillionTokens, 'pricing.inputUsdPerMillionTokens')
+    assertNonNegativeFinite(this.pricing.outputUsdPerMillionTokens, 'pricing.outputUsdPerMillionTokens')
   }
 
   beginTurn(): void {
@@ -241,11 +276,21 @@ export class BenchmarkBudgetGate {
   }
 
   /**
-   * Record reported usage and stop when it breaks a per-request cap or the
+   * Record reported usage, then stop when it breaks a per-request cap or the
    * session budget even if the provider ignored the requested `maxTokens`.
+   *
+   * Usage is accumulated BEFORE any check throws: the request that trips a cap
+   * was still dispatched and still costs money, so the snapshot must contain
+   * its real usage and the stop must be recorded in the same call.
    */
   completeRequest(input: CompleteRequestInput): void {
     const { usage } = input
+    this.inputTokenCount += usage.inputTokens
+    this.outputTokenCount += usage.outputTokens
+    this.costUsd = Math.round(
+      (this.costUsd + costOf(usage.inputTokens, usage.outputTokens, this.pricing)) * 1e12,
+    ) / 1e12
+
     if (usage.inputTokens > this.config.maxInputTokensPerRequest) {
       throw this.stop(
         'request-input-tokens',
@@ -264,12 +309,6 @@ export class BenchmarkBudgetGate {
         this.config.maxOutputTokensPerRequest,
       )
     }
-
-    this.inputTokenCount += usage.inputTokens
-    this.outputTokenCount += usage.outputTokens
-    this.costUsd = Math.round(
-      (this.costUsd + costOf(usage.inputTokens, usage.outputTokens, this.pricing)) * 1e12,
-    ) / 1e12
 
     if (this.costUsd > this.config.maxEstimatedCostUsd) {
       throw this.stop(
@@ -297,7 +336,9 @@ export class BenchmarkBudgetGate {
   snapshot(): BenchmarkBudgetGateSnapshot {
     return Object.freeze({
       config: this.config,
+      mode: this.mode,
       pricing: this.pricing,
+      pricingSource: this.pricingSource,
       requests: this.requestCount,
       inputTokens: this.inputTokenCount,
       outputTokens: this.outputTokenCount,
