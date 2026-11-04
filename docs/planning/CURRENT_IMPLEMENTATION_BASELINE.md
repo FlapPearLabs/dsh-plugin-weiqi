@@ -99,8 +99,8 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-CAP-01 | Go lane isolated preset | Spec §19/§21 no Code Mode / bash / python / web / subagent / generic MCP / solver | No preset, no scope configuration | NOT_IMPLEMENTED | Preset + scope | C | IMPLEMENTATION_TICKET |
-| BL-CAP-02 | Execution-time capability guards | Spec §21 | No code | NOT_IMPLEMENTED | Guards at tool boundary | C | IMPLEMENTATION_TICKET |
+| BL-CAP-01 | Go lane isolated preset | Spec §19/§21 no Code Mode / bash / python / web / subagent / generic MCP / solver | `src/preset/go-preset.ts` declares a frozen native-only preset (presentation `native-only`, 8 forbidden capability kinds, exact 8 `go.*` Phase A tool paths, `GO_TOOL_PATH_PREFIXES = ['go.']`); the Go lane is created with `meta.agentPreset` **and** `setup: composeGoLaneScope`, which binds the guard as the agent-scoped `goCapabilities` service via `Context.provide`; PR #74 (`81979dd`), adversarial review r1-r3 CHANGES_REQUESTED -> r4 APPROVE; 148 tests | IMPLEMENTED_VERIFIED | None (real AgentLoop factory not in the pinned dependency surface; `restrict()` has no implementation, so the claim is the declaration + setup composition, not per-tool execution hooks) | C | NO_ACTION |
+| BL-CAP-02 | Execution-time capability guards | Spec §21 | `src/runtime/go-capability-guard.ts`: private WeakMap provenance + `nativeGoCapability` accepts only the exact 8-tool surface; `register`/`execute`/`assertGoCapabilityAllowed`/scope all reject forged, out-of-surface, forbidden-kind and invalid paths; `go.exec` refused at five entry points; `resolveGoCapabilityGuard()` is the single production accessor; PR #74 (`81979dd`), review r4 APPROVE | IMPLEMENTED_VERIFIED | None (per-tool execution hooks await C-T02/C-T05 wiring; Cordis service isolation for multi-agent lifecycles flagged there) | C | NO_ACTION |
 | BL-CAP-03 | Anti-cheat tests | Spec §39.3 | No tests | NOT_IMPLEMENTED | Test suite with Wave C | C | IMPLEMENTATION_TICKET |
 
 ## Budget
