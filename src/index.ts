@@ -6,6 +6,7 @@ import { COMPANION_LANES, laneSessionId } from './runtime/lane-session.js'
 import { RuntimeFocusOwner, bindPinnedDshFocusBoundary } from './runtime/focus-boundary.js'
 import { bindPinnedDshCooperativeYield } from './runtime/focus-yield.js'
 import { bindPinnedDshLaneResume, emitLaneSwitched } from './runtime/focus-resume.js'
+import { GO_PRESET_ID } from './preset/go-preset.js'
 
 export * from './contracts/index.js'
 
@@ -27,7 +28,14 @@ export interface Config {}
 export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
   const agents = {} as Record<Lane, Agent>
   for (const lane of COMPANION_LANES) {
-    agents[lane] = (await ctx.agents.create({ sessionId: laneSessionId(lane) })).agent
+    agents[lane] = (
+      await ctx.agents.create({
+        sessionId: laneSessionId(lane),
+        // Only the isolated Go lane is composed from the native-only preset;
+        // the durable session header is what records that composition.
+        ...(lane === 'go' ? { meta: { agentPreset: GO_PRESET_ID } } : {}),
+      })
+    ).agent
   }
 
   const focusOwner = new RuntimeFocusOwner('work')
