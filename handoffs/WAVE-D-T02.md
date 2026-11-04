@@ -6,6 +6,7 @@
 - 分支：`work/d-t02-cross-lane-awareness`
 - 红测试提交：`5c52539`
 - 实现提交：`a37f268`
+- 测试有效性修订（r1 P2-1）：`e459e61`
 - 状态：实现完成，本地 `pnpm verify` 通过；**未推送、未开 PR、未合并**
 
 ## 做了什么
@@ -30,6 +31,7 @@
 | 红 | `pnpm test` | `FAIL src/bridge/awareness.test.ts`，`Error: Cannot find module './awareness.js'`；其余 13 files / **115** tests 仍通过 | `5c52539` |
 | 绿 | `pnpm test` | 14 files / **124 tests passed**（新增 9） | `a37f268` |
 | 回归 | `pnpm verify` | `EXIT=0`：typecheck PASS、124/124 PASS、clean+build PASS | `a37f268` |
+| P2 修订 | `pnpm verify` | `EXIT=0`：typecheck PASS、124/124 PASS、clean+build PASS | `e459e61` |
 
 ### 变异检查（证明隔离测试会红，不是空断言）
 
@@ -37,12 +39,13 @@
 |---|---|
 | 投影直接返回权威 payload 引用（隐藏字段随之外泄） | 2 个用例失败：`never inherits hidden payload carrying another lane history`、`hands each lane its own frozen copy, not the authoritative array` |
 | 契约数组按引用拷贝（`runningJobs` / `blockers` 不重建） | 1 个用例失败：`hands each lane its own frozen copy, not the authoritative array` |
+| 去掉 `schema.ts` 的未知字段校验（`assertKnownKeys` 两处调用） | 4 个用例失败（含新增的 `moves` / `boardStates` / `transcript` 拒绝断言） |
 | 还原后 | `src/bridge/awareness.test.ts` 9/9 通过 |
 
 ## 覆盖的验收点（Spec §12 / §35 / §40 Context Isolation）
 
-- **长局后 Work 侧无 Go 原始历史**：400 手（每手 3 个受影响棋块）后，Work 侧投影只含最新 `GameNotice`；用例另外构造 400 条 `raw-go-turn-*` / `raw-go-thought-*` 与 400 条 `raw-board-*` 原始历史，断言投影序列化后一条都不出现。
-- **对称：Go 侧无 Work 原始 transcript**：同样 400 手 + 400 组 `raw-work-tool-call-*` / `raw-work-stdout-*` 后，Go 侧投影只含 `WorkSnapshot` 四字段，序列化里不含任何 `raw-work-`。
+- **长局后 Work 侧无 Go 原始历史**：400 手（每手 3 个受影响棋块）后，Work 侧投影只含最新 `GameNotice`，own keys 精确等于契约的 7 个字段，最长数组为 3（只有最新一手的 `affectedGroups`）。同一用例构造 400 条 `raw-go-turn-*` / `raw-go-thought-*` 与 400 条 `raw-board-*`，作为 `moves` / `boardStates` 未知字段送入 `updateGame`，断言抛 `BridgeSchemaError`、错误信息指向多余字段、运行时仍停在第 400 手：原始历史不能经 Bridge 进入运行时，也就不会进入任何投影。
+- **对称：Go 侧无 Work 原始 transcript**：同样 400 手后，400 组 `raw-work-tool-call-*` / `raw-work-stdout-*` 作为 `transcript` 未知字段送入 `updateWork`，断言抛 `BridgeSchemaError` 且已发布的 `WorkSnapshot` 不变；Go 侧投影 own keys 等于 `WorkSnapshot` 的 4 个字段，最长数组为 2。
 - **无原始历史数组**：递归扫 `Reflect.ownKeys`（含非枚举与 symbol），`history` / `moves` / `moveHistory` / `transcript` / `board` / `boards` / `boardStates` / `events` / `messages` / `toolCalls` / `toolHistory` / `sessionHistory` / `handoff` 一律不出现；最长数组分别 ≤ 3（`affectedGroups`，且只有最新一手）与 ≤ 2（`runningJobs`）。
 - **不随局长增长**：400 手后的 Work 投影字节数 == 只发一条 `notice(400)` 的投影字节数，且 < 500 字节。
 - **重复读取不增长、不重投影**：同一来源 200 次读取返回同一冻结对象（`toBe`），getter 读数在首次投影后不再增加。
@@ -50,6 +53,8 @@
 - **交接消息不转发**：`handoff` 字段被 `assertGameNotice` 拒绝，运行时保持空/旧值；awareness 对象没有 handoff / 转发 / 队列成员。
 - **隐藏载荷不外泄**：在权威 `WorkSnapshot` 上定义非枚举 `history` 与 symbol `transcript`，在 `GameNotice` 上定义非枚举 361 格 `board` 与 `moves`；`Object.keys` 校验放行，但两个泳道的投影 own keys 精确等于契约字段、无 symbol、原型为 `Object.prototype`。
 - **只读**：副本冻结后对泳道视图 `push` / 赋值抛 `TypeError`，权威对象与另一泳道不受影响。
+
+隔离证据以字段集为准：own keys 精确相等（含递归、非枚举与 symbol）、最长数组长度、隐藏载荷用例，以及「原始历史作为未知字段被 schema 拒绝且运行时不变」。早先草稿里「把 raw-* 字符串 push 进局部数组、断言投影序列化后不出现」的扫描是空断言（字符串从未进入 runtime，任何实现都会通过），已在 `e459e61` 删除并改写成上面这些可失败的断言；不要把那次字符串扫描当作长局隔离证据。
 
 ## 改了哪些文件
 
