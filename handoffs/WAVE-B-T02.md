@@ -1,14 +1,15 @@
 # Handoff · WAVE-B-T02
 
-- 状态：READY_FOR_REVIEW（Round 1 审查 CHANGES_REQUESTED，P1/P2 已返修，待复审）
-- 轮次：Round 2/6
+- 状态：READY_FOR_REVIEW（Round 2 审查 CHANGES_REQUESTED，P1 已返修，待 Round 3 复审）
+- 轮次：Round 3/6
 - 分支：`work/b-t02-tenuki-adapter`
 - 开发 worktree：`/Users/songshiyao/Documents/ChatGPT/dsh-plugin-weiqi-wt/WAVE-B-T02`
 - 基线 BASE_SHA：`8249c12`（merge PR #70 后的 main；本分支起点）
-- 红测试 commit：`5edc45f`（首轮）；`45b6f71`（返修轮 P1/P2 回归测试）
-- 修复 commit：`e0534b2`（P1 + P2）
-- 待审代码 HEAD_SHA：`e0534b2`（Round 1 审的是 `3180083`）
+- 红测试 commit：`5edc45f`（首轮）；`45b6f71`（Round 1 返修）；`d607cf4`（Round 2 P1 回归）
+- 修复 commit：`e0534b2`（Round 1 P1 + P2）；`6f5199f`（Round 2 P1）
+- 待审代码 HEAD_SHA：`6f5199f`（Round 2 审的是 `59b3b63`）
 - Round 1 审查报告：`.omo/reviews/WAVE-B-T02/r1.md`（P0 0 / P1 1 / P2 1 / P3 1，CHANGES_REQUESTED）
+- Round 2 审查报告：`.omo/reviews/WAVE-B-T02/r2.md`（P0 0 / P1 1 / P2 1 / P3 1，CHANGES_REQUESTED）
 - 审查 worktree：由审查者填写
 - 遵循契约：`~/.agents/engineering/CONTRACT.md`
 
@@ -38,9 +39,9 @@
 - 文件与行数（相对 BASE_SHA `8249c12`，Round 2 返修后）：
   - `package.json` +3（`dependencies.tenuki: "0.3.1"`）
   - `pnpm-lock.yaml` +10（importer + resolution + snapshot）
-  - `src/rules/tenuki-adapter.ts` +461（新）
+  - `src/rules/tenuki-adapter.ts` +464（新）
   - `src/rules/tenuki.d.ts` +53（新）
-  - `src/rules/tenuki-adapter.test.ts` +279（新）
+  - `src/rules/tenuki-adapter.test.ts` +329（新）
   - `src/rules/tenuki-adapter-config.test.ts` +98（新）
   - `handoffs/WAVE-B-T02.md`（本文件）
 - 是否有范围外改动：无。
@@ -122,6 +123,38 @@ P2-SCORE-AFTER before {"returned":true,"winner":"user",...}（outcome winner 是
 - 新增 6 条测试：分歧后 pass、分歧后落子、分歧回滚还原被否认前的快照、未经结算的第三手 pass、认输后 score 拒绝、按分数结算后 score 一致。
 - 范围：只改 `src/rules/tenuki-adapter.ts` 与 `src/rules/tenuki-adapter.test.ts`；`src/rules/tenuki.d.ts`、契约、harness、pin 均未动。
 
+## 审查返修（Round 2 → Round 3）
+
+Round 2 审查（`.omo/reviews/WAVE-B-T02/r2.md`，针对 `59b3b63`）结论 CHANGES_REQUESTED：P0 0 / P1 1 / P2 1 / P3 1。本轮只修 P1（P2/P3 记录在「已知缺陷」，不顺手扩大范围）。
+
+| 编号 | 处理 | 证据 |
+| --- | --- | --- |
+| P1 `inspectGroup` 在环路/块状棋形下重复计数 | 已修复（`6f5199f`）：起点在遍历前入 `seenStones`，同色邻居在入栈时就标记，出栈后不再重复 append | 回归测试 `d607cf4`：2x2 恰 4 子 + 4 口气，3x3 恰 9 子 + 6 口气；在 `59b3b63` 上 2 failed |
+| P2 `getState().lastMove.point` 未深度冻结 | 未修（超出 P1 范围）：`lastMove` 对象已冻结但其中 `point` 未冻结；每次快照重新复制，不污染内部状态 | 记入「已知缺陷」B-T02-EDGE-3，建议下轮或 B-T04 处理 |
+| P3 `play()` 的 `captured` 元素未冻结 | 未修（超出 P1 范围）：数组已冻结，元素对象未冻结 | 记入「已知缺陷」B-T02-EDGE-4 |
+
+红测试（`d607cf4`，在未修复的 `59b3b63` 上运行）：
+
+```text
+pnpm exec vitest run src/rules/tenuki-adapter.test.ts -t inspectGroup
+  -> Test Files 1 failed (1); Tests 2 failed | 12 skipped (14)
+  -> 2x2 block: expected 4 to be 5        (info.stones.length)
+  -> 3x3 block: expected 9 to be 13       (info.stones.length)
+```
+
+修复前后 `stones.length`（同一组 2x2 / 3x3 黑块，白方以 pass 间隔落子后 `inspectGroup((0,0))` / `inspectGroup((1,1))`）：
+
+```text
+2x2 block   before 5   after 4   （唯一坐标 4，liberties 4：0,2 1,2 2,0 2,1）
+3x3 block   before 13  after 9   （唯一坐标 9，liberties 6：0,3 1,3 2,3 3,0 3,1 3,2）
+```
+
+返修后验证（`6f5199f`）：
+
+- `pnpm verify` → 退出码 0；`Test Files 16 passed (16)`，`Tests 138 passed (138)`（136 + 2）。
+- harness：`harness: 13 cases, methods: createGame, getState, inspectGroup, pass, play, resign, score, settle, failures: 0`（共享 harness 未改动，仍全绿）。
+- 范围：只改 `src/rules/tenuki-adapter.ts`（+4/-1）与 `src/rules/tenuki-adapter.test.ts`（+50），以及本文件。
+
 ## 限制与未验证
 
 - 本机 Node **v26.10.0**，而 `package.json` 要求 `>=24.11.1 <25`；安装与 verify 只有 pnpm engine 警告。CI 固定 Node 24.11.1，本次**未在 CI 的 Node 24 运行**。
@@ -139,6 +172,8 @@ P2-SCORE-AFTER before {"returned":true,"winner":"user",...}（outcome winner 是
 | --- | --- | --- | --- |
 | B-T02-EDGE-1 | P3 → P1（Round 1） | 分歧后（record 仍 playing、tenuki 已两连 pass）再请求 pass 被返回 `game-over`。 | 已修复（`e0534b2`），回归测试见「审查返修」 |
 | B-T02-EDGE-2 | P2（Round 1） | 认输后 `score()` 仍算盘面，可能返回与终局 `outcome` 相反的 winner。 | 已修复（`e0534b2`）：认输终局明确拒绝，分数终局保持一致 |
+| B-T02-EDGE-3 | P2（Round 2，遗留） | `freezeState` 只冻结 `lastMove` 对象，未冻结 `lastMove.point`；快照每次重建，故不能污染内部状态。 | 未修（本轮只修 P1），建议 `copyLastMove` 里改为 `Object.freeze(copyPoint(...))` |
+| B-T02-EDGE-4 | P3（Round 2，遗留） | `play()` 返回的 `captured` 数组已冻结，但元素对象未冻结。 | 未修（本轮只修 P1） |
 
 ## 已排除的假设
 
@@ -149,7 +184,7 @@ P2-SCORE-AFTER before {"returned":true,"winner":"user",...}（outcome winner 是
 
 ## 下一步
 
-- 审查者按 Standards + Spec 两轴复核，重点看：显式配置是否真的到达引擎、tenuki 是否只出现在 `src/rules/tenuki-adapter.ts`、`getState` 不可变、resign 语义、`superko` 分类取舍；Round 2 另请重点核对分歧回滚（被丢弃的两手 pass 与 `moveNumber` 回退）和认输后 `score()` 的拒绝是否符合 Spec §25。
+- 审查者按 Standards + Spec 两轴复核，重点看：显式配置是否真的到达引擎、tenuki 是否只出现在 `src/rules/tenuki-adapter.ts`、`getState` 不可变、resign 语义、`superko` 分类取舍；Round 3 另请核对 `inspectGroup` 的 visited 语义（起点的 `point` 键与邻居键都用 `x,y`）与 2x2/3x3 回归断言。
 - B-T03/B-T04 可直接复用 `createTenukiGoRulesPort()` 写 area/komi/超级劫与提子/自杀/结算夹具（B-T05 汇总）。
 
 ## 不要做什么
