@@ -37,6 +37,14 @@ export {
 } from './focus-yield.js'
 
 export {
+  bindPinnedDshLaneResume,
+  COMPANION_RESUME_PLUGIN,
+  emitLaneSwitched,
+  type FocusResumeBinding,
+  type FocusResumeBindingOptions,
+} from './focus-resume.js'
+
+export {
   COMPANION_HANDOFF_PLUGIN,
   createCompanionHandoff,
   type CompanionHandoff,
