@@ -112,7 +112,7 @@ the session and is recorded as `budget_stop` in the run metrics and in
 
 | Gate | Default | Enforced |
 |---|---:|---|
-| Total provider requests | 96 | checked before dispatch |
+| Total provider requests | 120 | checked before dispatch (8 classes x 3 runs x 4 steps = 96, plus headroom) |
 | Input tokens per request | 8000 | pre-flight estimate and reported usage |
 | Output tokens per request | 4000 | request clamped, reported usage re-checked |
 | Estimated session cost | $1.00 | projected before dispatch and accumulated after |
@@ -124,7 +124,11 @@ quote): 54 requests, estimated `$0.039681`, zero stops. The `budget-gate` test
 file proves each gate trips in isolation (max requests, input, output, cost,
 retry, search/fetch) and that the default path commits all eight classes
 without a false stop. The price schedule is a placeholder; a real run must pass
-the approved DeepSeek schedule to `BenchmarkBudgetGate`.
+the approved DeepSeek schedule to `BenchmarkBudgetGate`. The gate now lives
+inside the request path (`openBenchmarkRequestPath` requires it, so a caller
+cannot dispatch a request without admission), and live mode refuses to start
+without an explicit schedule instead of silently applying the placeholder
+prices. An adapter that declares retries is refused before any request leaves.
 
 ## What remains pending owner approval
 

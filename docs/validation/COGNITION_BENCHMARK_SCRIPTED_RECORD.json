@@ -2,7 +2,7 @@
   "recordKind": "cognition-benchmark",
   "specSection": "§38",
   "ticket": "WAVE-C-T10",
-  "generatedAt": "2026-11-04T10:02:55.262Z",
+  "generatedAt": "2026-11-04T10:20:05.262Z",
   "model": {
     "kind": "scripted-deterministic",
     "id": "scripted-legal-move-adapter-v1",
@@ -29,17 +29,19 @@
   },
   "budgetGate": {
     "config": {
-      "maxRequests": 96,
+      "maxRequests": 120,
       "maxInputTokensPerRequest": 8000,
       "maxOutputTokensPerRequest": 4000,
       "maxEstimatedCostUsd": 1,
       "allowRetries": false,
       "allowSearchFetch": false
     },
+    "mode": "scripted",
     "pricing": {
       "inputUsdPerMillionTokens": 1,
       "outputUsdPerMillionTokens": 2
     },
+    "pricingSource": "placeholder",
     "requests": 54,
     "inputTokens": 22593,
     "outputTokens": 8544,
@@ -61,10 +63,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 1.818125000000009,
+              "latencyMs": 1.7956250000000011,
               "stepLatenciesMs": [
-                1.199374999999975,
-                0.3478749999999877
+                1.2097080000000062,
+                0.3084170000000057
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -88,7 +90,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -102,10 +108,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.514125000000007,
+              "latencyMs": 0.5117500000000064,
               "stepLatenciesMs": [
-                0.2177910000000054,
-                0.2084159999999997
+                0.20699999999999363,
+                0.20504200000000594
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -129,7 +135,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -143,10 +153,10 @@
               "class": "opening",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.4362079999999935,
+              "latencyMs": 0.419667000000004,
               "stepLatenciesMs": [
-                0.18804099999999835,
-                0.15195900000000506
+                0.17995899999999665,
+                0.1559999999999917
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -170,7 +180,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -200,10 +214,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.4362079999999935,
-              "max": 1.818125000000009,
-              "mean": 0.9228193333333365,
-              "range": 1.3819170000000156
+              "min": 0.419667000000004,
+              "max": 1.7956250000000011,
+              "mean": 0.9090140000000039,
+              "range": 1.3759579999999971
             },
             "inputTokens": {
               "min": 887,
@@ -270,10 +284,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.41041699999999537,
+              "latencyMs": 0.41195899999999597,
               "stepLatenciesMs": [
-                0.21137499999997544,
-                0.13229200000000674
+                0.19633400000000734,
+                0.14454200000000128
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -297,7 +311,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -311,10 +329,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.3180409999999938,
+              "latencyMs": 0.3410829999999976,
               "stepLatenciesMs": [
-                0.12316700000002356,
-                0.13283400000000256
+                0.12537500000000534,
+                0.14887500000000387
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -338,7 +356,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -352,10 +374,10 @@
               "class": "simple capture",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.29454200000000696,
+              "latencyMs": 0.3023330000000044,
               "stepLatenciesMs": [
-                0.11766699999998309,
-                0.10283400000000142
+                0.12412500000000648,
+                0.10070900000000904
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -379,7 +401,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -409,10 +435,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.29454200000000696,
-              "max": 0.41041699999999537,
-              "mean": 0.3409999999999987,
-              "range": 0.1158749999999884
+              "min": 0.3023330000000044,
+              "max": 0.41195899999999597,
+              "mean": 0.351791666666666,
+              "range": 0.10962599999999156
             },
             "inputTokens": {
               "min": 839,
@@ -479,10 +505,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2514579999999853,
+              "latencyMs": 0.25312499999999716,
               "stepLatenciesMs": [
-                0.10254199999999969,
-                0.08124999999998295
+                0.10099999999999909,
+                0.0908330000000035
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -506,7 +532,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -520,10 +550,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.6202910000000088,
+              "latencyMs": 0.6320829999999944,
               "stepLatenciesMs": [
-                0.1144170000000031,
-                0.4497920000000022
+                0.11316700000000424,
+                0.4443330000000003
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -547,7 +577,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -561,10 +595,10 @@
               "class": "escape",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.22450000000000614,
+              "latencyMs": 0.2574160000000063,
               "stepLatenciesMs": [
-                0.09874999999999545,
-                0.07204199999998195
+                0.1167909999999921,
+                0.08174999999999955
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -588,7 +622,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -618,10 +656,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.22450000000000614,
-              "max": 0.6202910000000088,
-              "mean": 0.3654163333333334,
-              "range": 0.39579100000000267
+              "min": 0.25312499999999716,
+              "max": 0.6320829999999944,
+              "mean": 0.380874666666666,
+              "range": 0.37895799999999724
             },
             "inputTokens": {
               "min": 791,
@@ -688,10 +726,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2628750000000082,
+              "latencyMs": 0.2670000000000101,
               "stepLatenciesMs": [
-                0.1224589999999921,
-                0.08470800000000622
+                0.12754199999999116,
+                0.08083399999999585
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -715,7 +753,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -729,10 +771,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.22262499999999363,
+              "latencyMs": 0.2313749999999999,
               "stepLatenciesMs": [
-                0.10370900000000915,
-                0.07033400000000256
+                0.10241599999999096,
+                0.08099999999998886
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -756,7 +798,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -770,10 +816,10 @@
               "class": "local fight",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.23312500000000114,
+              "latencyMs": 0.26429199999999753,
               "stepLatenciesMs": [
-                0.10650000000001114,
-                0.07079200000001151
+                0.14216600000000312,
+                0.07250000000000512
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -797,7 +843,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -827,10 +877,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.22262499999999363,
-              "max": 0.2628750000000082,
-              "mean": 0.23954166666666765,
-              "range": 0.04025000000001455
+              "min": 0.2313749999999999,
+              "max": 0.2670000000000101,
+              "mean": 0.2542223333333358,
+              "range": 0.03562500000001023
             },
             "inputTokens": {
               "min": 839,
@@ -897,10 +947,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.27941699999999514,
+              "latencyMs": 0.29895799999999895,
               "stepLatenciesMs": [
-                0.0800830000000019,
-                0.15474999999997863
+                0.09108299999999758,
+                0.15604100000000187
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -926,7 +976,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -940,10 +994,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2292500000000075,
+              "latencyMs": 0.23550000000000182,
               "stepLatenciesMs": [
-                0.07620900000000574,
-                0.10883300000000418
+                0.07595799999999997,
+                0.11291699999999594
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -969,7 +1023,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -983,10 +1041,10 @@
               "class": "ko",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2724580000000003,
+              "latencyMs": 0.242416999999989,
               "stepLatenciesMs": [
-                0.09349999999997749,
-                0.12091599999999403
+                0.07450000000000045,
+                0.12041700000000333
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -1012,7 +1070,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1042,10 +1104,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.2292500000000075,
-              "max": 0.27941699999999514,
-              "mean": 0.26037500000000097,
-              "range": 0.05016699999998764
+              "min": 0.23550000000000182,
+              "max": 0.29895799999999895,
+              "mean": 0.2589583333333299,
+              "range": 0.06345799999999713
             },
             "inputTokens": {
               "min": 839,
@@ -1112,12 +1174,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.4535419999999988,
+              "latencyMs": 0.42275000000000773,
               "stepLatenciesMs": [
-                0.15908300000000963,
-                0.10266700000002515,
-                0.06254200000000765,
-                0.07529200000001879
+                0.13591700000000628,
+                0.10012499999999136,
+                0.06354199999999821,
+                0.07229200000000446
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -1143,7 +1205,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 4,
                 "streamSeamRequests": 4,
                 "retryPolicy": {
@@ -1157,12 +1223,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.3676670000000115,
+              "latencyMs": 0.36795899999999904,
               "stepLatenciesMs": [
-                0.08562499999999318,
-                0.09183400000000574,
-                0.06312499999998522,
-                0.08275000000000432
+                0.09250000000000114,
+                0.08537499999999909,
+                0.060000000000002274,
+                0.0857910000000004
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -1188,7 +1254,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 4,
                 "streamSeamRequests": 4,
                 "retryPolicy": {
@@ -1202,12 +1272,12 @@
               "class": "large-group pressure",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.31683400000000006,
+              "latencyMs": 0.32516600000001006,
               "stepLatenciesMs": [
-                0.07587499999999636,
-                0.07783299999999826,
-                0.053916000000015174,
-                0.06524999999999181
+                0.07904200000000117,
+                0.08200000000000784,
+                0.0559159999999963,
+                0.06649999999999068
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -1233,7 +1303,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 4,
                 "streamSeamRequests": 4,
                 "retryPolicy": {
@@ -1263,10 +1337,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.31683400000000006,
-              "max": 0.4535419999999988,
-              "mean": 0.37934766666667014,
-              "range": 0.13670799999999872
+              "min": 0.32516600000001006,
+              "max": 0.42275000000000773,
+              "mean": 0.37195833333333894,
+              "range": 0.09758399999999767
             },
             "inputTokens": {
               "min": 1658,
@@ -1333,10 +1407,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.21716699999998923,
+              "latencyMs": 0.22350000000000136,
               "stepLatenciesMs": [
-                0.09266600000000835,
-                0.08429100000000744
+                0.09295800000001009,
+                0.09037499999999454
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1360,7 +1434,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1374,10 +1452,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.1836669999999856,
+              "latencyMs": 0.19650000000000034,
               "stepLatenciesMs": [
-                0.06354200000001242,
-                0.07187500000000568
+                0.07166600000000756,
+                0.0735830000000135
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1401,7 +1479,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1415,10 +1497,10 @@
               "class": "endgame",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.1774170000000197,
+              "latencyMs": 0.18258399999999142,
               "stepLatenciesMs": [
-                0.07724999999999227,
-                0.06129099999998289
+                0.07970799999999656,
+                0.06366699999999526
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1442,7 +1524,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1472,10 +1558,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.1774170000000197,
-              "max": 0.21716699999998923,
-              "mean": 0.1927503333333315,
-              "range": 0.03974999999996953
+              "min": 0.18258399999999142,
+              "max": 0.22350000000000136,
+              "mean": 0.20086133333333103,
+              "range": 0.040916000000009944
             },
             "inputTokens": {
               "min": 791,
@@ -1542,10 +1628,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.22904200000002106,
+              "latencyMs": 0.2518749999999983,
               "stepLatenciesMs": [
-                0.09287499999999227,
-                0.09937499999998067
+                0.1105840000000029,
+                0.10099999999999909
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1569,7 +1655,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1583,10 +1673,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.2626250000000141,
+              "latencyMs": 0.2708329999999961,
               "stepLatenciesMs": [
-                0.08858299999999986,
-                0.13362500000002342
+                0.08912499999999568,
+                0.13695800000000702
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1610,7 +1700,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1624,10 +1718,10 @@
               "class": "ambiguous position",
               "outcome": "completed",
               "budgetStop": null,
-              "latencyMs": 0.24412499999999682,
+              "latencyMs": 0.234375,
               "stepLatenciesMs": [
-                0.08954199999999446,
-                0.11116699999999469
+                0.084541999999999,
+                0.10349999999999682
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1651,7 +1745,11 @@
               "requestPath": {
                 "provider": "benchmark-scripted",
                 "model": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
                 "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
                 "loopMarkedRequests": 2,
                 "streamSeamRequests": 2,
                 "retryPolicy": {
@@ -1681,10 +1779,10 @@
               "requestPath"
             ],
             "latencyMs": {
-              "min": 0.22904200000002106,
-              "max": 0.2626250000000141,
-              "mean": 0.24526400000001067,
-              "range": 0.033582999999993035
+              "min": 0.234375,
+              "max": 0.2708329999999961,
+              "mean": 0.2523609999999981,
+              "range": 0.036457999999996105
             },
             "inputTokens": {
               "min": 887,

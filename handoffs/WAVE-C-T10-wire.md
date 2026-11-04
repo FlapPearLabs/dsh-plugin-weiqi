@@ -7,8 +7,61 @@
 - 基线 BASE_SHA：`1b1e612836fd3a8528c92764701767a0f54bcf34`（`origin/main`）
 - 红测试 commit：`6bc6764`（`test: pin the DSH request path and spend/request gates`）
 - 绿实现 commit：`cbfcc38`（`feat: route the §38 benchmark through the DSH LLM request path and gate spend`）
+- 闸门加固 commit：`cf06a87`（`fix(test): close the four spend-gate holes before a real calibration run`）
 - 本 handoff 与记录/摘要以 `docs:` 单独提交
 - 未 push、未开 PR
+
+## 闸门加固（独立审查 4 个缺口，2026-11-04）
+
+独立审查在 `0afda3e` 上做活体变异后确认：闸门在 harness 内部有效，但作为“真实
+花钱标定”的护栏不合格。本节是加固结果；本轮仍然没有发起任何真实模型请求。
+
+| 缺口 | 修法 | 新测试（`tests/benchmark`） |
+|---|---|---|
+| D1 闸门位置 | `openBenchmarkRequestPath(provider, gate)` 必须接收 `BenchmarkBudgetGate`；`request()` 内部做 `beginRequest`/`completeRequest`，省略 gate 在类型层是错误、运行时抛 `TypeError` | `refuses to open the path without a BenchmarkBudgetGate`；`admits and records every request inside the path, and refuses a repeated step` |
+| D2 禁重试无牙 | 路径打开时拒绝 `mode:'always'` 或 `maxRetries>0` 的 adapter（`BenchmarkRetryPolicyError`）；metrics 新增 `transportAttempts` / `admittedRequests` / `retryAttempts`，`runFixture` 发现多余传输尝试直接抛 | `makes exactly one HTTP attempt when the transport fails, and counts no retry`（真实 `fetch` 打本地 429 服务，断言 1 次 HTTP 尝试、0 重试）；`refuses an adapter that declares retries before any request leaves` |
+| D3 触发请求不计费 | `completeRequest` 先累加 usage/cost，再按输入/输出/费用上限抛 `budget_stop` | `records the triggering request usage before stopping on the reported output cap`（output 192 / limit 100） |
+| D4 输入复查无测试 | 保留上报后的输入上限复查，补用例 | `stops when the provider reports more input tokens than the per-request cap`（上报 9000 / limit 8000） |
+
+顺手修：
+
+- `harness.ts` 的 `model.requestPath` 不再写死：`BenchmarkRequestPathStats.seam`
+  由实际路径给出，记录从各 run 的观察值聚合，出现混合路径直接报错。
+- `BenchmarkBudgetGate` 增加 `mode`（`scripted` | `live`）。live 模式不带显式
+  价目表时构造即抛 `RangeError`；快照记录 `pricingSource`
+  （`placeholder` | `explicit`）。scripted 模式仍可用占位价，并如实标注。
+- `maxRequests` 96 → 120（8 类 × 3 局 × 最多 4 步 = 96，加余量）；总花费仍由
+  `maxEstimatedCostUsd` 与单请求 token 上限约束。
+
+变异验证（每次只改一处、跑对应测试、随后复原）：
+
+| 变异 | 结果 |
+|---|---|
+| 删除 `openBenchmarkRequestPath` 的 gate 运行时检查 | `refuses to open the path without a BenchmarkBudgetGate` 红 |
+| `fake-provider.ts` 的 `maxRetries` 改 10 | 整组 benchmark 测试红（路径在分发前拒绝） |
+| 删除 adapter 重试策略守卫 | `refuses an adapter that declares retries before any request leaves` 红 |
+| 请求路径失败后再分发一次 | `makes exactly one HTTP attempt ...` 红 |
+| `completeRequest` 把累加挪回抛错之后 | `records the triggering request usage ...` 红 |
+| 删除上报后的输入上限复查 | `stops when the provider reports more input tokens ...` 红 |
+
+命令与结果：
+
+```text
+pnpm exec vitest run tests/benchmark
+ Test Files  4 passed (4)
+      Tests  34 passed (34)
+
+pnpm verify
+ Test Files  40 passed (40)
+      Tests  502 passed (502)
+$ tsc -p tsconfig.build.json
+VERIFY_EXIT=0
+```
+
+**现在真实入口还能不能绕过闸门：不能。** `tests/benchmark` 里唯一的请求出口是
+`openBenchmarkRequestPath(provider, gate)`：gate 是必填参数，`beginRequest` /
+`completeRequest` 在 `request()` 内部执行，打开时还会拒绝带重试策略的 adapter；
+harness 已改成只调 `path.request`，自己不再持有闸门调用。`src/**` 未动。
 
 ## 结论
 
@@ -17,7 +70,7 @@
 fake provider。8 类 §38 场景全部在真实 provider 绑定、`llm/stream` 瀑布、
 `prepareCall` 和 `BlockAssembler` 上跑通，计数与记录一致。
 
-benchmark 侧新增会话级费用/请求闸门：总请求 96、单请求输入 8000 / 输出 4000、
+benchmark 侧新增会话级费用/请求闸门：总请求 120、单请求输入 8000 / 输出 4000、
 预估总费用 $1.00、禁自动重试、禁 search/fetch。任一触发即停止并记录
 `budget_stop`。每个闸门都有可单独触发的测试（见“红/绿与有牙证据”）。
 
@@ -75,7 +128,7 @@ fixture 脚本
 
 | 闸门 | 默认值 | 执行点 |
 |---|---:|---|
-| `maxRequests` | 96 | 每次请求分发前 |
+| `maxRequests` | 120 | 每次请求分发前（8×3×4=96 + 余量） |
 | `maxInputTokensPerRequest` | 8000 | 分发前估算 + 上报 usage 复查 |
 | `maxOutputTokensPerRequest` | 4000 | 请求 `maxTokens` clamp + 上报 usage 复查 |
 | `maxEstimatedCostUsd` | 1.00 | 分发前最坏情况预估 + 上报后累计 |
@@ -86,7 +139,7 @@ fixture 脚本
 `outcome = 'budget_stop'`、`budgetStop` 记录 gate/detail/step/observed/limit；
 `buildBenchmarkRecord` 把整次会话的闸门快照写进 `record.budgetGate`（含 `stops`）。
 价格表目前是**占位值**（$1/M input、$2/M output），不是 DeepSeek 报价；真实跑必须
-传入批准的价目表。
+传入批准的价目表，并以 `mode: 'live'` 构造 gate——live 模式缺价目表会直接抛错。
 
 大模型响应里流出的 search/fetch 工具在 `registry.invoke` 之前就被拒绝（测试
 `stops before executing a search/fetch tool call streamed by the model`）。
@@ -95,7 +148,8 @@ fixture 脚本
 
 | 文件 | 职责 |
 |---|---|
-| `tests/benchmark/llm-request-path.ts` | 新：真实 `LlmRuntime` 请求路径 + `llm/stream` 断言 + `BlockAssembler` 取回 tool call/usage |
+| `tests/benchmark/llm-request-path.ts` | 新：真实 `LlmRuntime` 请求路径 + `llm/stream` 断言 + `BlockAssembler` 取回 tool call/usage；现要求 gate 并在内部准入/记账，拒绝带重试的 adapter |
+| `tests/benchmark/request-path.test.ts` | 新：闸门下沉与传输层不重试的测试（含本地 429 HTTP 服务） |
 | `tests/benchmark/fake-provider.ts` | 新：无网络 `LlmAdapter` 替身、重试策略 0、物理请求计数 |
 | `tests/benchmark/budget-gate.ts` | 新：会话级请求/输入/输出/费用/重试/search-fetch 闸门 + `budget_stop` |
 | `tests/benchmark/harness.ts` | 改：每步走真实请求路径、应用闸门、记录 `requestPath`/`outcome`/`budgetStop`；AgentLoop 驱动为文档化替身 |
@@ -166,8 +220,8 @@ requests=54  estimatedCostUsd=0.039681  stops=0
    pinned 包，要么提供等价 `LlmAdapter`。
 3. `@deepseek-ai/dsh-agent-loop` 未安装。真实跑前需主人决定：加 pinned 依赖，
    或接受当前文档化的 loop 替身。加依赖属于主人的决定（也涉及安装/联网）。
-4. 价格表是占位值；真实跑前必须给出批准的 DeepSeek 价目表，否则费用闸门只是
-   结构验证。
+4. 价格表是占位值；真实跑必须给出批准的 DeepSeek 价目表，并让 gate 以
+   `mode: 'live'` 构造（缺价目表会直接抛错，不会静默用占位价）。
 5. 生产 `GoTurnBudget` 默认值仍未切换；等真实数据后再进 C-T10 的 config 步骤。
 6. 本机 Node v26.10.0，`package.json` 要求 `>=24.11.1 <25`；CI 固定 Node 24.11.1，
    上面的证据来自本机。
