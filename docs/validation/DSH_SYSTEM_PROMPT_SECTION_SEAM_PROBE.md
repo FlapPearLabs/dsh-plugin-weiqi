@@ -130,7 +130,7 @@ under the rest, so the assertions are not self-fulfilling.
 ## Existing suites (Q6)
 
 From the earlier recorded run against the same pinned checkout (the re-run
-covered only the first two rows; see Q6 above):
+covered only the first two rows; see Q6 below):
 
 | Suite | Command target | Result |
 |---|---|---|
