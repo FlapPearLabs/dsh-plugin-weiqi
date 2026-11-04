@@ -273,3 +273,14 @@ export function runGoRulesPortContract(createPort: () => GoRulesPort): GoRulesPo
 }
 
 export const EXPECTED_GO_RULES_PORT_METHODS: readonly GoRulesPortMethod[] = [...GO_RULES_PORT_METHODS].sort()
+
+export function formatHarnessReport(report: GoRulesPortHarnessReport): string {
+  const lines = report.cases.map(
+    (harnessCase) =>
+      `${harnessCase.ok ? 'ok  ' : 'FAIL'} ${harnessCase.method.padEnd(13)} ${harnessCase.name}`,
+  )
+  lines.push(
+    `harness: ${report.cases.length} cases, methods: ${report.methods.join(', ')}, failures: ${report.failures.length}`,
+  )
+  return lines.join('\n')
+}

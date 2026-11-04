@@ -16,7 +16,7 @@ import type {
 import { GO_RULES_PORT_METHODS } from './rules.js'
 import type { GoRulesPort as PublicGoRulesPort } from './index.js'
 import { createStubGoRulesPort } from '../../tests/rules/stub-port.js'
-import { EXPECTED_GO_RULES_PORT_METHODS, runGoRulesPortContract } from '../../tests/rules/port-harness.js'
+import { EXPECTED_GO_RULES_PORT_METHODS, formatHarnessReport, runGoRulesPortContract } from '../../tests/rules/port-harness.js'
 
 class BoardMutatingResignPort implements GoRulesPort {
   private readonly inner: GoRulesPort
@@ -111,10 +111,11 @@ describe('engine-independent GoRulesPort harness', () => {
   const report = runGoRulesPortContract(createStubGoRulesPort)
 
   it('is green against the deterministic stub and exercises all eight methods', () => {
+    console.log(formatHarnessReport(report))
     expect(report.failures).toEqual([])
     expect(report.ok).toBe(true)
     expect([...report.methods]).toEqual([...EXPECTED_GO_RULES_PORT_METHODS])
-    expect(report.cases.length).toBeGreaterThanOrEqual(12)
+    expect(report.cases.length).toBeGreaterThanOrEqual(13)
   })
 
   it('exposes resign at runtime on the stub', () => {
