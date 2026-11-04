@@ -7,7 +7,7 @@
 - Current Stage: **Ticket / Spike Execution Ready**
 - Next Stage: **Pre-A Spikes + Implementation Wave A**
 - Spec Phase A: **Minimal Technical Vertical Slice**
-- Implementation Wave A: **IN PROGRESS — WAVE-A-T01 / T02 / T03 / T04 / T05 MERGED**
+- Implementation Wave A: **IN PROGRESS — WAVE-A-T01 / T02 / T03 / T04 / T05 / T07 MERGED**
 - Ticketization: **COMPLETE**
 
 ## Current scope
@@ -20,8 +20,10 @@ explicit `llmRunning`, single-slot focus arbitration, and one optional paused
 lane; safe-boundary eligibility detection over the real pinned DSH step and
 model-stream lifecycle without continuation interception or lane switching;
 cooperative-yield production integration with the actual post-settle lane
-switch; and immutable source-message handoff with Companion provenance. The
-package declares a DSH Profile Bundle whose patch mounts this Runtime entry.
+switch; immutable source-message handoff with Companion provenance; and resume
+sequencing that admits the preserved next-step context exactly once after a
+paused-lane return. The package declares a DSH Profile Bundle whose patch
+mounts this Runtime entry.
 
 Spec Phase is a product/architecture execution gate. Implementation Wave is an
 organizational construction stream. A Ticket belongs to a Wave and must not
