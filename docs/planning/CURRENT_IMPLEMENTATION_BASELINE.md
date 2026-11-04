@@ -36,7 +36,7 @@ baseline exists or should be created.
 | BL-PKG-03 | cordis.patch | Bundle patch mounts plugin row | `cordis.patch.yml` insert `companion-go` → `@flappearlabs/dsh-plugin-weiqi`; smoke asserts composeEntries + dump-config | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-04 | build / package | Reproducible build + pack | `pnpm verify` (tsc build → lib/); smoke runs `pnpm pack` and asserts tarball contents | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-05 | profile install (packed tarball) | `dsh plugin --profile add <tgz>` + bundle reconciliation + mount | `tests/profile-install/run-profile-install-smoke.sh` + `profile-mount-smoke.mjs`; CI pass | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
-| BL-PKG-06 | GitHub source install | `dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi` builds and activates | No evidence: smoke covers local tarball only; no `github:` spec path tested | NEEDS_SPIKE | Unknown CLI resolution/build/activation path for `github:` spec | — | SPIKE |
+| BL-PKG-06 | GitHub source install | `dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi` builds and activates | Executed on pinned DSH `b150a551...` / `0.1.1-rc.2` / Node 24.11.1 / pnpm 11.7.0: resolution PASS, clone PASS, install PASS, bundle reconciliation PASS (`--dump-config` composes `companion-go`), **activation FAIL** — installed tree has no `lib/`, mount smoke exits 1 with `ERR_MODULE_NOT_FOUND .../lib/index.js`; root cause: no `prepare` script, `lib/` gitignored and untracked, `files` ships only `cordis.patch.yml` + `lib/**`; merged PR #79 (`161eb5c`) records the failure; fallback = verified packed-tarball path (BL-PKG-05) | VERIFIED_FACT_NOT_INTEGRATED | Git-source install needs an install-time build (`prepare`/packaging fix) before the capability exists; no silent PASS | — | SMALL_INFRA_TICKET |
 | BL-PKG-07 | Foundation CI | typecheck + tests + build automated | `.github/workflows/ci.yml` (Node 24.11.1 / pnpm 11.7.0 pins); pass on foundation HEAD | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-08 | DSH version pin | Exact pinned DSH commit/packages | DSH `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`; packages `0.1.1-rc.2` (peerDeps + gate assertions) | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-09 | cooperative-yield upgrade gate | Any DSH change reruns the fixture | `.github/workflows/cooperative-yield-upgrade-gate.yml` (copies fixture into pinned DSH tree, real AgentLoop); pass | IMPLEMENTED_VERIFIED | None | — | KEEP_AS_UPGRADE_GATE |
@@ -146,7 +146,7 @@ baseline exists or should be created.
 | BL-HARD-05 | Spec Phase A core exit / viability gate | Evidence gate proving the core technical vertical slice is sound enough to allow Companion Layer (Phase B) execution; §40 core correctness counters + context isolation + cognition exclusivity + anti-cheat + budget bypass + §38 benchmark-derived budget + core Go UI + work→go→work continuity + DSH Phase A smoke gates + small number of complete human games / UX validation | No gate exists | NOT_IMPLEMENTED | Phase A exit gate (evidence/acceptance, not a new subsystem) | F | INTEGRATION_TICKET |
 | BL-HARD-06 | Full V0.1 acceptance after Companion Layer | R2.4.2 Spec §40 complete: Correctness, Context Isolation, Continuity, Cognition Exclusivity, Anti-Cheat, Budget, Persona Continuity, Subjective UX | No code | NOT_IMPLEMENTED | Full V0.1 acceptance owner (Phase B) | F | INTEGRATION_TICKET |
 
-Installation / upgrade validation is covered by BL-PKG-05 (verified), BL-PKG-06 (spike), BL-PKG-09 (upgrade gate).
+Installation / upgrade validation is covered by BL-PKG-05 (verified), BL-PKG-06 (verified negative fact, activation blocked on install-time build), BL-PKG-09 (upgrade gate).
 
 ---
 
@@ -182,6 +182,17 @@ requires `ESCALATION_REQUIRED`:
 
 # VERIFIED FACT — NOT INTEGRATED
 
+github-source install (BL-PKG-06):
+
+```text
+Feasibility:          VERIFIED NEGATIVE (pinned DSH b150a551, PR #79 merged 161eb5c)
+Resolution/clone/install/bundle: PASS
+Activation:           FAIL (installed tree has no lib/; mount ERR_MODULE_NOT_FOUND)
+Root cause:           no prepare script; lib/ gitignored/untracked; files ships only cordis.patch.yml + lib/**
+Fallback:             packed-tarball install (BL-PKG-05, verified)
+Follow-up:            SMALL_INFRA_TICKET (install-time build/packaging fix); no new ticket created by the Spike
+```
+
 tenuki version / conformance (BL-GR-03):
 
 ```text
@@ -216,7 +227,6 @@ feasibility Spike.
 
 | Baseline ID | Unknown | Why not directly implement | Dependent decision | Why current evidence is insufficient |
 |---|---|---|---|---|
-| BL-PKG-06 | GitHub source install (`dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`) | `github:` spec resolution/clone/build/activate path is unverified | Installation docs, Wave F installation acceptance | Smoke covers local tarball only; no `github:` path code or CI evidence |
 | BL-BR-03 | `ctx.systemPrompt.context` agent-scoped runtime-context provider semantics | Spec §9.1 requires read-only computed values, O(1), materialized on change | Wave D Bridge delivery mechanism | No provider code or DSH-internal probe |
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
