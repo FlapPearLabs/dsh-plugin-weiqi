@@ -102,8 +102,18 @@ describe('cross-lane awareness', () => {
       runtime.updateGame(notice(moveNumber), moveNumber)
     }
 
+    // The raw history above can only enter through the runtime; it is rejected
+    // as an unknown field and the published notice stays at the last move.
+    const withRawHistory = {
+      ...notice(400),
+      moves: rawGoTranscript,
+      boardStates: rawBoardStates,
+    }
+    expect(() => runtime.updateGame(withRawHistory, 401)).toThrow(BridgeSchemaError)
+    expect(() => runtime.updateGame(withRawHistory, 401)).toThrow(/moves/)
+    expect(runtime.latestGameNotice?.moveNumber).toBe(400)
+
     const view = awareness.forWorkLane()
-    const serialized = JSON.stringify(view)
 
     expect(view.latestGameNotice?.moveNumber).toBe(400)
     expect(view.latestGameNotice?.affectedGroups).toEqual(
@@ -111,9 +121,6 @@ describe('cross-lane awareness', () => {
     )
     expect('latestWorkSnapshot' in view).toBe(false)
     expect(longestArray(view)).toBe(3)
-    expect(serialized).not.toContain('raw-go-turn-')
-    expect(serialized).not.toContain('raw-go-thought-')
-    expect(serialized).not.toContain('raw-board-')
 
     const keys = ownKeys(view)
     for (const forbidden of HISTORY_KEYS) {
@@ -170,16 +177,22 @@ describe('cross-lane awareness', () => {
     }
     runtime.updateWork(snapshot('hash normalization changed; validating again'), 1)
 
+    // Raw Work transcript can only enter through the runtime; it is rejected as
+    // an unknown field and the published snapshot keeps its validated value.
+    const withRawTranscript = { ...snapshot('newer work'), transcript: rawWorkTranscript }
+    expect(() => runtime.updateWork(withRawTranscript, 2)).toThrow(BridgeSchemaError)
+    expect(() => runtime.updateWork(withRawTranscript, 2)).toThrow(/transcript/)
+    expect(runtime.latestWorkSnapshot).toEqual(
+      snapshot('hash normalization changed; validating again'),
+    )
+
     const view = awareness.forGoLane()
-    const serialized = JSON.stringify(view)
 
     expect(view.latestWorkSnapshot).toEqual(
       snapshot('hash normalization changed; validating again'),
     )
     expect('latestGameNotice' in view).toBe(false)
     expect(longestArray(view)).toBe(2)
-    expect(serialized).not.toContain('raw-work-')
-    expect(view.latestWorkSnapshot?.summary).not.toMatch(/raw-go-/)
     expect(ownKeys(view)).toEqual(
       new Set([
         'latestWorkSnapshot',
