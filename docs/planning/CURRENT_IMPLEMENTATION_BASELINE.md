@@ -37,7 +37,7 @@ baseline exists or should be created.
 | BL-PKG-04 | build / package | Reproducible build + pack | `pnpm verify` (tsc build → lib/); smoke runs `pnpm pack` and asserts tarball contents | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-05 | profile install (packed tarball) | `dsh plugin --profile add <tgz>` + bundle reconciliation + mount | `tests/profile-install/run-profile-install-smoke.sh` + `profile-mount-smoke.mjs`; CI pass | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-06 | GitHub source install | `dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi` builds and activates | No evidence: smoke covers local tarball only; no `github:` spec path tested | NEEDS_SPIKE | Unknown CLI resolution/build/activation path for `github:` spec | — | SPIKE |
-| BL-PKG-07 | Foundation CI | typecheck + tests + build automated | `.github/workflows/ci.yml` (Node 24.11.1 / pnpm 11.7.0 pins); pass on foundation HEAD | IMPLEMENTED_VERIFIED | Trigger policy is bootstrap-era (see BL-CI-01) | — | NO_ACTION |
+| BL-PKG-07 | Foundation CI | typecheck + tests + build automated | `.github/workflows/ci.yml` (Node 24.11.1 / pnpm 11.7.0 pins); pass on foundation HEAD | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-08 | DSH version pin | Exact pinned DSH commit/packages | DSH `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`; packages `0.1.1-rc.2` (peerDeps + gate assertions) | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 | BL-PKG-09 | cooperative-yield upgrade gate | Any DSH change reruns the fixture | `.github/workflows/cooperative-yield-upgrade-gate.yml` (copies fixture into pinned DSH tree, real AgentLoop); pass | IMPLEMENTED_VERIFIED | None | — | KEEP_AS_UPGRADE_GATE |
 
@@ -45,7 +45,7 @@ baseline exists or should be created.
 
 | Baseline ID | Capability | Spec Target | Current Evidence | Current State | Gap | Wave | Recommended Handling |
 |---|---|---|---|---|---|---|---|
-| BL-CI-01 | Post-bootstrap CI trigger policy | CI runs on current default branch / normal PR flow | All three workflows still trigger push on `work/bootstrap-foundation-v1`; only `ci.yml` has a generic `pull_request`; cooperative-yield gate and profile-install smoke have no regular PR trigger | NOT_IMPLEMENTED | No policy for main-based development; CI would not run on normal PRs against `main` | — | SMALL_INFRA_TICKET |
+| BL-CI-01 | Post-bootstrap CI trigger policy | CI runs on current default branch / normal PR flow | `.github/workflows/{ci.yml, cooperative-yield-upgrade-gate.yml, profile-install-smoke.yml}` trigger on `main` push and on PRs targeting `main`, with existing path filters preserved; trigger-only diff merged as PR #63 (`e988992`), adversarial review r1 APPROVE; all 3 PR checks passed | IMPLEMENTED_VERIFIED | None | — | NO_ACTION |
 
 ## Runtime / Focus
 
