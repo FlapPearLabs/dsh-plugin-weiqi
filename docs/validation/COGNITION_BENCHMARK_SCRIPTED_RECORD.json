@@ -2,12 +2,14 @@
   "recordKind": "cognition-benchmark",
   "specSection": "§38",
   "ticket": "WAVE-C-T10",
-  "generatedAt": "2026-11-04T07:53:49.815Z",
+  "generatedAt": "2026-11-04T10:02:55.262Z",
   "model": {
     "kind": "scripted-deterministic",
     "id": "scripted-legal-move-adapter-v1",
+    "provider": "benchmark-scripted",
+    "requestPath": "dsh-llm-runtime",
     "isDeepSeek": false,
-    "disclosure": "All token counts and moves come from a deterministic scripted adapter. No DeepSeek request was made. Latency is local harness wall-clock, not model latency. These numbers cannot calibrate production token caps; a real DeepSeek run awaits owner approval."
+    "disclosure": "Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime (provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, BlockAssembler), with a local no-network provider standing in for DeepSeek. The dsh-agent-loop package is not installed in this repository, so the step/turn driver is a documented stand-in for it. Token counts and moves are scripted synthetic values, never DeepSeek usage; latency is local harness wall-clock. These numbers cannot calibrate production token caps; a real DeepSeek run still needs owner approval, credentials, and a real price schedule."
   },
   "budgetUnderTest": {
     "maxModelSteps": 3,
@@ -25,6 +27,25 @@
     ],
     "note": "Candidate values only. src/budget/ production defaults were not changed by this ticket; no production GoTurnBudget config exists yet."
   },
+  "budgetGate": {
+    "config": {
+      "maxRequests": 96,
+      "maxInputTokensPerRequest": 8000,
+      "maxOutputTokensPerRequest": 4000,
+      "maxEstimatedCostUsd": 1,
+      "allowRetries": false,
+      "allowSearchFetch": false
+    },
+    "pricing": {
+      "inputUsdPerMillionTokens": 1,
+      "outputUsdPerMillionTokens": 2
+    },
+    "requests": 54,
+    "inputTokens": 22593,
+    "outputTokens": 8544,
+    "estimatedCostUsd": 0.039681,
+    "stops": []
+  },
   "runsPerFixture": 3,
   "classes": [
     {
@@ -38,10 +59,12 @@
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.7169159999999977,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 1.818125000000009,
               "stepLatenciesMs": [
-                0.5297079999999994,
-                0.18483299999999758
+                1.199374999999975,
+                0.3478749999999877
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -61,15 +84,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.12837500000000546,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.514125000000007,
               "stepLatenciesMs": [
-                0.06583300000001202,
-                0.05854200000000276
+                0.2177910000000054,
+                0.2084159999999997
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -89,15 +125,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.08595799999999088,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.4362079999999935,
               "stepLatenciesMs": [
-                0.047207999999997696,
-                0.037582999999997924
+                0.18804099999999835,
+                0.15195900000000506
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -117,12 +166,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -135,13 +196,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.08595799999999088,
-              "max": 0.7169159999999977,
-              "mean": 0.31041633333333135,
-              "range": 0.6309580000000068
+              "min": 0.4362079999999935,
+              "max": 1.818125000000009,
+              "mean": 0.9228193333333365,
+              "range": 1.3819170000000156
             },
             "inputTokens": {
               "min": 887,
@@ -206,10 +268,12 @@
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.18029200000000856,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.41041699999999537,
               "stepLatenciesMs": [
-                0.11429199999999184,
-                0.06491700000000833
+                0.21137499999997544,
+                0.13229200000000674
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -229,15 +293,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.08762500000000273,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3180409999999938,
               "stepLatenciesMs": [
-                0.0397920000000056,
-                0.043416999999990935
+                0.12316700000002356,
+                0.13283400000000256
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -257,15 +334,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.0802500000000066,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.29454200000000696,
               "stepLatenciesMs": [
-                0.03620899999999949,
-                0.04345800000000111
+                0.11766699999998309,
+                0.10283400000000142
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -285,12 +375,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -303,13 +405,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.0802500000000066,
-              "max": 0.18029200000000856,
-              "mean": 0.11605566666667262,
-              "range": 0.10004200000000196
+              "min": 0.29454200000000696,
+              "max": 0.41041699999999537,
+              "mean": 0.3409999999999987,
+              "range": 0.1158749999999884
             },
             "inputTokens": {
               "min": 839,
@@ -374,10 +477,12 @@
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.053625000000010914,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2514579999999853,
               "stepLatenciesMs": [
-                0.03079200000000526,
-                0.022291999999993095
+                0.10254199999999969,
+                0.08124999999998295
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -397,15 +502,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.04429100000000119,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.6202910000000088,
               "stepLatenciesMs": [
-                0.022542000000001394,
-                0.02137500000000614
+                0.1144170000000031,
+                0.4497920000000022
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -425,15 +543,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.042541999999997415,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.22450000000000614,
               "stepLatenciesMs": [
-                0.017499999999998295,
-                0.02462500000000034
+                0.09874999999999545,
+                0.07204199999998195
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -453,12 +584,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -471,13 +614,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.042541999999997415,
-              "max": 0.053625000000010914,
-              "mean": 0.04681933333333651,
-              "range": 0.011083000000013499
+              "min": 0.22450000000000614,
+              "max": 0.6202910000000088,
+              "mean": 0.3654163333333334,
+              "range": 0.39579100000000267
             },
             "inputTokens": {
               "min": 791,
@@ -542,10 +686,12 @@
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.09583300000001316,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2628750000000082,
               "stepLatenciesMs": [
-                0.0654169999999965,
-                0.03012499999999818
+                0.1224589999999921,
+                0.08470800000000622
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -565,15 +711,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.1867080000000101,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.22262499999999363,
               "stepLatenciesMs": [
-                0.1676249999999868,
-                0.01866699999999355
+                0.10370900000000915,
+                0.07033400000000256
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -593,15 +752,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.11562500000000853,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.23312500000000114,
               "stepLatenciesMs": [
-                0.08470799999999201,
-                0.03020800000000179
+                0.10650000000001114,
+                0.07079200000001151
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -621,12 +793,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -639,13 +823,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.09583300000001316,
-              "max": 0.1867080000000101,
-              "mean": 0.13272200000001058,
-              "range": 0.09087499999999693
+              "min": 0.22262499999999363,
+              "max": 0.2628750000000082,
+              "mean": 0.23954166666666765,
+              "range": 0.04025000000001455
             },
             "inputTokens": {
               "min": 839,
@@ -710,10 +895,12 @@
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.1721249999999941,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.27941699999999514,
               "stepLatenciesMs": [
-                0.041042000000004464,
-                0.13016600000000267
+                0.0800830000000019,
+                0.15474999999997863
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -735,15 +922,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.08520899999999187,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2292500000000075,
               "stepLatenciesMs": [
-                0.030167000000005828,
-                0.05445799999999679
+                0.07620900000000574,
+                0.10883300000000418
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -765,15 +965,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.07766699999999105,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2724580000000003,
               "stepLatenciesMs": [
-                0.021250000000009095,
-                0.055959000000001424
+                0.09349999999997749,
+                0.12091599999999403
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -795,12 +1008,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -813,13 +1038,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.07766699999999105,
-              "max": 0.1721249999999941,
-              "mean": 0.11166699999999234,
-              "range": 0.09445800000000304
+              "min": 0.2292500000000075,
+              "max": 0.27941699999999514,
+              "mean": 0.26037500000000097,
+              "range": 0.05016699999998764
             },
             "inputTokens": {
               "min": 839,
@@ -884,12 +1110,14 @@
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.11804200000000264,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.4535419999999988,
               "stepLatenciesMs": [
-                0.05520800000000747,
-                0.03495900000000063,
-                0.009833000000000425,
-                0.017208999999994035
+                0.15908300000000963,
+                0.10266700000002515,
+                0.06254200000000765,
+                0.07529200000001879
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -911,17 +1139,30 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 4,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.08100000000000307,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3676670000000115,
               "stepLatenciesMs": [
-                0.01779200000000003,
-                0.029541999999992186,
-                0.009332999999998037,
-                0.023707999999999174
+                0.08562499999999318,
+                0.09183400000000574,
+                0.06312499999998522,
+                0.08275000000000432
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -943,17 +1184,30 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 4,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.07483300000001236,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.31683400000000006,
               "stepLatenciesMs": [
-                0.019874999999998977,
-                0.025334000000000856,
-                0.011665999999991072,
-                0.017417000000008898
+                0.07587499999999636,
+                0.07783299999999826,
+                0.053916000000015174,
+                0.06524999999999181
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -975,12 +1229,24 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 4,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -993,13 +1259,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.07483300000001236,
-              "max": 0.11804200000000264,
-              "mean": 0.0912916666666727,
-              "range": 0.04320899999999028
+              "min": 0.31683400000000006,
+              "max": 0.4535419999999988,
+              "mean": 0.37934766666667014,
+              "range": 0.13670799999999872
             },
             "inputTokens": {
               "min": 1658,
@@ -1064,10 +1331,12 @@
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.047291000000001304,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.21716699999998923,
               "stepLatenciesMs": [
-                0.017333000000007814,
-                0.029582999999988147
+                0.09266600000000835,
+                0.08429100000000744
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1087,15 +1356,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.03395799999999838,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.1836669999999856,
               "stepLatenciesMs": [
-                0.01229200000000219,
-                0.021291000000005056
+                0.06354200000001242,
+                0.07187500000000568
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1115,15 +1397,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.03958299999999326,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.1774170000000197,
               "stepLatenciesMs": [
-                0.01825000000000898,
-                0.02087500000000375
+                0.07724999999999227,
+                0.06129099999998289
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1143,12 +1438,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -1161,13 +1468,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.03395799999999838,
-              "max": 0.047291000000001304,
-              "mean": 0.04027733333333098,
-              "range": 0.013333000000002926
+              "min": 0.1774170000000197,
+              "max": 0.21716699999998923,
+              "mean": 0.1927503333333315,
+              "range": 0.03974999999996953
             },
             "inputTokens": {
               "min": 791,
@@ -1232,10 +1540,12 @@
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.0906659999999988,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.22904200000002106,
               "stepLatenciesMs": [
-                0.0401250000000033,
-                0.0501249999999942
+                0.09287499999999227,
+                0.09937499999998067
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1255,15 +1565,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.08291700000000901,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2626250000000141,
               "stepLatenciesMs": [
-                0.0319160000000096,
-                0.050667000000004236
+                0.08858299999999986,
+                0.13362500000002342
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1283,15 +1606,28 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             },
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.08370799999998724,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.24412499999999682,
               "stepLatenciesMs": [
-                0.03216599999998948,
-                0.05116699999999241
+                0.08954199999999446,
+                0.11116699999999469
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1311,12 +1647,24 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "llmRequests": 2,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -1329,13 +1677,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.08291700000000901,
-              "max": 0.0906659999999988,
-              "mean": 0.08576366666666502,
-              "range": 0.007748999999989792
+              "min": 0.22904200000002106,
+              "max": 0.2626250000000141,
+              "mean": 0.24526400000001067,
+              "range": 0.033582999999993035
             },
             "inputTokens": {
               "min": 887,
