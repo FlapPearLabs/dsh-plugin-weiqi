@@ -103,6 +103,8 @@ export type GoTurnBudgetSnapshot = Readonly<{
 export type GoTurnEnforcement = Readonly<{
   /** Register on the Go agent's `agent/request` waterfall (C-S01 seam). */
   readonly requestTokenCap: GoRequestTokenCapListener
+  /** Turn tokens still available before §22.4 exhaustion (never negative). */
+  remainingTurnTokens: () => number
   snapshot: () => GoTurnBudgetSnapshot
   beginModelStep: () => GoModelStep
   beginInspect: () => void
@@ -121,7 +123,6 @@ export type GoTurnEnforcement = Readonly<{
  */
 export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement {
   const limits: Readonly<GoTurnBudget> = Object.freeze({ ...loadGoTurnBudget(budget) })
-  const requestTokenCap = createGoRequestTokenCap(limits.perRequestMaxTokens)
 
   let modelSteps = 0
   let inspectCalls = 0
@@ -130,6 +131,12 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
   let turnTokens = 0
   let committedAction: GoTurnCommit | undefined
   let gameTerminal = false
+
+  function remainingTurnTokens(): number {
+    return Math.max(0, limits.maxTurnTokens - turnTokens)
+  }
+
+  const requestTokenCap = createGoRequestTokenCap(limits.perRequestMaxTokens, remainingTurnTokens)
 
   function assertAnalysisOpen(action: GoTurnAction): void {
     if (committedAction === undefined) return
@@ -169,17 +176,22 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
   function beginInspect(): void {
     assertAnalysisOpen('inspect')
     assertBelow('maxInspectCalls', limits.maxInspectCalls, inspectCalls)
+    assertBelow('maxTurnTokens', limits.maxTurnTokens, turnTokens)
     inspectCalls += 1
   }
 
   function beginTryMove(): void {
     assertAnalysisOpen('try_move')
     assertBelow('maxTryMoves', limits.maxTryMoves, tryMoves)
+    assertBelow('maxTurnTokens', limits.maxTurnTokens, turnTokens)
     tryMoves += 1
   }
 
   function beginDeepThink(): void {
     assertAnalysisOpen('deep_think')
+    // §22.4: once the turn budget is exhausted, no inspect/try/model step
+    // (including a deep-think request) may start.
+    assertBelow('maxTurnTokens', limits.maxTurnTokens, turnTokens)
     deepThinkRequests += 1
   }
 
@@ -204,6 +216,7 @@ export function createGoTurnEnforcement(budget: GoTurnBudget): GoTurnEnforcement
 
   return {
     requestTokenCap,
+    remainingTurnTokens,
     snapshot,
     beginModelStep,
     beginInspect,

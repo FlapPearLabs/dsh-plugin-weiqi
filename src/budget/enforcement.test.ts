@@ -91,7 +91,7 @@ function resolvedRequest(maxTokens: number): {
 
 describe('createGoTurnEnforcement per-request cap', () => {
   it('applies the budget per-request cap through the verified request seam', async () => {
-    const enforcement = createGoTurnEnforcement(NON_PRODUCTION_BUDGET)
+    const enforcement = createGoTurnEnforcement(budgetWith({ maxTurnTokens: 1_000 }))
 
     const capped = await enforcement.requestTokenCap({ turn: 1, step: 1 }, async () => ({
       provider: 'deepseek-official',
