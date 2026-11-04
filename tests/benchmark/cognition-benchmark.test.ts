@@ -41,6 +41,8 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
     for (const fixture of BENCHMARK_FIXTURES) {
       const metrics = await runFixture(fixture, { clock: monotonicClock().clock })
 
+      expect(metrics.outcome).toBe('completed')
+      expect(metrics.budgetStop).toBeNull()
       expect(metrics.committedAction).toBe(
         fixture.expectedFinalAction.kind === 'play' ? 'play' : 'pass',
       )
@@ -52,6 +54,14 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
       expect(metrics.remainingTurnTokens).toBe(
         CANDIDATE_BUDGET.maxTurnTokens - metrics.turnTokens,
       )
+      expect(metrics.requestPath).toEqual({
+        provider: 'benchmark-scripted',
+        model: 'scripted-legal-move-adapter-v1',
+        llmRequests: fixture.steps.length,
+        loopMarkedRequests: fixture.steps.length,
+        streamSeamRequests: fixture.steps.length,
+        retryPolicy: { mode: 'normal', maxRetries: 0 },
+      })
     }
   })
 
@@ -155,6 +165,17 @@ describe('Spec §38 scripted cognition benchmark (WAVE-C-T10)', () => {
     }
     expect(record.model.isDeepSeek).toBe(false)
     expect(record.model.kind).toBe('scripted-deterministic')
+    expect(record.model.requestPath).toBe('dsh-llm-runtime')
+    expect(record.model.provider).toBe('benchmark-scripted')
     expect(record.budgetUnderTest.status).toBe('candidate-not-applied')
+    expect(record.budgetGate.config).toMatchObject({
+      maxRequests: 96,
+      maxInputTokensPerRequest: 8_000,
+      maxOutputTokensPerRequest: 4_000,
+      maxEstimatedCostUsd: 1,
+      allowRetries: false,
+      allowSearchFetch: false,
+    })
+    expect(record.budgetGate.stops).toEqual([])
   })
 })
