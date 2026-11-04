@@ -14,7 +14,6 @@ import type { Lane, PendingFocusIntent, RuntimeFocusState } from '../contracts/f
 import {
   submitFocusIntent,
   type FocusIntentDisposition,
-  type FocusIntentTransition,
 } from './focus.js'
 
 export type InactiveLaneAdmission = Readonly<{
@@ -30,11 +29,6 @@ export type InactiveLaneAdmissionRejection =
   | 'not-user-message'
   | 'empty-message'
   | 'mutable-message'
-
-export type FocusIntentArbitration = (
-  state: RuntimeFocusState,
-  incoming: PendingFocusIntent,
-) => FocusIntentTransition
 
 /**
  * The exact user-command intent created for one inactive-lane admission.
@@ -53,11 +47,27 @@ export type InactiveLaneUserCommandIntent = Readonly<
   }
 >
 
+/**
+ * Discriminated admission outcome.
+ *
+ * - `submitted`: the intent reached the single focus slot (`admitted`) or
+ *   displaced a younger `self_initiated` intent (`replaced`).
+ * - `retained`: A-T02 kept an older `user_command`, so the incoming message was
+ *   NOT admitted and appears only on this result. Callers must handle it and
+ *   must not drop the message (Spec §5/§44).
+ * - `rejected`: no intent was created and arbitration was never called.
+ */
 export type InactiveLaneAdmissionResult =
   | Readonly<{
     kind: 'submitted'
     intent: InactiveLaneUserCommandIntent
-    disposition: FocusIntentDisposition
+    disposition: Exclude<FocusIntentDisposition, 'retained-existing'>
+    state: RuntimeFocusState
+  }>
+  | Readonly<{
+    kind: 'retained'
+    intent: InactiveLaneUserCommandIntent
+    disposition: 'retained-existing'
     state: RuntimeFocusState
   }>
   | Readonly<{
@@ -82,14 +92,12 @@ export type InactiveLaneAdmissionResult =
  * by the DSH `createUserMessage` contract. A mutable message is rejected rather
  * than freezing the caller's object or copying its text.
  *
- * @param arbitrate - test-only injection seam defaulting to the A-T02
- *   `submitFocusIntent`; production callers must omit it so admission has
- *   exactly one arbitration path.
+ * There is exactly one arbitration path: this function always calls the A-T02
+ * `submitFocusIntent`, and the exported signature offers no override.
  */
 export function admitInactiveLaneUserMessage(
   state: RuntimeFocusState,
   admission: InactiveLaneAdmission,
-  arbitrate: FocusIntentArbitration = submitFocusIntent,
 ): InactiveLaneAdmissionResult {
   const reason = rejectionReason(state, admission)
   if (reason !== undefined) return Object.freeze({ kind: 'rejected' as const, reason })
@@ -103,7 +111,16 @@ export function admitInactiveLaneUserMessage(
     }),
   })
 
-  const transition = arbitrate(state, intent)
+  const transition = submitFocusIntent(state, intent)
+  if (transition.disposition === 'retained-existing') {
+    return Object.freeze({
+      kind: 'retained' as const,
+      intent,
+      disposition: transition.disposition,
+      state: transition.state,
+    })
+  }
+
   return Object.freeze({
     kind: 'submitted' as const,
     intent,

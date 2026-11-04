@@ -19,7 +19,6 @@ export {
 
 export {
   admitInactiveLaneUserMessage,
-  type FocusIntentArbitration,
   type InactiveLaneAdmission,
   type InactiveLaneAdmissionRejection,
   type InactiveLaneAdmissionResult,
