@@ -230,11 +230,11 @@ export class TenukiAdapter implements GoRulesPort {
     const seenStones = new Set<string>()
     const seenLiberties = new Set<string>()
     const pending: Point[] = [copyPoint(origin.point)]
+    seenStones.add(pointKey(origin.point))
 
     while (pending.length > 0) {
       const current = pending.pop()
       if (current === undefined) break
-      seenStones.add(pointKey(current))
       group.push(current)
       for (const neighbor of this.neighbors(record, current)) {
         const key = pointKey(neighbor)
@@ -247,6 +247,9 @@ export class TenukiAdapter implements GoRulesPort {
           continue
         }
         if (color !== origin.color || seenStones.has(key)) continue
+        // Mark on push: a cyclic block reaches the same stone from several
+        // sides before it is popped, which must not enqueue it twice.
+        seenStones.add(key)
         pending.push(neighbor)
       }
     }
