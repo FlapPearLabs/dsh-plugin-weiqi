@@ -14,6 +14,14 @@ const NON_PRODUCTION_FIXTURE = {
   maxTurnTokens: 4096,
 } as const satisfies GoTurnBudget
 
+/** Fields that accept `0` as a legal "forbid this operation" cap (Spec §22.4). */
+const ZERO_ALLOWED_FIELDS = [
+  'maxInspectCalls',
+  'maxTryMoves',
+  'perRequestMaxTokens',
+  'maxTurnTokens',
+] as const satisfies readonly (keyof GoTurnBudget)[]
+
 function captureError(source: unknown): GoTurnBudgetConfigError {
   try {
     loadGoTurnBudget(source)
@@ -55,12 +63,41 @@ describe('loadGoTurnBudget', () => {
   })
 
   it('rejects invalid field values', () => {
-    const invalidValues: readonly unknown[] = [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '5', true, null]
+    const invalidValues: readonly unknown[] = [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '5', true, null]
 
     for (const value of invalidValues) {
       const error = captureError({ ...NON_PRODUCTION_FIXTURE, maxInspectCalls: value })
-      expect(error.issues).toEqual([{ field: 'maxInspectCalls', reason: 'not-positive-integer' }])
+      expect(error.issues).toEqual([
+        { field: 'maxInspectCalls', reason: 'not-non-negative-integer' },
+      ])
     }
+  })
+
+  it('accepts a zero cap for the counted operations and the token caps', () => {
+    for (const field of ZERO_ALLOWED_FIELDS) {
+      const budget = loadGoTurnBudget({ ...NON_PRODUCTION_FIXTURE, [field]: 0 })
+
+      expect(budget).toEqual({ ...NON_PRODUCTION_FIXTURE, [field]: 0 })
+      expect(budget[field]).toBe(0)
+    }
+  })
+
+  it('still rejects negative and non-integer values on zero-accepting fields', () => {
+    const invalidValues: readonly unknown[] = [-1, -0.5, 0.25, Number.NaN, Number.NEGATIVE_INFINITY, '0', false, null]
+
+    for (const field of ZERO_ALLOWED_FIELDS) {
+      for (const value of invalidValues) {
+        const error = captureError({ ...NON_PRODUCTION_FIXTURE, [field]: value })
+        expect(error.issues).toEqual([{ field, reason: 'not-non-negative-integer' }])
+      }
+    }
+  })
+
+  it('rejects a zero model-step budget because a turn still needs one model step', () => {
+    const error = captureError({ ...NON_PRODUCTION_FIXTURE, maxModelSteps: 0 })
+
+    expect(error.issues).toEqual([{ field: 'maxModelSteps', reason: 'not-positive-integer' }])
+    expect(error.message).toContain('not a positive integer: maxModelSteps')
   })
 
   it('rejects a non-object source', () => {
@@ -77,10 +114,10 @@ describe('loadGoTurnBudget', () => {
 
     expect(error.issues).toEqual([
       { field: 'maxModelSteps', reason: 'missing' },
-      { field: 'maxTurnTokens', reason: 'not-positive-integer' },
+      { field: 'maxTurnTokens', reason: 'not-non-negative-integer' },
     ])
     expect(error.message).toContain('missing: maxModelSteps')
-    expect(error.message).toContain('not a positive integer: maxTurnTokens')
+    expect(error.message).toContain('not a non-negative integer: maxTurnTokens')
   })
 
   it('ignores unrelated keys so wider configuration objects can be injected', () => {
