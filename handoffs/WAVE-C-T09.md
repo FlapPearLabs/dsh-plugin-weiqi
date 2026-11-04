@@ -120,7 +120,7 @@ enforcement.snapshot() 仍是：
 机制：`src/tools/go/go-tools.ts` 的 `runPlay` / `runPass` / `runResign` 都是**先** `runtime.port.*` 执行，**再** `enforcement.recordCommittedAction(...)`；因此门禁能拒绝返回值，却挡不住第二次权威动作已经落到 port。`runResign` 里 `publishGameNotice` 在 `recordCommittedAction` 之后，所以 Bridge 也收不到这次终局通知，port 状态与 Bridge/runtime 视图出现分叉（对标 §40 `state drift = 0`）。
 
 - 影响面：同一 Go turn 内 play/pass 之后再 resign（resign 在规则上任何时候都合法，port 会接受）；其他“再落子/再 pass”会被 port 的 turn 校验挡住。
-- 归属：C-T02 的工具执行顺序 + C-T07 的 commit 门禁集成；**不属于 C-T09 的预算测试范围，本票按约束不改产品源码、不新增失败测试**。
+- 归属：C-T02 的工具执行顺序 + C-T07 的 commit 门禁集成；**不属于 C-T09 的预算测试范围，本票按约束不改产品源码、不新增失败测试**。修复已拆到独立 PR（`fix/post-commit-ordering`），本票 diff 不含 `src/`。
 - 建议：由 owner 在 `runPlay`/`runPass`/`runResign` 执行 port 之前调用 `assertAnalysisOpen('commit')` 等价的准入检查（或先 `recordCommittedAction` 的预检），并补一条“第二次 commit 不触碰 port”的回归测试。
 
 ## 未验证项
@@ -149,6 +149,7 @@ enforcement.snapshot() 仍是：
 ## 下一步（审查者 / 合并后）
 
 - 审查：Standards（只新增 `tests/budget/` 与一个 workflow；无源码改动；无新依赖；断言有牙）+ Spec（§22.1-22.4、§23、§24、§39.4 逐条覆盖，边界值精确，无绕过）。
-- 重点复核 OUT-1：确认它确实在 C-T09 范围外，并把它转给 C-T02/C-T07 的 owner 或新开票。
+- 重点复核 OUT-1：确认它确实在 C-T09 范围外；修复在独立 PR `fix/post-commit-ordering` 中，本票不包含。
+- 审查证据补充：总 token 耗尽用例已改为调用真实 `go.play` 工具面（而非只记录 committedAction），断言 `{ok:true}` 与 `committedAction='play'`；workflow 的 `paths` 已覆盖 `src/contracts/**` 与 `src/preset/go-preset.ts`。
 - 合并后按流程同步 `docs/planning/CURRENT_IMPLEMENTATION_BASELINE.md` 的 BL-BUD-05 行为 IMPLEMENTED_VERIFIED（本票不直接改 Baseline）。
 - F-T04 Phase A Exit Gate 可把本套件与 `budget-bypass-gate.yml` 作为“budget bypass tests pass”的证据输入（与 CI 实际运行结果一起引用）。
