@@ -87,7 +87,7 @@ bash tests/upgrade-gates/tenuki-conformance/run-tenuki-conformance.sh
 
 The runner asserts Node `v24.11.1` by default (the repo pin); on a machine
 with a different Node, set `EXPECTED_NODE` to the actual version (e.g.
-`EXPECTED_NODE=v24.19.0`). CI runs the default pin via
+`EXPECTED_NODE=v26.10.0`). CI runs the default pin via
 `.github/workflows/tenuki-conformance-gate.yml`. To retain the self-contained
 artifact, set `TRACE_LOG` to an output path (the workflow uploads it as the
 `tenuki-conformance-trace` artifact). The gate asserts that the trace's final
@@ -95,14 +95,17 @@ line is the terminal PASS marker and fails when the artifact is missing
 (`if-no-files-found: error`), so a trace truncated before the terminal result
 cannot pass CI.
 
-Executed result (Node v24.19.0 local run, `EXPECTED_NODE=v24.19.0`; CI runs the
-pinned v24.11.1). The `TRACE_LOG` artifact is self-contained: it records, in
+Executed result at HEAD `d62f2eb` (local Node `v26.10.0`; `EXPECTED_NODE`
+overrides the runner's default pin `v24.11.1`, and CI remains authoritative for
+the pinned version). The `TRACE_LOG` artifact is self-contained: it records, in
 execution order, the Node preflight, the exact Tenuki version, the actual
 archive-integrity verification result, the installed-package verification, the
-Vitest output, and the final PASS/FAIL:
+Vitest output, and the final PASS/FAIL. Reproduced byte-for-byte from
+`/tmp/tenuki-trace-evidence.log` with one edit: the local Vitest run directory
+on the `RUN` line is elided to `<worktree>`:
 
 ```text
-TRACE preflight node=v24.19.0 expected=v24.19.0 tenuki=0.3.1
+TRACE preflight node=v26.10.0 expected=v26.10.0 tenuki=0.3.1
 TRACE packing tenuki@0.3.1
 TRACE archive integrity actual=sha512-4obVv+CHn0QXrtHEZOYXE69xweUAae/iHfEz6oqM+dKTcdL8b0G44knfjLtepu4UHdwW0OzxurXDXoZKzKOIIQ==
 TRACE archive integrity OK (matches recorded sha512)
@@ -110,9 +113,15 @@ TRACE installing verified archive
 TRACE verifying installed package
 TRACE installed tenuki@0.3.1 package.json sha1=d0cd7c688ccbfed6284df287267241179dae3525
 TRACE running conformance spec
- ✓ tests/upgrade-gates/tenuki-conformance/tenuki-conformance.spec.ts (6 tests)
+
+ RUN  v4.1.8 <worktree>
+
+
  Test Files  1 passed (1)
       Tests  6 passed (6)
+   Start at  13:15:36
+   Duration  110ms (transform 11ms, setup 0ms, import 15ms, tests 8ms, environment 0ms)
+
 FINAL RESULT: PASS (tenuki@0.3.1 conformance)
 ```
 

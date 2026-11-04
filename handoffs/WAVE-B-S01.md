@@ -1,13 +1,16 @@
-# WAVE-B-S01 交接包（r1 审查修复轮）
+# WAVE-B-S01 交接包（r1 / r2 审查修复轮）
 
 - 仓库：`FlapPearLabs/dsh-plugin-weiqi`
-- 工作树：`~/Documents/ChatGPT/dsh-plugin-weiqi-wt/WAVE-B-S01`
+- 工作树：`<worktree>`
 - 分支：`spike/b-s01-tenuki-conformance`
 - 审查基线（r1 reviewed HEAD）：`0a64ec6`
 - 修复后代码 HEAD：`cfe93e8`
 - 修复提交：`2b27859`（test：CI 断言 PASS 标记 + artifact 缺失改 error）、`cfe93e8`（fix：runner 成功路径触发 `finish` 并清理）
 - 交接包提交：见 `git log -- handoffs/WAVE-B-S01.md`（`docs:` 单独一笔）
 - r1 结论：CHANGES_REQUESTED，P0 0 / P1 1 / P2 2 / P3 1
+- r2 审查 HEAD：`d62f2eb`
+- r2 结论：APPROVE，P0 0 / P1 0 / P2 1 / P3 7
+- r2 修复提交：本交接包同批的 `docs:` 提交（见 `git log -1 -- handoffs/WAVE-B-S01.md`）
 
 ## 本轮修了什么
 
@@ -33,7 +36,7 @@ TRACE_LOG=/tmp/tenuki-trace-before.log EXPECTED_NODE=$(node --version) \
 TRACE installed tenuki@0.3.1 package.json sha1=d0cd7c688ccbfed6284df287267241179dae3525
 TRACE running conformance spec
 
- RUN  v4.1.8 /Users/songshiyao/Documents/ChatGPT/dsh-plugin-weiqi-wt/WAVE-B-S01
+ RUN  v4.1.8 <worktree>
 
  Test Files  1 passed (1)
       Tests  6 passed (6)
@@ -51,7 +54,7 @@ TRACE running conformance spec
 TRACE installed tenuki@0.3.1 package.json sha1=d0cd7c688ccbfed6284df287267241179dae3525
 TRACE running conformance spec
 
- RUN  v4.1.8 /Users/songshiyao/Documents/ChatGPT/dsh-plugin-weiqi-wt/WAVE-B-S01
+ RUN  v4.1.8 <worktree>
 
  Test Files  1 passed (1)
       Tests  6 passed (6)
@@ -87,6 +90,13 @@ FINAL RESULT: PASS (tenuki@0.3.1 conformance)
 - r1 的另一条 **P2**：`scratch_dir=$(cygpath -w ...)` 与后续正斜杠拼接在部分 MINGW/MSYS 下可能异常。仓库没有 Windows gate 在跑，本轮任务清单也未列入。
 - r1 的 **P3**：`./node_modules/vitest/vitest.mjs` 硬编码，建议改 `pnpm exec vitest`；需要确认 CI 里 pnpm hoisting 与 `--no-file-parallelism` 参数透传，属独立小改。
 - 本地系统临时目录仍留着 4 个修复前泄漏的 tenuki scratch 目录（含 `tenuki-0.3.1.tgz`，合计约几十 MB），是修复前行为的证据，未删除。
+
+## r2 修复（文档保真）
+
+1. **P2（记录保真）**：`docs/validation/TENUKI_CONFORMANCE_VERIFIED.md` 原先贴的“trace”是合成文本：其中 `✓ tests/... (6 tests)` 的汇总格式 runner 实际不会产出，`node=v24.19.0` 也不是本轮实际运行的版本，且该段自 `0a64ec6` 起未再更新。已在 HEAD `d62f2eb` 上用 `TRACE_LOG=/tmp/tenuki-trace-evidence.log EXPECTED_NODE=$(node --version) bash tests/upgrade-gates/tenuki-conformance/run-tenuki-conformance.sh` 重跑（**exit 0**，末行 `FINAL RESULT: PASS (tenuki@0.3.1 conformance)`），把 `/tmp/tenuki-trace-evidence.log` 原文贴入文档，仅把 Vitest `RUN` 行的本机目录替换为 `<worktree>`（正文已注明该处省略）；同时把实际 Node 版本写为 `v26.10.0`，并说明 `EXPECTED_NODE` 覆盖了 runner 默认 pin `v24.11.1`（CI 为准）。
+2. **P3（第 5 条）**：本交接包里的本机绝对路径与家目录路径全部替换为 `<worktree>`。
+
+r2 的其余 P3（scorer.js 行号、spec 用例命名、determinism 近空测试、vitest 硬编码、tsconfig include、完整性常量双份）不在本轮范围，保留为遗留。
 
 ## 需决定
 
