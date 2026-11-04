@@ -103,7 +103,7 @@ describe('Go lane model-facing registry structure (Phase A)', () => {
   })
 
   it('rejects a go.* path that is outside the exact whitelist', () => {
-    for (const path of ['go.arbitrary', 'go.state.extra', 'go.try_move_best']) {
+    for (const path of ['go.arbitrary', 'go.state.extra']) {
       expect(goLanePathViolation(path), path).toBe('not-in-surface')
     }
     // `go.try_move_best` names an evaluation surface, not a move tool.
