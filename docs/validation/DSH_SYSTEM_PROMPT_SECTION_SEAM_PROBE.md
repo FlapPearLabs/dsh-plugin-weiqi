@@ -166,23 +166,36 @@ What is measured exactly (trace 6):
 - `request/header` gains exactly one `reason: "change"` event for that
   request, so the epoch change is recorded, not inferred.
 
-Why the delta is the whole request: DeepSeek prefix caching matches the
-longest common prefix, with a 64-token cache-block granularity
-(`packages/core/agent-loop/tests/request-cache.e2e.ts` in the pinned tree pins
-this and states that per-step usage on `assistant/message` is the production
-observable for cache behavior). A change inside the first cache block
-invalidates every token after it — the rest of the system slot, all tool
-schemas, and all messages — so that request is billed as a full cache miss:
-`cacheReadTokens` drops and `inputTokens` rises by the invalidated prefix.
-The exact token count is provider-tokenizer output and needs the with-key run.
+Why a changed request cannot reuse the previous request's prefix: DeepSeek
+persists a cache prefix unit at the end of each request's user input and at the
+end of the model output, and a later request hits only by fully matching one of
+those units (official cache guide, fetched 2026-11-04). Request 1's unit ends
+after its final message and therefore embeds the old system text; request 2
+differs inside the system slot, so it cannot fully match that unit. Whether some
+smaller, independently persisted common prefix still matches is the provider's
+best-effort detection, not something this fixture can observe. The earlier
+"64-token block" statement in this document was an unsupported inference from a
+pinned-tree e2e test and is withdrawn; the current official guide states no such
+granularity.
+
+The exact token and cache-hit delta is provider-tokenizer output and needs a
+with-key run; it is not measured here.
 
 Decision rule for the Runtime (no price assumptions): let `X` be the input
-tokens of one request. Each natural request whose system section differs from
-the previous request's costs about `X` instead of the cached remainder. Twenty
-coalesced updates cost one invalidation (only the value at admission is
-rendered), not twenty. The cost is acceptable if changes are rare relative to
-natural requests; it is not acceptable if a snapshot can change between the
-steps of one tool loop, where every step would restart the cache.
+tokens of one request. A natural request whose system section differs from the
+previous request's cannot match that previous prefix unit, so it pays
+miss-rate input where a match would have paid the (much cheaper) hit rate;
+official Flash pricing on 2026-11-04 was CNY 0.02 vs CNY 1 per million input
+tokens off-peak for hit vs miss (ratio 1/50). Twenty coalesced updates cost one
+such request (only the value at admission is rendered), not twenty. The cost is
+acceptable if changes are rare relative to natural requests; it is not
+acceptable if a snapshot can change between the steps of one tool loop.
+
+One persistence caveat, confirmed by review: `agent.ts:477-488` in the pinned
+tree appends `request/header` events containing the rendered system text, so old
+snapshot text does remain on disk in the header log even though it never enters
+the message history. The claim "no history pollution" covers model-visible
+messages only.
 
 ## Spike-question answers
 
@@ -220,22 +233,27 @@ the token number needs the with-key instrument.
 ## Answers
 
 **A. Does the scheme satisfy latest-only + no wake + no history pollution?**
-Yes, all three, on the pinned commit: latest-only (Q1), no wake (Q2, Q3), no
-history pollution (Q1: no durable snapshot, message list unaffected). Two
-caveats: dynamic values must go through variables (Q4), and each changed value
-that a request observes rewrites the request prefix (Q7 shape).
+Yes for the three properties as scoped, on the pinned commit: latest-only (Q1),
+no wake (Q2, Q3), and no model-visible snapshot in the message history (Q1: no
+durable snapshot message, message list unaffected). Caveats: dynamic values must
+go through variables (Q4); each changed value that a request observes prevents a
+full match with the previous request's prefix unit (Q7 shape); and the rendered
+system text is still persisted in `request/header` log events, so "no history
+pollution" does not mean "nothing on disk".
 
-**B. Cache cost.** The per-change cost is one full prefix invalidation of the
-request that observes the change, because the section precedes all messages
-and tool schemas; the exact token delta is unmeasured in this environment
-(Q7). Coalescing means 20 updates cost one invalidation. This is acceptable
-when snapshot changes are rare relative to natural requests and unacceptable
-if a snapshot can change between steps of one turn. A core-added ephemeral
-tail segment would keep the stable prefix (system, tools, history) cached and
-pay only for the tail; that is strictly better for cache but requires a DSH
-core change instead of a plugin-side registration. Recommendation: adopt the
-section approach only if the with-key Q7 number shows the changed-request cost
-fits the budget; otherwise the tail segment is the correct target.
+**B. Cache cost.** A request that observes a changed section cannot fully match
+the previous request's persisted prefix unit, so the changed part of the prefix
+is paid at the miss rate instead of the hit rate. The exact token and cache-hit
+delta is **not measured** in this environment (Q7), and the official guide
+describes hits as best-effort with independent prefix units rather than a
+strict longest-common-prefix rule, so this document does not claim a precise
+per-change cost. Coalescing means many updates between two requests cost one
+such request. The cost is acceptable when snapshot changes are rare relative to
+natural requests, and not acceptable if a snapshot can change between the steps
+of one turn. A core-added ephemeral tail would avoid rewriting the prefix, but
+per the review recorded in this run it is not identical to append-only replay
+and needs its own spike; it remains a candidate, not a proven win. Recommendation:
+treat the section approach as viable pending a with-key measurement of Q7.
 
 **C. Minimal change if adopted.** Plugin-side only, no DSH patch:
 
