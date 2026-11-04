@@ -130,6 +130,58 @@ cannot dispatch a request without admission), and live mode refuses to start
 without an explicit schedule instead of silently applying the placeholder
 prices. An adapter that declares retries is refused before any request leaves.
 
+## Tool-name mapping and fail-closed handling
+
+The official API rejected the first real request because `tools[0].function.name`
+must match `^[a-zA-Z0-9_-]+$` while the product tools are named `go.play`,
+`go.inspect_group`, and so on. `tests/benchmark/tool-name-mapping.ts` now owns a
+bijective table derived from the real `GO_TOOL_NAMES`:
+
+| Product name | Provider name |
+|---|---|
+| `go.state` | `go_state` |
+| `go.inspect_group` | `go_inspect_group` |
+| `go.inspect_region` | `go_inspect_region` |
+| `go.try_move` | `go_try_move` |
+| `go.play` | `go_play` |
+| `go.pass` | `go_pass` |
+| `go.resign` | `go_resign` |
+| `go.request_deep_think` | `go_request_deep_think` |
+
+Outbound tool schemas and assistant tool-call history are mapped before the
+request leaves; returned tool calls are mapped back before the registry sees
+them. The table build refuses collisions and non-compliant encodings, and both
+directions throw `BenchmarkToolNameError` for a name outside the table.
+
+Six response/failure paths stop instead of being accepted silently:
+
+| Failure | Test |
+|---|---|
+| no `usage` chunk | `stops when the response has no usage and records no tokens` |
+| provider timeout | `stops on a provider timeout without retrying` |
+| connection interruption mid-stream | `stops on a connection interruption mid-stream without retrying` |
+| stream ends without a `finish` chunk | `stops and records a failure when the stream ends without a finish chunk` |
+| reported model alias drift | `stops on model alias drift and records the reported model` |
+| unknown inbound tool name | `fails closed when the model returns an unknown tool name` |
+
+The benchmark gate now reserves the worst-case output cost (`maxTokens` plus
+the pre-flight input estimate) before dispatch and settles it against real
+usage. When no usage arrives, the reservation remains counted. Cumulative
+requests and spend can be persisted through `BenchmarkSpendLedger` (for example
+`tests/benchmark/.state/spend.json`); a restart reloads them, and a corrupt
+ledger throws instead of resetting to zero.
+
+## Reported model and billing basis
+
+This round made **no live DeepSeek call**. The record's `model.reportedModel` is
+the local scripted adapter envelope value
+(`scripted-legal-move-adapter-v1`), not a server response. The billing basis is
+recorded as DSH-normalized usage fields: `usage.inputTokens`,
+`usage.outputTokens`, `usage.cacheReadTokens`, `usage.cacheWriteTokens`, and
+`usage.reasoningTokens`; reasoning tokens are assumed to be included in
+`outputTokens` and are not priced twice. The price schedule is still the
+documented placeholder, so no number in the record is a DeepSeek quote.
+
 ## What remains pending owner approval
 
 1. A real "ask DeepSeek for one move" benchmark run over the same eight

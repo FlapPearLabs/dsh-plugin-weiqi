@@ -8,6 +8,7 @@
 - 红测试 commit：`6bc6764`（`test: pin the DSH request path and spend/request gates`）
 - 绿实现 commit：`cbfcc38`（`feat: route the §38 benchmark through the DSH LLM request path and gate spend`）
 - 闸门加固 commit：`cf06a87`（`fix(test): close the four spend-gate holes before a real calibration run`）
+- 工具名映射/fail-closed commit：`e7588f0`（`fix(test): map provider-safe tool names and fail closed on bad responses`）
 - 本 handoff 与记录/摘要以 `docs:` 单独提交
 - 未 push、未开 PR
 
@@ -62,6 +63,115 @@ VERIFY_EXIT=0
 `openBenchmarkRequestPath(provider, gate)`：gate 是必填参数，`beginRequest` /
 `completeRequest` 在 `request()` 内部执行，打开时还会拒绝带重试策略的 adapter；
 harness 已改成只调 `path.request`，自己不再持有闸门调用。`src/**` 未动。
+
+## 工具名映射与 fail-closed（2026-11-04，零费用）
+
+上一轮真实请求被官方 API 以 400 拒绝：`tools[0].function.name` 必须匹配
+`^[a-zA-Z0-9_-]+$`，而产品工具名带点号。本轮补上双向映射和失败路径，全程没有
+发起任何真实模型请求，也没有读取凭据。
+
+### 映射规则
+
+`tests/benchmark/tool-name-mapping.ts` 从真实的 `GO_TOOL_NAMES` 构建双射表，
+出站把 `.` 换成 `_`，入站反查回原名：
+
+| 原名 | provider 名 |
+|---|---|
+| `go.state` | `go_state` |
+| `go.inspect_group` | `go_inspect_group` |
+| `go.inspect_region` | `go_inspect_region` |
+| `go.try_move` | `go_try_move` |
+| `go.play` | `go_play` |
+| `go.pass` | `go_pass` |
+| `go.resign` | `go_resign` |
+| `go.request_deep_think` | `go_request_deep_think` |
+
+- 建表时校验：每个 provider 名匹配 `^[a-zA-Z0-9_-]+$`、两两不同、能反查；
+  冲突或编码后不合规直接抛错，不会静默覆盖。
+- 出站映射工具 schema 和 assistant 历史里的 tool-call 名字；入站映射模型返回的
+  tool-call 名字，未知名字抛 `BenchmarkToolNameError`，绝不透传或猜。
+- 测试：`tool-name-mapping.test.ts` 覆盖表完整性、往返、冲突、非法编码、schema/
+  历史映射；`request-path.test.ts` 断言 provider 实际收到的名字全部合规、响应里的
+  `tool_calls` 被还原成原名且都在 `GO_TOOL_NAMES` 中。
+
+### 六条 fail-closed 测试
+
+文件：`tests/benchmark/fail-closed.test.ts`。每条都用本地注入 provider 触发，
+没有网络请求。
+
+| 失败路径 | 测试名 |
+|---|---|
+| 响应缺 `usage` | `stops when the response has no usage and records no tokens` |
+| 超时 | `stops on a provider timeout without retrying` |
+| 连接中断 | `stops on a connection interruption mid-stream without retrying` |
+| 流被截断（无 `finish`） | `stops and records a failure when the stream ends without a finish chunk` |
+| 模型别名漂移 | `stops on model alias drift and records the reported model` |
+| 未知入站工具名 | `fails closed when the model returns an unknown tool name` |
+
+行为：全部 `throw`，并把失败类型写进 `path.stats().failures`；有 `usage` 的失败
+先按真实 usage 结算再抛（花费不能因为失败而丢），无 `usage` 时保留最坏情况预留。
+
+### 预留与落盘
+
+- `beginRequest` 按 `maxTokens` + 预检输入估算预留最坏费用；`costUsd + reservedCostUsd
+  + reservation > maxEstimatedCostUsd` 时在分发前停。`completeRequest` 先释放预留、
+  再按真实 usage 结算，最后复查上限。
+- `BenchmarkSpendLedger` 在 `beginRequest`（含预留）和 `completeRequest` 后原子写盘；
+  进程重启从同一文件恢复请求数/token/花费/未释放预留；损坏或负值文件直接抛错，
+  不重置为 0。测试用临时目录 + 两个子进程验证跨进程累加。
+
+### 本轮记录里的模型名与计费口径
+
+**本轮没有真实 DeepSeek 调用。** 记录（`COGNITION_BENCHMARK_SCRIPTED_RECORD.json`）
+里的 `model.reportedModel` 是本地 scripted adapter 的 envelope 值
+`scripted-legal-move-adapter-v1`，不是服务端返回；`model.reportedModels` 也只有这一个。
+计费口径记录为 DSH 归一化字段：`usage.inputTokens` / `usage.outputTokens` /
+`usage.cacheReadTokens` / `usage.cacheWriteTokens` / `usage.reasoningTokens`；
+reasoning 视为已含在 output 里，不重复计费。价格仍是占位表（$1/M input、$2/M output、
+$0.5/M cache read、$1/M cache write），不是 DeepSeek 报价。记录里只有字段，没有 key。
+
+重新生成的记录：54 requests、`estimatedCostUsd=0.039681`（占位价）、
+`reservedCostUsd=0`、`stops=0`。
+
+### 验证
+
+```text
+pnpm exec vitest run tests/benchmark
+ Test Files  7 passed (7)
+      Tests  56 passed (56)
+
+pnpm verify
+ Test Files  43 passed (43)
+      Tests  524 passed (524)
+VERIFY_EXIT=0
+```
+
+变异验证 21 条，每条只改一处、跑对应单测、确认变红、按 SHA-256 复原：
+映射冲突、未知出站/入站、schema 映射、历史映射、入站还原、缺 usage、超时分类、
+连接中断分类、截断流、别名漂移、未知入站工具、预留检查、预留累加、预留释放、
+分发前落盘、重启加载、损坏账本、负值账本、账本保存、请求声明的 search 工具。
+全部 `RED`，复原后 benchmark 56/56 通过。
+
+### 真实入口剩余未验证风险
+
+1. **真实 DeepSeek 调用仍未发生。** `reportedModel` 目前只是本地 adapter 的值。真实
+   adapter 必须把响应里的 `model` 放进 `finish.replayState.response.model`（或等价
+   暴露）；否则 drift 检查只能记录 `null`，等于不生效。
+2. **真实 usage 字段映射未验证。** 计费口径在 DSH 归一化层（`usage.inputTokens` /
+   `outputTokens`）；真实 adapter 是否把 DeepSeek 的 `prompt_tokens` /
+   `completion_tokens` / cache 字段正确映射到这些字段，未在真实响应上验证。
+3. **真实超时/连接中断未验证。** 本轮用本地抛 `LlmError('TIMEOUT')` 和
+   `NETWORK_INTERRUPTED` 的 provider 证明分类逻辑；真实 HTTP adapter 是否把 socket
+   超时、TLS reset、流中断都归一化成 `finish` 的 error/aborted，需要在真实入口复核。
+4. **映射只覆盖 benchmark 请求路径。** 真实 adapter 自己序列化 `options.tools` /
+   messages 时看到的是映射后的名字；如果 adapter 内部还从别处重放历史消息，那段
+   序列化是否同样走映射尚未验证。
+5. **价格/缓存计费未标定。** 占位价和 cache 读按 input 价兜底是保守估计，不是
+   DeepSeek 报价；真实跑必须传批准的价目表并以 `mode: 'live'` 构造 gate。
+6. **`@deepseek-ai/dsh-agent-loop` 仍未安装。** step/turn 驱动仍是文档化替身；
+   真实 loop 的 resume/steering/turn-end 语义不在本 harness 范围内。
+7. **别名漂移是精确字符串比较。** 官方若发布新的模型 id，运行会按设计停住；
+   需要人工确认后更新配置的 model id，而不是自动接受。
 
 ## 结论
 
