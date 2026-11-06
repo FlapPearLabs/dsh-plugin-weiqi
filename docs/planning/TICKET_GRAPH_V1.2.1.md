@@ -468,7 +468,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Explicit Non-Goals:** No attention policy (D-T06); no focus scheduling (D-T07); no queue, event bus, trimming, or history edit.
 - **Dependencies / blocked_by:** WAVE-D-T01, WAVE-D-S01, WAVE-A-T02
 - **Expected Surfaces:** `src/bridge/delivery.ts`, the pinned DSH hybrid delivery seams
-- **Acceptance Criteria:** §39.6 smoke: 20 rapid GameNotice updates → zero attention-evaluation requests (request-count trace); idle Manual lane not woken; the next natural Go request carries only the newest WorkSnapshot; the Work direction stays within the §39.6 numeric bound (≤ 20 runtime-context entries and ≤ 5920 rendered characters over 400 moves with one natural request every 20 moves).
+- **Acceptance Criteria:** §39.6 smoke: 20 rapid GameNotice updates → zero attention-evaluation requests (request-count trace); idle Manual lane not woken; the next natural Go request carries only the newest WorkSnapshot; the Work direction stays within the §39.6 numeric bound (≤ 20 runtime-context entries and ≤ 20 × 300 = 6000 characters of GameNotice text over 400 moves with one natural request every 20 moves; the same gate may assert a tighter measured value such as 5920, which sits inside that ceiling).
 - **Required Review Evidence:** request-count trace; assertions.
 - **Stop / Escalation Condition:** cooldown/new mechanism → `ESCALATION_REQUIRED`.
 
