@@ -6,3 +6,15 @@ export {
   type GoLaneAwareness,
   type WorkLaneAwareness,
 } from './awareness.js'
+export {
+  bindBridgeDelivery,
+  renderGameNotice,
+  renderWorkSnapshot,
+  GO_SNAPSHOT_ORDER,
+  GO_SNAPSHOT_SECTION,
+  GO_SNAPSHOT_VARIABLE,
+  WORK_NOTICE_ORDER,
+  WORK_NOTICE_CONTEXT,
+  type DeliveryTargets,
+  type PromptSeam,
+} from './delivery.js'
