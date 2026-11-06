@@ -230,4 +230,17 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     expect(context.split('\n')).not.toContain(forged)
     expect(context).toContain(BOUNDARY)
   })
+
+  it('7. a Bridge value containing double braces still yields one request and stays verbatim', async () => {
+    const { work, runtime, adapter } = await harness([textResponse('w1')])
+
+    runtime.updateGame({ ...notice(2), gameId: 'gate-{{x}}', lastMove: '{{go.resign}}' }, 2)
+    work.followup(userText('one'))
+    await work.whenIdle()
+
+    expect(adapter.requests).toHaveLength(1)
+    const visible = modelVisibleText(work)
+    expect(visible).toContain('gameId: gate-{{x}}')
+    expect(visible).toContain('lastMove: {{go.resign}}')
+  })
 })
