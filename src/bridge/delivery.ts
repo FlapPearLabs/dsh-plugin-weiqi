@@ -39,6 +39,7 @@ export interface DeliveryTargets {
 export const GO_SNAPSHOT_SECTION = 'companion-go:go-lane-work-snapshot'
 export const GO_SNAPSHOT_VARIABLE = 'go_work_snapshot'
 export const WORK_NOTICE_CONTEXT = 'companion-go:work-lane-game-notice'
+export const WORK_NOTICE_VARIABLE = 'work_game_notice'
 
 export const GO_SNAPSHOT_ORDER = 40
 
@@ -120,12 +121,16 @@ export function bindBridgeDelivery(targets: DeliveryTargets, awareness: CrossLan
         ? ''
         : `${BRIDGE_DATA_BOUNDARY}\n\n{{${GO_SNAPSHOT_VARIABLE}}}`,
   })
+  targets.work.variable(WORK_NOTICE_VARIABLE, () => {
+    const notice = awareness.forWorkLane().latestGameNotice
+    return notice === undefined ? undefined : renderGameNotice(notice)
+  })
   targets.work.context({
     name: WORK_NOTICE_CONTEXT,
     order: WORK_NOTICE_ORDER,
-    text: () => {
-      const notice = awareness.forWorkLane().latestGameNotice
-      return notice === undefined ? '' : `${BRIDGE_DATA_BOUNDARY}\n\n${renderGameNotice(notice)}`
-    },
+    text: () =>
+      awareness.forWorkLane().latestGameNotice === undefined
+        ? ''
+        : `${BRIDGE_DATA_BOUNDARY}\n\n{{${WORK_NOTICE_VARIABLE}}}`,
   })
 }

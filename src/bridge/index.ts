@@ -17,6 +17,7 @@ export {
   GO_SNAPSHOT_VARIABLE,
   WORK_NOTICE_ORDER,
   WORK_NOTICE_CONTEXT,
+  WORK_NOTICE_VARIABLE,
   type DeliveryTargets,
   type PromptSeam,
 } from './delivery.js'

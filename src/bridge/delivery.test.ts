@@ -59,7 +59,7 @@ function textOf(registration: Registration | undefined, context: unknown = {}): 
 }
 
 describe('bindBridgeDelivery', () => {
-  it('registers the Go direction as a section plus a variable and the Work direction as runtime context', () => {
+  it('registers the Go direction as a section plus a variable and the Work direction as a context plus a variable', () => {
     const go = recorder()
     const work = recorder()
     bindBridgeDelivery(
@@ -68,14 +68,16 @@ describe('bindBridgeDelivery', () => {
     )
 
     expect(go.registrations.map(entry => entry.kind).sort()).toEqual(['section', 'variable'])
-    expect(work.registrations.map(entry => entry.kind)).toEqual(['context'])
+    expect(work.registrations.map(entry => entry.kind).sort()).toEqual(['context', 'variable'])
 
     const section = go.registrations.find(entry => entry.kind === 'section')
     const variable = go.registrations.find(entry => entry.kind === 'variable')
+    const noticeVariable = work.registrations.find(entry => entry.kind === 'variable')
     const context = work.registrations.find(entry => entry.kind === 'context')
 
     expect(section?.name).not.toBe(variable?.name)
     expect(context?.name).not.toBe(section?.name)
+    expect(noticeVariable?.name).not.toBe(variable?.name)
   })
 
   it('contributes nothing before the first snapshot and only the newest value afterwards', () => {
@@ -104,14 +106,17 @@ describe('bindBridgeDelivery', () => {
     bindBridgeDelivery({ go: recorder().seam, work: work.seam }, new CrossLaneAwareness(runtime))
 
     const context = work.registrations.find(entry => entry.kind === 'context')
+    const variable = work.registrations.find(entry => entry.kind === 'variable')
     expect(textOf(context)).toBe('')
+    expect(variable?.provider?.({})).toBeUndefined()
 
     runtime.updateGame(notice(1), 1)
-    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(1))}`)
+    expect(textOf(context)).toBe(`${BOUNDARY}\n\n{{${variable?.name}}}`)
+    expect(variable?.provider?.({})).toBe(renderGameNotice(notice(1)))
 
     runtime.updateGame(notice(2), 2)
-    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(2))}`)
-    expect(textOf(context)).not.toContain('moveNumber: 1')
+    expect(variable?.provider?.({})).toBe(renderGameNotice(notice(2)))
+    expect(variable?.provider?.({})).not.toContain('moveNumber: 1')
   })
 
   it('ignores a stale publication for both directions', () => {
@@ -127,8 +132,10 @@ describe('bindBridgeDelivery', () => {
 
     const variable = go.registrations.find(entry => entry.kind === 'variable')
     const context = work.registrations.find(entry => entry.kind === 'context')
+    const noticeVariable = work.registrations.find(entry => entry.kind === 'variable')
     expect(variable?.provider?.({})).toBe(renderWorkSnapshot(snapshot(2)))
-    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(2))}`)
+    expect(noticeVariable?.provider?.({})).toBe(renderGameNotice(notice(2)))
+    expect(textOf(context)).toBe(`${BOUNDARY}\n\n{{${noticeVariable?.name}}}`)
   })
 })
 

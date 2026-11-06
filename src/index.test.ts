@@ -160,8 +160,9 @@ describe('Companion Go Cordis entry', () => {
     expect(goSeam?.contexts).toHaveLength(0)
     expect(workSeam?.contexts).toHaveLength(1)
     expect(workSeam?.sections).toHaveLength(0)
-    expect(workSeam?.variables).toHaveLength(0)
+    expect(workSeam?.variables).toHaveLength(1)
     expect(workSeam?.contexts[0]?.name).not.toBe(goSeam?.sections[0]?.name)
+    expect(workSeam?.variables[0]?.name).not.toBe(goSeam?.variables[0]?.name)
   })
 
   it('propagates factory collisions instead of adopting an existing identity', async () => {
