@@ -21,7 +21,7 @@ tests_dir="$dsh_root/packages/core/agent-loop/tests"
 log_dir="${LOG_DIR:-$(mktemp -d)}"
 mkdir -p "$log_dir"
 
-section_block='  targets.go.variable(GO_SNAPSHOT_VARIABLE, () => {
+GO_SECTION_BLOCK='  targets.go.variable(GO_SNAPSHOT_VARIABLE, () => {
     const snapshot = awareness.forGoLane().latestWorkSnapshot
     return snapshot === undefined ? undefined : renderWorkSnapshot(snapshot)
   })
@@ -32,7 +32,7 @@ section_block='  targets.go.variable(GO_SNAPSHOT_VARIABLE, () => {
   })
 '
 
-context_block='  targets.go.context({
+GO_CONTEXT_BLOCK='  targets.go.context({
     name: GO_SNAPSHOT_SECTION,
     order: GO_SNAPSHOT_ORDER,
     text: () => {
@@ -42,15 +42,39 @@ context_block='  targets.go.context({
   })
 '
 
+WORK_CONTEXT_BLOCK='  targets.work.context({
+    name: WORK_NOTICE_CONTEXT,
+    order: WORK_NOTICE_ORDER,
+    text: () => {
+      const notice = awareness.forWorkLane().latestGameNotice
+      return notice === undefined ? '"''"' : renderGameNotice(notice)
+    },
+  })
+'
+
+WORK_FROZEN_BLOCK='  let frozenWorkProjection: string | undefined
+  targets.work.context({
+    name: WORK_NOTICE_CONTEXT,
+    order: WORK_NOTICE_ORDER,
+    text: () => {
+      if (frozenWorkProjection === undefined) {
+        const notice = awareness.forWorkLane().latestGameNotice
+        frozenWorkProjection = notice === undefined ? '"''"' : renderGameNotice(notice)
+      }
+      return frozenWorkProjection
+    },
+  })
+'
+
 survived=0
 run_mutant() {
-  local name=$1 replacement=$2
+  local name=$1 from=$2 to=$3
   local dir
   dir=$(mktemp -d "$tests_dir/bridge-delivery-mutant-$name.XXXXXX")
   cp "$script_dir/bridge-delivery.fixture.ts" "$dir/bridge-delivery.spec.ts"
   cp -R "$plugin_root/src" "$dir/plugin"
 
-  if ! node --input-type=module - "$dir/plugin/bridge/delivery.ts" "$section_block" "$replacement" <<'NODE'
+  if ! node --input-type=module - "$dir/plugin/bridge/delivery.ts" "$from" "$to" <<'NODE'
 import { readFileSync, writeFileSync } from 'node:fs'
 const [file, from, to] = process.argv.slice(2)
 const text = readFileSync(file, 'utf8')
@@ -84,8 +108,9 @@ NODE
   fi
 }
 
-run_mutant context-seam-for-go "$context_block"
-run_mutant no-go-registration ''
+run_mutant context-seam-for-go "$GO_SECTION_BLOCK" "$GO_CONTEXT_BLOCK"
+run_mutant no-go-registration "$GO_SECTION_BLOCK" ''
+run_mutant frozen-work-projection "$WORK_CONTEXT_BLOCK" "$WORK_FROZEN_BLOCK"
 
 if [[ $survived -ne 0 ]]; then
   echo "RESULT: FAIL — $survived mutant(s) survived; the gate does not prove the property"

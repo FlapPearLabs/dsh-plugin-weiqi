@@ -146,6 +146,9 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     work.followup(userText('two'))
     await work.whenIdle()
     expect(adapter.requests.length).toBe(afterFirst + 1)
+
+    const visible = modelVisibleText(work)
+    expect(visible.slice(visible.lastIndexOf('GAME_NOTICE'))).toContain('moveNumber: 21')
   })
 
   it('3. an idle lane is not woken by a Bridge change alone', async () => {
@@ -186,6 +189,8 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     expect(blocks.length).toBeGreaterThan(0)
     expect(Math.max(...blocks)).toBeLessThanOrEqual(296)
     expect(blocks.reduce((total, length) => total + length, 0)).toBeLessThanOrEqual(20 * 296)
+    const newest = visible.slice(visible.lastIndexOf('GAME_NOTICE'))
+    expect(newest).toContain('moveNumber: 400')
   })
 
   it('5. an unchanged GameNotice adds no repeated runtime context', async () => {

@@ -90,6 +90,12 @@ RESULT: PASS — every mutant was killed by an assertion
 |---|---|---|
 | `context-seam-for-go` | the Go direction registers `context(...)` instead of `section` + `variable` | assertion 1 red: the system slot no longer carries the snapshot |
 | `no-go-registration` | the Go registrations are removed entirely | assertion 1 red |
+| `frozen-work-projection` | the Work provider renders once and then returns the cached text, so later GameNotices never reach the model | assertions 2 and 4 red: the newest block no longer carries `moveNumber: 21` / `moveNumber: 400` |
+
+The `frozen-work-projection` mutant exists because review r1 found it surviving the
+first version of this gate: the "newest last" property was asserted only in the
+repository unit test, not in the pinned gate. It is now asserted in both, and the
+mutant proves the gate can fail for it.
 
 The mutants live only under the pinned tests directory and are removed on exit;
 `git -C "$DSH_PINNED_ROOT" status --porcelain` is empty afterwards.
