@@ -131,11 +131,12 @@ also found no assertion for the newest notice's position, so a mutant that put
 the boundary after the projection survived. Both gaps are closed above, and the
 `pad` / `notice-not-last` rows are the mutants that prove it.
 
-The same r2 run recorded `stale` (first GameNotice forever) as surviving; with
-the committed gate at `27b5aa0` that mutant is already killed by the content
-assertions in cases 2 and 4 (see the commit history of this branch for the raw
-`SURVIVED` run of `notice-not-last` and the `killed` runs of `stale`), so this
-record does not repeat that claim.
+Correction: this record previously stated that the `stale` mutant was already
+killed by content assertions at `27b5aa0`. That was wrong. At `27b5aa0` the gate
+had five cases and two mutants (`context-seam-for-go`, `no-go-registration`); it
+had no content assertion. The content assertions in cases 2 and 4 exist from
+`b27f3f1`, so `stale` is first killed there. A `frozen-work-projection` mutant
+did exist in the gate before `f3d87b6`.
 
 The mutants live only under the pinned tests directory and are removed on exit;
 `git -C "$DSH_PINNED_ROOT" status --porcelain` is empty afterwards.
