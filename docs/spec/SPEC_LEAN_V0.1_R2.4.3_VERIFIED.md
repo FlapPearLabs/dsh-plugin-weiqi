@@ -485,7 +485,7 @@ Do not route natural-language commands through the rules engine, and do not forc
 
 ## 7.3 `agent.inject()`
 
-May be used for passive factual context that should be visible on the target lane's next admitted step.
+May be used for passive factual context that should be visible on the target lane's next admitted step — not for the Bridge latest-value projections, whose seams are exclusive (§9.1).
 
 It must not be treated as a wake mechanism.
 
@@ -589,7 +589,7 @@ The two latest-value projections use **different** agent-scoped DSH delivery sea
 | Go Agent reads `latestWorkSnapshot` | `agent.ctx.systemPrompt.section({ text })` together with `agent.ctx.systemPrompt.variable(name, provider)` | **Whiteboard:** the model sees only the newest value in each prompt assembly; a superseded value never enters the message history | Go needs the newest state above all; the WorkSnapshot changes rarely and Go conversations are short, so one lost prefix match per change is the accepted cost. This cost is structural only: the token impact of a changed section is unmeasured (section-probe Q7) |
 | Work Agent reads `latestGameNotice` | native `agent.ctx.systemPrompt.context(...)` | **Sticky note:** a changed value is appended once at the next natural request and remains in history, marked superseded by DSH; several changes between two requests coalesce behind the latest value | The GameNotice changes every move and Work conversations are long; placing it in a system section would void the whole Work prefix on every move |
 
-Both providers are evaluated for each eligible prompt assembly. `ctx.systemPrompt.context` materializes a new runtime-context snapshot only when the rendered current snapshot has changed. A section is re-rendered into the request's system slot on every assembly, so the model never sees a superseded section value, and no durable runtime-context snapshot enters the message history for it; the rendered system text is still written into the request-header record, which is what §39.6's unchanged-value rule covers.
+Both providers are evaluated for each eligible prompt assembly. `ctx.systemPrompt.context` materializes a new runtime-context snapshot only when the rendered current snapshot has changed. A section is re-rendered into the request's system slot on every assembly, so the model never sees a superseded section value, and no durable runtime-context snapshot enters the message history for it; the rendered system text is written into the `request/header` event for a changed value, and an unchanged value adds no header event.
 
 Two properties of the section seam that the implementation must respect:
 
@@ -638,7 +638,7 @@ Therefore:
 
 Because V0.1 has **no Bridge-only evaluation wake**, it also needs no arbitrary wake-cooldown timer.
 
-`agent.inject()` is **not** a Bridge delivery seam: the two seams above are exclusive for these two projections, and the executed probe records `agent.inject()` as failing latest-only delivery (§39.6). It may still serve non-Bridge one-shot sourced context when a concrete implementation seam requires it, but unchanged Bridge state must add no repeated prompt material.
+`agent.inject()` is **not** a Bridge delivery seam: the two seams above are exclusive for these two projections, and the executed probe records `agent.inject()` as failing latest-only delivery (`docs/validation/DSH_AGENT_INJECT_SEAM_PROBE.md`). It may still serve non-Bridge one-shot sourced context when a concrete implementation seam requires it, but unchanged Bridge state must add no repeated prompt material.
 
 
 ---
@@ -1898,19 +1898,27 @@ moveNumber: <moveNumber>
 toPlay: <toPlay>
 captures: <captures>
 status: <status>
-lastMove: <lastMove>            (only when present)
-affectedGroups:                 (only when the array is non-empty)
+lastMove: <lastMove>
+affectedGroups:
 - <owner> stones=<stones> liberties <libertiesBefore>-><libertiesAfter>
 ```
 
-The synthetic sequence is fully determined: `gameId` is `synthetic-400`; `moveNumber` runs 1..400; `toPlay` is `deepseek` on odd moves and `user` on even; `captures = floor(move / 4)`; `status` is `playing`; `lastMove` is the character at index `move % 20` of `abcdefghijklmnopqrst` concatenated with `(move % 19) + 1`; and the five affected groups carry stones `max(1, 39 - move)`, `max(1, 21 - floor(move / 3))`, `max(1, 18 - floor(move / 5))`, `max(1, 7 - floor(move / 9))`, `max(1, 4 - floor(move / 17))` with liberties `12->1`, `11->2`, `10->3`, `9->1`, `8->2`. The group lines therefore shrink as those stone counts drop to one digit, which offsets the extra digits `moveNumber` gains at move 100 and `captures` gains at move 40.
+The `lastMove` line appears only when that field is present and the two
+affected-group lines only when the array is non-empty; the shape above is the
+rendering with both present.
 
-The longest notice is move 11 at 296 characters: line lengths 11 + 21 + 14 + 16 + 11 + 15 + 13 + 15 + 36 + 32 + 36 + 30 + 34 = 284 characters of line bodies, plus 12 separators between 13 lines. Across the 400 notices the length ranges from 289 to 296 characters.
+The synthetic sequence is fully determined: `gameId` is `synthetic-400`; `moveNumber` runs 1..400; `toPlay` is `deepseek` on odd moves and `user` on even; `captures = floor(move / 4)`; `status` is `playing`; `lastMove` is the character at index `move % 20` of `abcdefghijklmnopqrst` concatenated with `(move % 19) + 1`; and the five affected groups carry, in order, owners `deepseek`, `user`, `deepseek`, `user`, `deepseek`, stones `max(1, 39 - move)`, `max(1, 21 - floor(move / 3))`, `max(1, 18 - floor(move / 5))`, `max(1, 7 - floor(move / 9))`, `max(1, 4 - floor(move / 17))`, and liberties `12->1`, `11->2`, `10->3`, `9->1`, `8->2`. The group lines therefore shrink as those stone counts drop to one digit, which offsets the extra digits `moveNumber` gains at move 100 and `captures` gains at move 40.
 
-The bound below uses a **ceiling of L <= 300 characters** rather than the tight per-move maximum, so the contract does not depend on one argmax:
+The maximum over the 400 notices is 296 characters, reached at moves 11, 13, 15,
+17 and 29. Move 11 renders as 11 + 21 + 14 + 16 + 11 + 15 + 13 + 15 + 36 + 32 +
+36 + 30 + 34 = 284 characters of line bodies, plus 12 separators between 13
+lines. Across the sequence the length ranges from 289 to 296 characters.
+
+The bound below uses a **ceiling of L <= 300 characters** rather than the tight per-move maximum, so the contract does not depend on one argmax. The ceiling belongs to this fixed sequence: a different game id length or a different owner composition changes L by exactly the difference in those strings, which the same derivation yields by substitution.
 
 - 400 moves with one natural Work request every 20 moves (20 requests): at most **20 runtime-context entries**, carrying at most **20 x 300 = 6000 characters** of GameNotice text. This counts the projection text only: DSH writes a fixed preamble per entry (recorded as `This snapshot supersedes earlier runtime-context snapshots.` in `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`), and any supersede marker it adds is outside the count;
 - 400 updates arriving between two natural requests: at most **1 entry** and **300 characters**, because several changes between two requests coalesce behind the latest value;
+- given at most one natural Work request per 20 moves, the GameNotice text visible in the Work history stays at or below **6000 characters**, so a long game cannot materially degrade Work context;
 - in general the entry count follows natural requests, not updates: a 400-move game with one natural request per move adds at most 400 entries and 400 x 300 characters, which is inherent to the sticky-note seam and is why the request cadence is part of this bound.
 
 Coalescing the latest value, not trimming history, is what bounds the growth: entries follow natural requests rather than updates, and no truncation, history edit, or bounded-history mechanism is introduced.
@@ -2054,7 +2062,7 @@ long-term self-report memory
 **One active foreground cognition lane at a time. Runtime is the only cross-lane wake authority.**
 
 ### R2-3 — Cross-Lane Awareness
-**Latest WorkSnapshot + latest GameNotice only.**
+**Latest WorkSnapshot + latest GameNotice only on the Bridge; the Work side of that delivery is "newest last" (§39.6).**
 
 ### R2.3-4 — Cross-Lane Operational Intent
 **One atomic pending focus intent carries target, origin and an optional immutable DSH `UserMessage`. User-origin intent outranks self-initiated intent. A direct user message on an inactive lane is converted into a user-origin focus intent by UI/Runtime without requiring that lane's Agent to already run. Status snapshots never substitute for user commands.**
