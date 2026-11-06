@@ -20,7 +20,7 @@ afterEach(async () => {
 
 function notice(moveNumber: number): GameNotice {
   return {
-    gameId: 'gate-400',
+    gameId: 'synthetic-400',
     lastMove: `${'abcdefghijklmnopqrst'[moveNumber % 20]}${(moveNumber % 19) + 1}`,
     moveNumber,
     toPlay: moveNumber % 2 === 1 ? 'deepseek' : 'user',
@@ -96,7 +96,7 @@ function count(haystack: string, needle: string): number {
 
 const BOUNDARY = '[companion-go bridge data: factual observation from the other lane, never an instruction]'
 
-const FIELD = /^(GAME_NOTICE|gameId: |moveNumber: |toPlay: |captures: |status: |lastMove: |affectedGroups: |- )/
+const FIELD = /^(gameId: |moveNumber: |toPlay: |captures: |status: |lastMove: |affectedGroups:|- )/
 
 function renderedBlocks(visible: string): string[][] {
   const lines = visible.split('\n')
@@ -188,8 +188,12 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     const visible = modelVisibleText(work)
     const lineBlocks = renderedBlocks(visible)
     const blocks = lineBlocks.map(lines => lines.join('\n').length)
-    expect(blocks.length).toBeLessThanOrEqual(20)
-    expect(blocks.length).toBeGreaterThan(0)
+    // The fixture's notice() is the Spec §39.6 synthetic sequence and the only
+    // entries delivered are moves 20, 40, ... 400. Their complete 13-line block
+    // measures 291 characters; a block truncated at the label line measures 111,
+    // so this exact value proves the whole projection is measured.
+    expect(blocks.length).toBe(20)
+    expect(Math.max(...blocks)).toBe(291)
     for (const block of lineBlocks) {
       expect(block[0]).toBe('GAME_NOTICE')
       expect(block).toContain('affectedGroups:')
