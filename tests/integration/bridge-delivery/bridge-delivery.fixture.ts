@@ -98,14 +98,14 @@ const BOUNDARY = '[companion-go bridge data: factual observation from the other 
 
 const FIELD = /^(GAME_NOTICE|gameId: |moveNumber: |toPlay: |captures: |status: |lastMove: |affectedGroups: |- )/
 
-function renderedBlocks(visible: string): number[] {
+function renderedBlocks(visible: string): string[][] {
   const lines = visible.split('\n')
-  const blocks: number[] = []
+  const blocks: string[][] = []
   for (let index = 0; index < lines.length; index += 1) {
     if (lines[index] !== 'GAME_NOTICE') continue
     let end = index
     while (end + 1 < lines.length && FIELD.test(lines[end + 1] as string)) end += 1
-    blocks.push(lines.slice(index, end + 1).join('\n').length)
+    blocks.push(lines.slice(index, end + 1))
     index = end
   }
   return blocks
@@ -186,9 +186,15 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     }
 
     const visible = modelVisibleText(work)
-    const blocks = renderedBlocks(visible)
+    const lineBlocks = renderedBlocks(visible)
+    const blocks = lineBlocks.map(lines => lines.join('\n').length)
     expect(blocks.length).toBeLessThanOrEqual(20)
     expect(blocks.length).toBeGreaterThan(0)
+    for (const block of lineBlocks) {
+      expect(block[0]).toBe('GAME_NOTICE')
+      expect(block).toContain('affectedGroups:')
+      expect(block[block.length - 1]).toMatch(/^- /)
+    }
     expect(Math.max(...blocks)).toBeLessThanOrEqual(296)
     expect(blocks.reduce((total, length) => total + length, 0)).toBeLessThanOrEqual(20 * 296)
     const newest = visible.slice(visible.lastIndexOf('GAME_NOTICE'))
