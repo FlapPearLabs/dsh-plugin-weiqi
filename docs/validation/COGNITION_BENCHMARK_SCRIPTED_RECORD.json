@@ -2,12 +2,69 @@
   "recordKind": "cognition-benchmark",
   "specSection": "§38",
   "ticket": "WAVE-C-T10",
-  "generatedAt": "2026-11-04T07:53:49.815Z",
+  "generatedAt": "2026-11-04T11:55:24.841Z",
   "model": {
     "kind": "scripted-deterministic",
     "id": "scripted-legal-move-adapter-v1",
+    "provider": "benchmark-scripted",
+    "requestPath": "dsh-llm-runtime",
     "isDeepSeek": false,
-    "disclosure": "All token counts and moves come from a deterministic scripted adapter. No DeepSeek request was made. Latency is local harness wall-clock, not model latency. These numbers cannot calibrate production token caps; a real DeepSeek run awaits owner approval."
+    "providerMode": "scripted",
+    "reportedModel": "scripted-legal-move-adapter-v1",
+    "reportedModels": [
+      "scripted-legal-move-adapter-v1"
+    ],
+    "billingBasis": {
+      "inputTokensField": "usage.inputTokens",
+      "outputTokensField": "usage.outputTokens",
+      "cacheReadTokensField": "usage.cacheReadTokens",
+      "cacheWriteTokensField": "usage.cacheWriteTokens",
+      "reasoningTokensField": "usage.reasoningTokens",
+      "pricingSource": "placeholder",
+      "inputUsdPerMillionTokens": 1,
+      "outputUsdPerMillionTokens": 2,
+      "cacheReadUsdPerMillionTokens": 0.5,
+      "cacheWriteUsdPerMillionTokens": 1,
+      "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+    },
+    "toolNameMapping": {
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "table": [
+        {
+          "original": "go.state",
+          "provider": "go_state"
+        },
+        {
+          "original": "go.inspect_group",
+          "provider": "go_inspect_group"
+        },
+        {
+          "original": "go.inspect_region",
+          "provider": "go_inspect_region"
+        },
+        {
+          "original": "go.try_move",
+          "provider": "go_try_move"
+        },
+        {
+          "original": "go.play",
+          "provider": "go_play"
+        },
+        {
+          "original": "go.pass",
+          "provider": "go_pass"
+        },
+        {
+          "original": "go.resign",
+          "provider": "go_resign"
+        },
+        {
+          "original": "go.request_deep_think",
+          "provider": "go_request_deep_think"
+        }
+      ]
+    },
+    "disclosure": "Requests now leave through the real pinned @deepseek-ai/dsh-llm LlmRuntime (provider registry, prepareCall, llm/stream waterfall, LlmAdapter.stream, BlockAssembler), with a local no-network provider standing in for DeepSeek. The dsh-agent-loop package is not installed in this repository, so the step/turn driver is a documented stand-in for it. Token counts and moves are scripted synthetic values, never DeepSeek usage; latency is local harness wall-clock. The reported model is the local adapter envelope value, not a live DeepSeek response. These numbers cannot calibrate production token caps; a real DeepSeek run still needs owner approval, credentials, and a real price schedule."
   },
   "budgetUnderTest": {
     "maxModelSteps": 3,
@@ -25,6 +82,38 @@
     ],
     "note": "Candidate values only. src/budget/ production defaults were not changed by this ticket; no production GoTurnBudget config exists yet."
   },
+  "budgetGate": {
+    "config": {
+      "maxRequests": 120,
+      "maxInputTokensPerRequest": 8000,
+      "maxOutputTokensPerRequest": 4000,
+      "maxEstimatedCostCny": 6.66,
+      "usdToCnyRate": 7.1,
+      "allowRetries": false,
+      "allowSearchFetch": false
+    },
+    "mode": "scripted",
+    "pricing": {
+      "inputUsdPerMillionTokens": 1,
+      "outputUsdPerMillionTokens": 2,
+      "cacheReadUsdPerMillionTokens": 0.5,
+      "cacheWriteUsdPerMillionTokens": 1
+    },
+    "pricingSource": "placeholder",
+    "requests": 54,
+    "inputTokens": 22593,
+    "outputTokens": 8544,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "estimatedCostUsd": 0.039681,
+    "estimatedCostCny": 0.2817351,
+    "reservedCostUsd": 0,
+    "reservedCostCny": 0,
+    "maxEstimatedCostCny": 6.66,
+    "usdToCnyRate": 7.1,
+    "ledgerPath": null,
+    "stops": []
+  },
   "runsPerFixture": 3,
   "classes": [
     {
@@ -38,10 +127,12 @@
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.7169159999999977,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 2.5267079999999993,
               "stepLatenciesMs": [
-                0.5297079999999994,
-                0.18483299999999758
+                1.6494160000000022,
+                0.5320840000000118
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -61,15 +152,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.12837500000000546,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.9059170000000023,
               "stepLatenciesMs": [
-                0.06583300000001202,
-                0.05854200000000276
+                0.3579589999999939,
+                0.4276669999999996
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -89,15 +229,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "opening-spread",
               "class": "opening",
-              "latencyMs": 0.08595799999999088,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.7159590000000122,
               "stepLatenciesMs": [
-                0.047207999999997696,
-                0.037582999999997924
+                0.28820900000000904,
+                0.3318749999999966
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -117,12 +306,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -135,13 +372,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.08595799999999088,
-              "max": 0.7169159999999977,
-              "mean": 0.31041633333333135,
-              "range": 0.6309580000000068
+              "min": 0.7159590000000122,
+              "max": 2.5267079999999993,
+              "mean": 1.382861333333338,
+              "range": 1.810748999999987
             },
             "inputTokens": {
               "min": 887,
@@ -206,10 +444,12 @@
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.18029200000000856,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.5511670000000066,
               "stepLatenciesMs": [
-                0.11429199999999184,
-                0.06491700000000833
+                0.2482909999999805,
+                0.2236249999999984
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -229,15 +469,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.08762500000000273,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.9078329999999823,
               "stepLatenciesMs": [
-                0.0397920000000056,
-                0.043416999999990935
+                0.19787500000001046,
+                0.6032500000000027
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -257,15 +546,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "simple-capture-single-stone",
               "class": "simple capture",
-              "latencyMs": 0.0802500000000066,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.4284590000000037,
               "stepLatenciesMs": [
-                0.03620899999999949,
-                0.04345800000000111
+                0.1787080000000003,
+                0.18129099999998743
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -285,12 +623,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -303,13 +689,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.0802500000000066,
-              "max": 0.18029200000000856,
-              "mean": 0.11605566666667262,
-              "range": 0.10004200000000196
+              "min": 0.4284590000000037,
+              "max": 0.9078329999999823,
+              "mean": 0.6291529999999975,
+              "range": 0.47937399999997865
             },
             "inputTokens": {
               "min": 839,
@@ -374,10 +761,12 @@
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.053625000000010914,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3567090000000235,
               "stepLatenciesMs": [
-                0.03079200000000526,
-                0.022291999999993095
+                0.16270899999997823,
+                0.13220799999999144
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -397,15 +786,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.04429100000000119,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3504169999999931,
               "stepLatenciesMs": [
-                0.022542000000001394,
-                0.02137500000000614
+                0.15604200000001356,
+                0.13166599999999562
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -425,15 +863,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "escape-from-atari",
               "class": "escape",
-              "latencyMs": 0.042541999999997415,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3257499999999993,
               "stepLatenciesMs": [
-                0.017499999999998295,
-                0.02462500000000034
+                0.1424169999999947,
+                0.11879100000001586
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -453,12 +940,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -471,13 +1006,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.042541999999997415,
-              "max": 0.053625000000010914,
-              "mean": 0.04681933333333651,
-              "range": 0.011083000000013499
+              "min": 0.3257499999999993,
+              "max": 0.3567090000000235,
+              "mean": 0.3442920000000053,
+              "range": 0.03095900000002416
             },
             "inputTokens": {
               "min": 791,
@@ -542,10 +1078,12 @@
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.09583300000001316,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3812910000000045,
               "stepLatenciesMs": [
-                0.0654169999999965,
-                0.03012499999999818
+                0.16425000000000978,
+                0.14825000000001864
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -565,15 +1103,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.1867080000000101,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3183750000000032,
               "stepLatenciesMs": [
-                0.1676249999999868,
-                0.01866699999999355
+                0.13900000000001,
+                0.1269580000000019
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -593,15 +1180,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "local-fight-contact",
               "class": "local fight",
-              "latencyMs": 0.11562500000000853,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3085829999999987,
               "stepLatenciesMs": [
-                0.08470799999999201,
-                0.03020800000000179
+                0.12833300000002623,
+                0.1307079999999985
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -621,12 +1257,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -639,13 +1323,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.09583300000001316,
-              "max": 0.1867080000000101,
-              "mean": 0.13272200000001058,
-              "range": 0.09087499999999693
+              "min": 0.3085829999999987,
+              "max": 0.3812910000000045,
+              "mean": 0.33608300000000213,
+              "range": 0.07270800000000577
             },
             "inputTokens": {
               "min": 839,
@@ -710,10 +1395,12 @@
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.1721249999999941,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.38724999999999454,
               "stepLatenciesMs": [
-                0.041042000000004464,
-                0.13016600000000267
+                0.12404200000000287,
+                0.20808300000001623
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -735,15 +1422,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.08520899999999187,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.39699999999999136,
               "stepLatenciesMs": [
-                0.030167000000005828,
-                0.05445799999999679
+                0.15195900000000506,
+                0.1830839999999796
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -765,15 +1501,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "ko-immediate-recapture",
               "class": "ko",
-              "latencyMs": 0.07766699999999105,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.35841700000000287,
               "stepLatenciesMs": [
-                0.021250000000009095,
-                0.055959000000001424
+                0.12870899999998642,
+                0.17608300000000554
               ],
               "inputTokens": 839,
               "outputTokens": 320,
@@ -795,12 +1580,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1159,
-              "remainingTurnTokens": 2937
+              "remainingTurnTokens": 2937,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -813,13 +1646,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.07766699999999105,
-              "max": 0.1721249999999941,
-              "mean": 0.11166699999999234,
-              "range": 0.09445800000000304
+              "min": 0.35841700000000287,
+              "max": 0.39699999999999136,
+              "mean": 0.38088899999999626,
+              "range": 0.03858299999998849
             },
             "inputTokens": {
               "min": 839,
@@ -884,12 +1718,14 @@
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.11804200000000264,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.6651669999999967,
               "stepLatenciesMs": [
-                0.05520800000000747,
-                0.03495900000000063,
-                0.009833000000000425,
-                0.017208999999994035
+                0.16499999999999204,
+                0.15954199999998764,
+                0.13591700000000628,
+                0.15858299999999304
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -911,17 +1747,78 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 3,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 4,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.08100000000000307,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.5811249999999859,
               "stepLatenciesMs": [
-                0.01779200000000003,
-                0.029541999999992186,
-                0.009332999999998037,
-                0.023707999999999174
+                0.11391700000001492,
+                0.13529099999999517,
+                0.12545900000000643,
+                0.16079099999998903
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -943,17 +1840,78 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 3,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 4,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "large-group-pressure",
               "class": "large-group pressure",
-              "latencyMs": 0.07483300000001236,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.546750000000003,
               "stepLatenciesMs": [
-                0.019874999999998977,
-                0.025334000000000856,
-                0.011665999999991072,
-                0.017417000000008898
+                0.11129199999999173,
+                0.1323330000000169,
+                0.12266700000000696,
+                0.1392500000000041
               ],
               "inputTokens": 1658,
               "outputTokens": 608,
@@ -975,12 +1933,72 @@
               ],
               "oversizedProposalsClamped": 4,
               "turnTokens": 2266,
-              "remainingTurnTokens": 1830
+              "remainingTurnTokens": 1830,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 4,
+                "transportAttempts": 4,
+                "admittedRequests": 4,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 4,
+                "streamSeamRequests": 4,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 3,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 4,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -993,13 +2011,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.07483300000001236,
-              "max": 0.11804200000000264,
-              "mean": 0.0912916666666727,
-              "range": 0.04320899999999028
+              "min": 0.546750000000003,
+              "max": 0.6651669999999967,
+              "mean": 0.5976806666666619,
+              "range": 0.11841699999999378
             },
             "inputTokens": {
               "min": 1658,
@@ -1064,10 +2083,12 @@
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.047291000000001304,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3206249999999784,
               "stepLatenciesMs": [
-                0.017333000000007814,
-                0.029582999999988147
+                0.1250840000000153,
+                0.15537499999999227
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1087,15 +2108,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.03395799999999838,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.27579100000002654,
               "stepLatenciesMs": [
-                0.01229200000000219,
-                0.021291000000005056
+                0.11329200000000128,
+                0.11920799999998621
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1115,15 +2185,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "endgame-dame-fill",
               "class": "endgame",
-              "latencyMs": 0.03958299999999326,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.2736250000000098,
               "stepLatenciesMs": [
-                0.01825000000000898,
-                0.02087500000000375
+                0.11129199999999173,
+                0.11854200000001924
               ],
               "inputTokens": 791,
               "outputTokens": 288,
@@ -1143,12 +2262,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1079,
-              "remainingTurnTokens": 3017
+              "remainingTurnTokens": 3017,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -1161,13 +2328,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.03395799999999838,
-              "max": 0.047291000000001304,
-              "mean": 0.04027733333333098,
-              "range": 0.013333000000002926
+              "min": 0.2736250000000098,
+              "max": 0.3206249999999784,
+              "mean": 0.29001366666667155,
+              "range": 0.04699999999996862
             },
             "inputTokens": {
               "min": 791,
@@ -1232,10 +2400,12 @@
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.0906659999999988,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3552500000000123,
               "stepLatenciesMs": [
-                0.0401250000000033,
-                0.0501249999999942
+                0.13262500000001864,
+                0.17783299999999258
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1255,15 +2425,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.08291700000000901,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.4829589999999939,
               "stepLatenciesMs": [
-                0.0319160000000096,
-                0.050667000000004236
+                0.19120799999998894,
+                0.23116699999999923
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1283,15 +2502,64 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             },
             {
               "fixture": "ambiguous-wide-board",
               "class": "ambiguous position",
-              "latencyMs": 0.08370799999998724,
+              "outcome": "completed",
+              "budgetStop": null,
+              "latencyMs": 0.3793749999999818,
               "stepLatenciesMs": [
-                0.03216599999998948,
-                0.05116699999999241
+                0.13862499999999045,
+                0.1888749999999959
               ],
               "inputTokens": 887,
               "outputTokens": 352,
@@ -1311,12 +2579,60 @@
               ],
               "oversizedProposalsClamped": 2,
               "turnTokens": 1239,
-              "remainingTurnTokens": 2857
+              "remainingTurnTokens": 2857,
+              "requestPath": {
+                "provider": "benchmark-scripted",
+                "model": "scripted-legal-move-adapter-v1",
+                "configuredModel": "scripted-legal-move-adapter-v1",
+                "seam": "dsh-llm-runtime",
+                "llmRequests": 2,
+                "transportAttempts": 2,
+                "admittedRequests": 2,
+                "retryAttempts": 0,
+                "loopMarkedRequests": 2,
+                "streamSeamRequests": 2,
+                "retryPolicy": {
+                  "mode": "normal",
+                  "maxRetries": 0
+                },
+                "reportedModels": [
+                  "scripted-legal-move-adapter-v1"
+                ],
+                "modelObservations": [
+                  {
+                    "step": 1,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  },
+                  {
+                    "step": 2,
+                    "configured": "scripted-legal-move-adapter-v1",
+                    "reported": "scripted-legal-move-adapter-v1",
+                    "drifted": false
+                  }
+                ],
+                "failures": [],
+                "billingBasis": {
+                  "inputTokensField": "usage.inputTokens",
+                  "outputTokensField": "usage.outputTokens",
+                  "cacheReadTokensField": "usage.cacheReadTokens",
+                  "cacheWriteTokensField": "usage.cacheWriteTokens",
+                  "reasoningTokensField": "usage.reasoningTokens",
+                  "pricingSource": "placeholder",
+                  "inputUsdPerMillionTokens": 1,
+                  "outputUsdPerMillionTokens": 2,
+                  "cacheReadUsdPerMillionTokens": 0.5,
+                  "cacheWriteUsdPerMillionTokens": 1,
+                  "note": "Settled from DSH-normalized usage.inputTokens/outputTokens plus cache read/write tokens; reasoning tokens are assumed included in outputTokens and are not priced twice."
+                }
+              }
             }
           ],
           "variation": {
             "identicalStructuralMetrics": true,
             "comparedFields": [
+              "outcome",
               "inputTokens",
               "outputTokens",
               "totalTokens",
@@ -1329,13 +2645,14 @@
               "committedAction",
               "requestCaps",
               "turnTokens",
-              "remainingTurnTokens"
+              "remainingTurnTokens",
+              "requestPath"
             ],
             "latencyMs": {
-              "min": 0.08291700000000901,
-              "max": 0.0906659999999988,
-              "mean": 0.08576366666666502,
-              "range": 0.007748999999989792
+              "min": 0.3552500000000123,
+              "max": 0.4829589999999939,
+              "mean": 0.40586133333332935,
+              "range": 0.12770899999998164
             },
             "inputTokens": {
               "min": 887,

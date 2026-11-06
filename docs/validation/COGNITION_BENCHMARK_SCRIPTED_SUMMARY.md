@@ -10,11 +10,12 @@
 ## What actually ran
 
 **The model is scripted, not DeepSeek.** No DeepSeek request was made, no
-credentials were used, and no spend was incurred. The scripted adapter
-(`tests/benchmark/scripted-model.ts`) replays a fixed plan per fixture and
-reports token counts from a fixed formula. Those counts exercise the §38 token
-fields and the C-S01 clamp; they are **not** a measurement of DeepSeek token
-usage and cannot calibrate a production token cap.
+credentials were used, and no spend was incurred. The scripted provider
+(`tests/benchmark/fake-provider.ts` + `tests/benchmark/scripted-model.ts`)
+implements the pinned `LlmAdapter` interface, replays a fixed plan per fixture,
+and reports token counts from a fixed formula. Those counts exercise the §38
+token fields and the C-S01 clamp; they are **not** a measurement of DeepSeek
+token usage and cannot calibrate a production token cap.
 
 Each run composes the real production surfaces:
 
@@ -22,10 +23,23 @@ Each run composes the real production surfaces:
    fixed setup script;
 2. the real eight `go.*` tools (C-T02) are registered behind
    `GoCapabilityGuard` (C-T01/C-T04);
-3. every model step passes through `createGoTurnEnforcement` (C-T07) and the
+3. every model request leaves through the real pinned
+   `@deepseek-ai/dsh-llm` runtime: `markAgentLoopRequest` → `prepareCall` →
+   `llm/stream` waterfall → the registered `LlmAdapter.stream`; the real
+   `BlockAssembler` turns the chunks back into tool calls and usage;
+4. every model step passes through `createGoTurnEnforcement` (C-T07) and the
    `agent/request` token cap (C-S01);
-4. the large-group fixture requests `go.request_deep_think` and consumes the
+5. the large-group fixture requests `go.request_deep_think` and consumes the
    bounded one-step boost (C-T08) on its fourth model step.
+
+**One layer is a documented stand-in.** `@deepseek-ai/dsh-agent-loop` is not in
+this package's dependency surface (only `cordis`, `dsh-agent`, `dsh-llm` and
+`dsh-session` are installed), so the step/turn driver in
+`tests/benchmark/harness.ts` assembles the request itself: it marks the request
+as an AgentLoop request, applies the production `agent/request` cap, and streams
+through `LlmRuntime`. Everything below the loop is the pinned real
+implementation; nothing above the adapter registry is simulated inside
+dsh-llm.
 
 Enforcement is checked per call: an inspect/try_move/deep-think execution that
 does not advance its counter, a read that changes a gated counter, or a
@@ -40,14 +54,14 @@ Input/output tokens are the scripted adapter's synthetic accounting.
 
 | §38 class | latency ms | input tok | output tok | model steps | inspect | try_move | deep-think | illegal | final move | latency range (3 runs) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
-| opening | 0.72 | 887 | 352 | 2 | 1 | 2 | 0 | 0 | play (2,4) | 0.63 |
-| simple capture | 0.18 | 839 | 320 | 2 | 1 | 1 | 0 | 0 | play (1,2) | 0.10 |
-| escape | 0.05 | 791 | 288 | 2 | 1 | 1 | 0 | 0 | play (4,5) | 0.01 |
-| local fight | 0.10 | 839 | 320 | 2 | 1 | 2 | 0 | 0 | play (4,3) | 0.09 |
-| ko | 0.17 | 839 | 320 | 2 | 1 | 1 | 0 | 1 | play (6,6) | 0.09 |
-| large-group pressure | 0.12 | 1658 | 608 | 4 | 2 | 2 | 1 | 0 | play (2,3) | 0.04 |
-| endgame | 0.05 | 791 | 288 | 2 | 1 | 0 | 0 | 0 | play (4,5) | 0.01 |
-| ambiguous position | 0.09 | 887 | 352 | 2 | 2 | 1 | 0 | 0 | play (4,4) | 0.01 |
+| opening | 1.82 | 887 | 352 | 2 | 1 | 2 | 0 | 0 | play (2,4) | 1.38 |
+| simple capture | 0.41 | 839 | 320 | 2 | 1 | 1 | 0 | 0 | play (1,2) | 0.12 |
+| escape | 0.25 | 791 | 288 | 2 | 1 | 1 | 0 | 0 | play (4,5) | 0.40 |
+| local fight | 0.26 | 839 | 320 | 2 | 1 | 2 | 0 | 0 | play (4,3) | 0.04 |
+| ko | 0.28 | 839 | 320 | 2 | 1 | 1 | 0 | 1 | play (6,6) | 0.05 |
+| large-group pressure | 0.45 | 1658 | 608 | 4 | 2 | 2 | 1 | 0 | play (2,3) | 0.14 |
+| endgame | 0.22 | 791 | 288 | 2 | 1 | 0 | 0 | 0 | play (4,5) | 0.04 |
+| ambiguous position | 0.23 | 887 | 352 | 2 | 2 | 1 | 0 | 0 | play (4,4) | 0.03 |
 
 Variation across the three runs: every structural metric above is identical in
 all three runs for every fixture (`identicalStructuralMetrics: true`); only
@@ -88,14 +102,117 @@ The counter values are defensible from the scripted structural maxima. The two
 token caps are **not** calibrated: any number here is a placeholder until a
 real DeepSeek run measures actual input/output usage per class.
 
+## Benchmark spend / request gates
+
+`tests/benchmark/budget-gate.ts` is a benchmark-only gate (it never touches
+`src/budget/` or the production `GoTurnBudget` defaults). It guards a whole
+benchmark session — all fixtures and repeated runs — and every violation stops
+the session and is recorded as `budget_stop` in the run metrics and in
+`record.budgetGate.stops`.
+
+| Gate | Default | Enforced |
+|---|---:|---|
+| Total provider requests | 120 | checked before dispatch (8 classes x 3 runs x 4 steps = 96, plus headroom) |
+| Input tokens per request | 8000 | pre-flight estimate and reported usage |
+| Output tokens per request | 4000 | request clamped, reported usage re-checked |
+| Estimated session cost | ¥6.66 at ¥7.1/USD (≈$0.94) | projected in CNY before dispatch and accumulated after; USD estimate and the rate are recorded |
+| Automatic retries | forbidden | adapter policy `maxRetries: 0`; a repeated step request stops |
+| Search / fetch tools | forbidden | request tool list and every streamed tool call |
+
+Observed on the regenerated record (placeholder price schedule, not a DeepSeek
+quote): 54 requests, estimated `$0.039681` (¥0.2817351 at ¥7.1/USD), zero stops. The `budget-gate` test
+file proves each gate trips in isolation (max requests, input, output, cost,
+retry, search/fetch) and that the default path commits all eight classes
+without a false stop. The price schedule is a placeholder; a real run must pass
+the approved DeepSeek schedule to `BenchmarkBudgetGate`. The gate now lives
+inside the request path (`openBenchmarkRequestPath` requires it, so a caller
+cannot dispatch a request without admission), and live mode refuses to start
+without an explicit schedule instead of silently applying the placeholder
+prices. An adapter that declares retries is refused before any request leaves.
+
+## Tool-name mapping and fail-closed handling
+
+The official API rejected the first real request because `tools[0].function.name`
+must match `^[a-zA-Z0-9_-]+$` while the product tools are named `go.play`,
+`go.inspect_group`, and so on. `tests/benchmark/tool-name-mapping.ts` now owns a
+bijective table derived from the real `GO_TOOL_NAMES`:
+
+| Product name | Provider name |
+|---|---|
+| `go.state` | `go_state` |
+| `go.inspect_group` | `go_inspect_group` |
+| `go.inspect_region` | `go_inspect_region` |
+| `go.try_move` | `go_try_move` |
+| `go.play` | `go_play` |
+| `go.pass` | `go_pass` |
+| `go.resign` | `go_resign` |
+| `go.request_deep_think` | `go_request_deep_think` |
+
+Outbound tool schemas and assistant tool-call history are mapped before the
+request leaves; returned tool calls are mapped back before the registry sees
+them. The table build refuses collisions and non-compliant encodings, and both
+directions throw `BenchmarkToolNameError` for a name outside the table.
+
+Six response/failure paths stop instead of being accepted silently:
+
+| Failure | Test |
+|---|---|
+| no `usage` chunk | `stops when the response has no usage and records no tokens` |
+| provider timeout | `stops on a provider timeout without retrying` |
+| connection interruption mid-stream | `stops on a connection interruption mid-stream without retrying` |
+| stream ends without a `finish` chunk | `stops and records a failure when the stream ends without a finish chunk` |
+| reported model alias drift | `stops on model alias drift and records the reported model` |
+| unknown inbound tool name | `fails closed when the model returns an unknown tool name` |
+
+The benchmark gate now reserves the worst-case output cost (`maxTokens` plus
+the pre-flight input estimate) before dispatch and settles it against real
+usage. A failed or cancelled request that produced no usage releases its
+reservation; re-entering the same step replaces the stale reservation instead
+of stacking a second one, and completing a step without a reservation is a
+`missing-reservation` budget stop. Cumulative
+requests and spend can be persisted through `BenchmarkSpendLedger` (for example
+`tests/benchmark/.state/spend.json`); a restart reloads them, and a corrupt
+ledger throws instead of resetting to zero.
+
+## Live driver (wired, not exercised)
+
+`buildBenchmarkRecord({ env: process.env })` resolves the provider mode from
+`BENCHMARK_PROVIDER`. `live` loads the five required `BENCHMARK_*` variables,
+constructs `LiveBenchmarkProvider`, registers it under `benchmark-live` with
+the configured model id, builds the gate in `live` mode with the explicit
+schedule from `BENCHMARK_PRICING_JSON`, and drives each fixture until the model
+commits a legal action or the turn step cap refuses another step. The record
+keeps the same shape and adds `model.providerMode`; token counts, latency and
+moves then come from the provider response and the real `go.*` registry.
+`tests/benchmark/run-cognition-benchmark.sh` selects the live record path when
+`BENCHMARK_PROVIDER=live`. **No live call was made in this round**; the driver
+test injects a stub `fetch`.
+
+## Reported model and billing basis
+
+This round made **no live DeepSeek call**. The record's `model.reportedModel` is
+the local scripted adapter envelope value
+(`scripted-legal-move-adapter-v1`), not a server response. The billing basis is
+recorded as DSH-normalized usage fields: `usage.inputTokens`,
+`usage.outputTokens`, `usage.cacheReadTokens`, `usage.cacheWriteTokens`, and
+`usage.reasoningTokens`; reasoning tokens are assumed to be included in
+`outputTokens` and are not priced twice. The price schedule is still the
+documented placeholder, so no number in the record is a DeepSeek quote.
+
 ## What remains pending owner approval
 
 1. A real "ask DeepSeek for one move" benchmark run over the same eight
    fixtures, with credentials and spend approved, to replace the synthetic token
-   accounting.
-2. Only after that run may this record be used to **apply** production
+   accounting. The live driver is wired; only the approved variables are needed.
+2. A real run still needs an approved DeepSeek price schedule in
+   `BENCHMARK_PRICING_JSON`; the adapter reads the endpoint from
+   `BENCHMARK_BASE_URL`, and no credential is recorded.
+3. The `@deepseek-ai/dsh-agent-loop` package is not installed here; before a
+   real run either add that pinned package (a dependency decision for the owner)
+   or keep the documented loop stand-in and record it as such.
+4. Only after that run may this record be used to **apply** production
    `GoTurnBudget` numeric defaults (BL-BUD-06 / C-T10 config step).
-3. Until then the candidate values above must not be cited as production
+5. Until then the candidate values above must not be cited as production
    calibration.
 
 ## Non-goals respected
