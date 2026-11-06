@@ -8,8 +8,10 @@ export {
 } from './awareness.js'
 export {
   bindBridgeDelivery,
+  escapeBridgeField,
   renderGameNotice,
   renderWorkSnapshot,
+  BRIDGE_DATA_BOUNDARY,
   GO_SNAPSHOT_ORDER,
   GO_SNAPSHOT_SECTION,
   GO_SNAPSHOT_VARIABLE,

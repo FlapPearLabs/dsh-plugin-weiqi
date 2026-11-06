@@ -91,7 +91,7 @@ describe('bindBridgeDelivery', () => {
 
     runtime.updateWork(snapshot(1), 1)
     expect(variable?.provider?.({})).toBe(renderWorkSnapshot(snapshot(1)))
-    expect(textOf(section)).toBe(`{{${variable?.name}}}`)
+    expect(textOf(section)).toBe(`${BOUNDARY}\n\n{{${variable?.name}}}`)
 
     runtime.updateWork(snapshot(2), 2)
     expect(variable?.provider?.({})).toBe(renderWorkSnapshot(snapshot(2)))
@@ -107,10 +107,10 @@ describe('bindBridgeDelivery', () => {
     expect(textOf(context)).toBe('')
 
     runtime.updateGame(notice(1), 1)
-    expect(textOf(context)).toBe(renderGameNotice(notice(1)))
+    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(1))}`)
 
     runtime.updateGame(notice(2), 2)
-    expect(textOf(context)).toBe(renderGameNotice(notice(2)))
+    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(2))}`)
     expect(textOf(context)).not.toContain('moveNumber: 1')
   })
 
@@ -128,7 +128,7 @@ describe('bindBridgeDelivery', () => {
     const variable = go.registrations.find(entry => entry.kind === 'variable')
     const context = work.registrations.find(entry => entry.kind === 'context')
     expect(variable?.provider?.({})).toBe(renderWorkSnapshot(snapshot(2)))
-    expect(textOf(context)).toBe(renderGameNotice(notice(2)))
+    expect(textOf(context)).toBe(`${BOUNDARY}\n\n${renderGameNotice(notice(2))}`)
   })
 })
 
