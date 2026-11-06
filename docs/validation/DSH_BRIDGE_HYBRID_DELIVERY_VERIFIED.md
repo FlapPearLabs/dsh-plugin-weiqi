@@ -58,6 +58,11 @@ What each assertion exercises, on the real pinned `agent-loop`, `agent`,
 | 2 | no evaluation-only wake, 20 rapid updates | 20 `updateGame` calls between two natural requests leave the request count unchanged; the next natural request adds exactly one |
 | 3 | an idle lane is not woken | holder updates after the lane went idle add no request and no `running` status transition, after both drivers are flushed with `whenIdle()` |
 | 4 | bounded long sequence | 400 moves with one natural Work request every 20 moves: at most 20 runtime-context blocks, each ≤ 296 characters, total ≤ 5920 |
+
+Assertion 4 is deliberately tighter than the contract: R2.4.3 §39.6 states the
+bound as a ceiling of `L <= 300` characters and `20 x 300 = 6000` characters so
+the contract does not depend on one per-move maximum, while this gate asserts the
+measured maximum of 296 and the resulting 5920, which sits inside that ceiling.
 | 5 | unchanged value adds nothing | two natural requests with one unchanged GameNotice produce exactly one runtime-context block |
 
 ## Falsifiability check
