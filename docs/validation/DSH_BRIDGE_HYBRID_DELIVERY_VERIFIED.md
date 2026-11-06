@@ -79,11 +79,11 @@ bound as a ceiling of `L <= 300` characters and `20 x 300 = 6000` characters so
 the contract does not depend on one per-move maximum. The pinned gate now
 measures the complete block (it previously stopped at the `affectedGroups:`
 label because the scanner's field list carried a trailing space), pins the
-delivered maximum at 291 characters for the twelve entries it actually observes
-(moves 20, 40, ... 400), and caps the total at `20 x 296 = 5920`. The 296
-per-notice maximum of the full 400-move render sequence is pinned separately by
-`src/bridge/delivery.test.ts`, which renders every move and asserts the exact
-maximum.
+delivered maximum at 291 characters over the twenty entries it observes (moves
+20, 40, ... 400; twelve of them share that maximum), and caps the total at
+`20 x 296 = 5920`. The 296 per-notice maximum of the full 400-move render
+sequence is pinned separately by `src/bridge/delivery.test.ts`, which renders
+every move and asserts the exact maximum.
 
 ## Falsifiability check
 
