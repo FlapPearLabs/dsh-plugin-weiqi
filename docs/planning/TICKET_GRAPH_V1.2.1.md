@@ -39,9 +39,9 @@ Counted by unique `BL-*` ID extraction; the closing SPIKE-CANDIDATES table repea
 | `NEEDS_SPIKE` | 2 (BL-PKG-06, BL-GR-03) |
 | `FOUNDATION_ONLY` | 7 (BL-RT-03/05/08, BL-BR-01/04, BL-CMP-01/04) |
 | `VERIFIED_FACT_NOT_INTEGRATED` | 6 (BL-RT-06/07/11, BL-BUD-07, BL-UI-04, BL-BR-03) |
-| `NOT_IMPLEMENTED` | 35 |
+| `NOT_IMPLEMENTED` | 36 |
 
-Breakdown check: 8 + 1 + 2 + 3 + 7 + 5 + 36 = 62 ✓
+Breakdown check: 8 + 1 + 2 + 2 + 7 + 6 + 36 = 62 ✓
 
 ---
 
@@ -421,7 +421,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 
 ### Wave D — Bridge / Attention / Persona / Mood
 
-#### WAVE-D-S01 — `ctx.systemPrompt.context` provider spike
+#### WAVE-D-S01 — hybrid Bridge delivery seam spike
 - **Type:** SPIKE | **Wave:** D (gate) | **Spec Phase:** Pre-A | **Baseline IDs:** BL-BR-03
 - **Current Baseline State:** BL-BR-03: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** VERIFIED_FACT_NOT_INTEGRATED
 - **Spec Authority:** §9.1 (as amended by R2.4.3: hybrid per-direction delivery)
@@ -460,8 +460,9 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Stop / Escalation Condition:** DSH history filtering needed → `ESCALATION_REQUIRED`.
 
 #### WAVE-D-T03 — No Bridge-only evaluation wake (Phase A core)
-- **Type:** IMPLEMENTATION_TICKET | **Wave:** D | **Spec Phase:** A | **Baseline IDs:** BL-BR-05
-- **Current Baseline State:** BL-BR-05: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
+- **Type:** IMPLEMENTATION_TICKET | **Wave:** D | **Spec Phase:** A | **Baseline IDs:** BL-BR-03, BL-BR-05
+- **Current Baseline State:** BL-BR-03: VERIFIED_FACT_NOT_INTEGRATED; BL-BR-05: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
+- **Atomicity:** BL-BR-03 and BL-BR-05 are one delivery boundary — the integration of the verified seams and the no-evaluation-wake guarantee are the same code path, so they cannot be split.
 - **Spec Authority:** §9.1 (hybrid seams; no evaluation-only wake; no cooldown timer), §39.6 (including the numeric long-sequence bound)
 - **Scope:** Deliver latest snapshots through the D-S01-verified hybrid seams — Go reads `latestWorkSnapshot` via `agent.ctx.systemPrompt.section` + `variable`, Work reads `latestGameNotice` via `agent.ctx.systemPrompt.context`; Bridge changes never create evaluation-only wakes; unchanged snapshots add no repeated prompt material.
 - **Explicit Non-Goals:** No attention policy (D-T06); no focus scheduling (D-T07); no queue, event bus, trimming, or history edit.
@@ -829,7 +830,7 @@ F-T03 is the Phase A core e2e milestone; **F-T04** is the Phase A exit gate (con
 | BL-RT-11 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-A-T07 | A | A-T02, A-T04 | COVERED |
 | BL-BR-01 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
 | BL-BR-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
-| BL-BR-03 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET (predeclared consumer WAVE-D-T03) | WAVE-D-S01 | Pre-A | none | COVERED |
+| BL-BR-03 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-D-T03 | Pre-A | none | COVERED |
 | BL-BR-04 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T02 | A | D-T01 | COVERED |
 | BL-BR-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T03 | A | D-T01, D-S01, A-T02 | COVERED |
 | BL-GR-01 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-B-T01 | A | none | COVERED |
@@ -878,7 +879,7 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 - **duplicate owners = 0** — 51 actionable rows → 44 primary owners. Multi-gap Tickets (5) own 14 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04/07 = budget execution + lifecycle rule + verified request-cap seam, one enforcement boundary), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-E-T01 (BL-UI-02/BL-RT-10/BL-UI-04 = core board incl. click path + verified conversation.view seam, one production boundary). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
 - **orphan actionable gaps = 0** — all 51 actionable rows have a primary owner.
 - **orphan tickets = 0** — every Ticket/Spike references ≥1 Baseline ID.
-- **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; two remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03) → one Spike each; BL-BR-03 is closed by D-S01 evidence and is now an INTEGRATION_TICKET owned by WAVE-D-S01 with WAVE-D-T03 as its predeclared consumer; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
+- **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; two remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03) → one Spike each; BL-BR-03 is closed by D-S01 evidence and its `VERIFIED_FACT_NOT_INTEGRATED → IMPLEMENTED_VERIFIED` transition belongs to its integration owner WAVE-D-T03 (Rule 8), not to the Spike; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
 
 ---
 
@@ -894,7 +895,7 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 
 - **WAVE-B-S01 fail ⇒ ESCALATION_REQUIRED** (§27 no silent degradation).
 - **WAVE-C-S01 fail ⇒ ESCALATION_REQUIRED** if fixing needs DSH core patch / frozen change / new mechanism; otherwise gates C-T07.
-- **WAVE-D-S01 / WAVE-E-S01 fail ⇒ documented fallbacks** (agent.inject; simplified UX).
+- **WAVE-D-S01 / WAVE-E-S01 fail ⇒ record which direction's seam fails** (the hybrid assignment has two independent directions, so a single failure no longer disqualifies the whole Bridge delivery); WAVE-E-S01 fail ⇒ simplified UX.
 - **Phase B gating:** no Phase B ticket may execute before F-T04 PASS; F-T04 FAIL = stop and fix core (not an escalation, but a gate result).
 - **Budget values:** production defaults owned by C-T10; test values never called production.
 - **Resign:** the approved contract is encoded in R2.4.2; any ticket requiring a GameLifecycleController / second game truth → `ESCALATION_REQUIRED`.

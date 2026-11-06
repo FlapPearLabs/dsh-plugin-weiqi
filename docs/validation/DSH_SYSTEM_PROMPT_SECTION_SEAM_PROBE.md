@@ -301,9 +301,10 @@ Documentation consequence (judgment only, nothing changed here):
   interaction, subagent scopes, and disposal of a live agent.
 - The token-cost instrument is unexecuted (skip path only); its with-key path
   is unverified.
-- No CI workflow was added for this gate; the run script mirrors the existing
-  gate layout but has only been exercised locally.
-- Local run used Node `v26.10.0`, not the pinned gate's `v24.11.1`.
+- No CI workflow existed when this probe was first recorded; see the next
+  section for the gate that now runs it.
+- The recorded local run used Node `v26.10.0`; the pinned `v24.11.1` run is the
+  CI execution referenced in the next section.
 
 ## CI gate and hybrid-delivery consequence (added by PR #64, 2026-11-06)
 
@@ -318,9 +319,17 @@ must equal the probed package line before any probe work, so a future pin
 upgrade turns the gate RED instead of silently probing an older DSH.
 
 This record is the single section-seam record in the repository. An earlier
-draft kept a second copy under `DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`;
-it is merged into this file so the repository has one account of the seam, and
-the workflow's path filter points here.
+draft kept a second copy under `DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`; that
+draft documented a different 13-assertion fixture which was replaced by the
+reviewed six-assertion fixture above when `main` was merged, so it was removed
+with it and **its conclusions are not inherited**: the formal acceptance matrix
+in that draft, its GitHub Actions run `33782409492`, and its 13/13 claim do not
+describe this record. The workflow's path filter points here, so the repository
+has one account of the seam.
+
+The executed pinned run for this record is GitHub Actions run `42179314592`
+(job `127764974291`, head `d18a132`, Node `v24.11.1`, 6/6 passed), and the same
+runner was executed locally against the pinned checkout with the same result.
 
 Consequence for the delivery decision (owner 2026-11-06, Spec R2.4.3 §9.1):
 this seam carries the **Go** direction only. The Work direction keeps

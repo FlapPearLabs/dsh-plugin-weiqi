@@ -218,8 +218,11 @@ feasibility Spike.
 
 | Baseline ID | Unknown | Why not directly implement | Dependent decision | Why current evidence is insufficient |
 |---|---|---|---|---|
-| BL-PKG-06 | GitHub source install (`dsh plugin --profile web add github:FlapPearLabs/dsh-plugin-weiqi`) | `github:` spec resolution/clone/build/activate path is unverified | Installation docs, Wave F installation acceptance | Smoke covers local tarball only; no `github:` path code or CI evidence |
-| BL-GR-03 | Tenuki version satisfying area + positional-superko + komi 7.5 explicit config, passing §31 fixture | Spec §27 forbids defaults, silent downgrade, dual rules authority | GoRulesPort / TenukiAdapter version pin and implementation | No Tenuki dependency, no fixtures, no candidate evaluation record |
+
+No open spike candidate remains: BL-BR-03 is answered by WAVE-D-S01 and its
+integration is owned by WAVE-D-T03, and the two rows that used to sit here
+(BL-PKG-06, BL-GR-03) are `VERIFIED_FACT_NOT_INTEGRATED` in the table above with
+`INTEGRATION_TICKET` owners.
 
 Not spikes: cooperative-yield feasibility (verified), V4 style exploration
 (frozen), crash/resume mechanism (conservative V0.1 strategy, implementation
