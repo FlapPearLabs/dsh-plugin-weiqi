@@ -49,9 +49,13 @@ bash tests/integration/bridge-delivery/run-bridge-delivery.sh
 Result: `Test Files 1 passed (1)`, `Tests 5 passed (5)`. The pinned tree was
 left clean.
 
-Falsifiability: two mutants (`context-seam-for-go`, `no-go-registration`) both
-turn test 1 red for the expected reason; logs and method are in the validation
-record.
+Falsifiability: `run-mutation-check.sh` applies three mutants — `context-seam-for-go`,
+`no-go-registration`, and `frozen-work-projection` — and every one must turn an
+assertion red; a surviving mutant exits non-zero. The third exists because review r1
+proved the first version of the gate let a frozen Work projection pass 5/5; the gate
+now asserts the newest block's `moveNumber` after the twenty-update burst and at the
+end of the 400-move sequence. Recorded result: `RESULT: PASS — every mutant was
+killed by an assertion`. Logs and method are in the validation record.
 
 ## Regression surface
 
@@ -59,6 +63,12 @@ record.
 context, because `apply()` now registers prompt contributions. The three
 existing entry tests still pass unchanged in intent (lane identity, preset
 header, Go capability scope, collision propagation).
+
+## Review
+
+- r1 (deepseek-v4.1-flash): **APPROVE**, no P0/P1. One P2 — the frozen-projection
+  mutant survived — fixed in `b27f3f1` together with the two new assertions.
+- r2: see `.omo/reviews/bridge-dt03/`.
 
 ## Not verified / known gaps
 
