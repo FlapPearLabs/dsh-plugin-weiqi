@@ -586,8 +586,8 @@ The two latest-value projections use **different** agent-scoped DSH delivery sea
 
 | Direction | Seam | Shape | Why |
 |---|---|---|---|
-| Go Agent reads `latestWorkSnapshot` | `agent.ctx.systemPrompt.section({ text })` together with `agent.ctx.systemPrompt.variable(name, provider)` | **Whiteboard:** the model sees only the newest value; a superseded value never enters history | Go needs the newest state above all; the WorkSnapshot changes rarely and Go conversations are short, so one lost prefix match per change is cheap |
-| Work Agent reads `latestGameNotice` | native `agent.ctx.systemPrompt.context(...)` | **Sticky note:** a changed value is appended once at the next natural request and remains in history, marked superseded by DSH; several changes between two requests coalesce into one | The GameNotice changes every move and Work conversations are long; placing it in a system section would void the whole Work prefix on every move |
+| Go Agent reads `latestWorkSnapshot` | `agent.ctx.systemPrompt.section({ text })` together with `agent.ctx.systemPrompt.variable(name, provider)` | **Whiteboard:** the model sees only the newest value in each prompt assembly; a superseded value never enters the message history | Go needs the newest state above all; the WorkSnapshot changes rarely and Go conversations are short, so one lost prefix match per change is cheap |
+| Work Agent reads `latestGameNotice` | native `agent.ctx.systemPrompt.context(...)` | **Sticky note:** a changed value is appended once at the next natural request and remains in history, marked superseded by DSH; several changes between two requests coalesce behind the latest value | The GameNotice changes every move and Work conversations are long; placing it in a system section would void the whole Work prefix on every move |
 
 Both providers are evaluated for each eligible prompt assembly. `ctx.systemPrompt.context` materializes a new runtime-context snapshot only when the rendered current snapshot has changed. A section is re-rendered into the request's system slot on every assembly, so the model never sees a superseded section value and no durable snapshot is appended for it.
 
@@ -1884,16 +1884,16 @@ Verify against the current DSH runtime:
 - provider callbacks only read the already-computed Runtime snapshot and do not rescan Session/game history;
 - an idle `Manual` lane is not woken by Bridge change alone;
 - 20 rapid GameNotice updates while Work is already running create **zero additional model requests solely for attention evaluation**;
-- the next natural Work request sees only the newest relevant snapshot;
+- the next natural Work request sees the newest GameNotice as the last runtime-context entry; earlier entries remain in model-visible history and DSH marks them superseded, so this requirement is "newest last", not "newest only";
 - repeated updates before admission coalesce behind the existing single `pendingFocus`.
 
 ### Bounded long-sequence delivery (Work direction)
 
 The Work direction's runtime-context seam appends one durable snapshot per natural request that observes a change, so the long-sequence bound is stated on a concrete, reproducible synthetic sequence:
 
-- a single rendered GameNotice in the 400-move synthetic sequence is at most **L = 296 characters**. Derivation: each notice renders as a `GAME_NOTICE` heading, five scalar field lines (`gameId`, `moveNumber`, `toPlay`, `captures`, `status`), an optional `lastMove` line, and one line per affected group (`- <owner> stones=<n> liberties <before>-><after>`); the synthetic sequence uses five affected groups on every move, and the 400 rendered lengths ranged from 289 to 296 characters, the longest at move 11;
-- in a 400-move synthetic sequence with one natural Work request every 20 moves (20 requests), Work history gains at most **20 runtime-context entries** and at most **20 × 296 = 5920 rendered characters**;
-- if the same 400 updates arrive between two natural requests, at most **1 entry** and **296 characters** are added.
+- a single rendered GameNotice in the 400-move synthetic sequence is at most **L = 296 characters**. The sequence uses the fixed game id `synthetic-400`, ascending move numbers, alternating `toPlay`, `captures = floor(move / 4)`, status `playing`, a `lastMove` coordinate, and five affected groups on every move. The longest notice is move 11, and its length follows line by line from the fixed rendering shape (`GAME_NOTICE`, then `gameId`, `moveNumber`, `toPlay`, `captures`, `status`, an optional `lastMove`, `affectedGroups:`, and one `- <owner> stones=<n> liberties <before>-><after>` line per affected group; line lengths in characters): `GAME_NOTICE` 11, `gameId: synthetic-400` 21, `moveNumber: 11` 14, `toPlay: deepseek` 16, `captures: 2` 11, `status: playing` 15, `lastMove: l12` 13, `affectedGroups:` 15, and the five group lines 36 + 32 + 36 + 30 + 34; the line bodies sum to 284 characters, plus 12 separators between 13 lines = 296. Across the 400 rendered notices the length ranges from 289 to 296 characters;
+- in a 400-move synthetic sequence with one natural Work request every 20 moves (20 requests), Work history gains at most **20 runtime-context entries**, carrying at most **20 × 296 = 5920 characters** of GameNotice text. This counts the projection text only: DSH writes a fixed preamble per entry (recorded as `This snapshot supersedes earlier runtime-context snapshots.` in `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`) and any supersede marker it adds are outside the count;
+- if the same 400 updates arrive between two natural requests, at most **1 entry** and **296 characters** are added: several changes between two requests coalesce behind the latest value, so the entry count follows natural requests, not update count.
 
 Coalescing the latest value, not trimming history, is what keeps this bounded; no truncation, history edit, or bounded-history mechanism is introduced.
 
