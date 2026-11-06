@@ -1,10 +1,10 @@
 # Handoff · WAVE-D-S01-inject-probe
 
-- 状态：READY_FOR_REVIEW
+- 状态：MERGED（6edded4）· 冻结记录
 - 分支：task/d-s01
 - 基线 BASE_SHA：1b1e612836fd3a8528c92764701767a0f54bcf34
 - 待审代码 HEAD_SHA：80674c2
-- 工作树：`dsh-plugin-weiqi-wt/task-d-s01`（未 push，未开 PR）
+- 工作树：`dsh-plugin-weiqi-wt/task-d-s01`；原分支 task/d-s01 未开 PR，经本地 merge `6edded4` 入 main
 - 遵循契约：`~/.agents/engineering/CONTRACT.md`
 
 ## 目标与验收
@@ -24,7 +24,9 @@
 - 定位到本地 pinned DSH 检出：commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`，
   包线 `0.1.1-rc.2`，依赖已安装。
 - 新建 8 个实验的探针 fixture，真实跑 pinned `agent-loop` / `agent` /
-  `system-prompt` / `session` / `llm` / `tools` / `scope` 实现：**8/8 passed**。
+  `system-prompt` / `session` / `llm` / `tools` / `scope` 实现：实现方本地（Node v26.10.0）**8/8 passed**。
+  严格门禁（Node v24.11.1）下的 8/8 由规划方于 18:47 单独复跑（`ds01-gate-node24b.log`），
+  不是审查者产出。
 - 记录结论：`agent.inject` **不能**作为 §39.6 latest-only 的回退接缝。
 - 冻结文件零改动（`git diff` 对 TICKET_GRAPH / CURRENT_IMPLEMENTATION_BASELINE /
   `docs/spec/**` 为空）；未改 `src/**`；未碰 PR #64。
@@ -57,7 +59,7 @@ cd "$DSH_PINNED_ROOT"
    packages/core/agent-loop/tests/agent-inject.spike.spec.ts
 ```
 
-- 探针结果：`Test Files 1 passed (1)` / `Tests 8 passed (8)`。
+- 探针结果：`Test Files 1 passed (1)` / `Tests 8 passed (8)`（Node v26.10.0 本地；审查者复跑同一 spec 时日志只留下开头输出，未留汇总行）。
 - 探针后 pinned 检出 `git status --porcelain` 为空（fixture 已清理）。
 - CI 门禁命令（严格版本，需 Node v24.11.1 + pnpm 11.7.0）：
 
@@ -86,7 +88,7 @@ ESCALATION_REQUIRED
 
 ## 限制与未验证
 
-- 本地记录运行使用 Node `v26.10.0`（DSH `engines` 允许 `^22.19.0 || >=24.0.0`），
+- （历史陈述，见「偏离记录」的后续闭合）本地记录运行使用 Node `v26.10.0`（DSH `engines` 允许 `^22.19.0 || >=24.0.0`），
   未使用门禁要求的 `v24.11.1`；因此 `run-agent-inject.sh` 的严格版本预检未被本地端到端执行。
 - CI workflow 已按现有 `system-prompt-context` 门禁模式备好，但尚未在 CI 跑过；
   首次 CI 结果才是最终环境证据。
@@ -97,7 +99,7 @@ ESCALATION_REQUIRED
 
 | ID | 级别 | 说明 | 状态 |
 | --- | --- | --- | --- |
-| F1 | P2 | 严格 runner 只在 CI 可端到端执行，本地缺 Node 24.11.1 | 未验证 |
+| F1 | P2 | 严格 runner 只在 CI 可端到端执行，本地缺 Node 24.11.1 | 已闭合（规划方 Node v24.11.1 复跑，18:47；见偏离记录） |
 
 ## 已排除的假设
 
@@ -126,7 +128,12 @@ ESCALATION_REQUIRED
 - 与门禁脚本的偏离：**已闭合**。后续在 Node v24.11.1（官方 darwin-arm64 发行包，非系统 Node 26）
   下按门禁要求重跑 `run-agent-inject.sh`，含版本相等预检，全部通过：
   命令 `DSH_PINNED_ROOT=<pinned checkout> PATH=<node-24.11.1>/bin:$PATH bash tests/upgrade-gates/agent-inject/run-agent-inject.sh`
-  → exit 0，`Test Files 1 passed (1)`、`Tests 8 passed (8)`，8 条 `DSH_INJECT_PROBE` 观测与本文档记录一致。
+  → vitest 段 `Test Files 1 passed (1)`、`Tests 8 passed (8)`，8 条 `DSH_INJECT_PROBE` 观测与本文档记录一致。
+  该日志只保存 vitest 输出，不含 runner 的版本预检行与退出码行，"Node 24.11.1"与"exit 0"取自
+  执行命令与文件名，日志本身不作证。
   原“本地绕过版本检查”的说明仅适用于更早那一次运行，不再是本提交的未验证项。
-- 独立审查：由未参与实现的审查者在 detached worktree 上复跑并逐条核对，结论为该 FAIL 记录可作为
-  D-S01 的正式证据；剩余 P3 为 spec 依赖 pinned 树的 `mock-adapter.ts` 与 workflow 尚未在 CI 跑过。
+- 独立审查：审查依据为外部独立审查会话（deleg_51c56368，task-1），不在 `.omo/reviews` 内，未入库。
+  该审查者自跑回归 38 files / 478 tests passed，并在 pinned 树复跑本 spec、自述 8/8；但其严格 runner
+  在系统 Node v26.10.0 下 `RUNNER_EXIT=1`（版本预检未通过），因此不能称"审查者在门禁 Node 上复跑通过"。
+  审查结论正文只保留前段，完整措辞已不可逐字复核。剩余 P3 为 spec 依赖 pinned 树的 `mock-adapter.ts`
+  与 workflow 尚未在 CI 跑过。
