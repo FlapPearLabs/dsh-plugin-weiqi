@@ -3,8 +3,8 @@
 Status: **PASS for latest-only delivery, no-wake, and history isolation; Q7
 token cost NOT MEASURED (no provider credentials in this environment)**
 
-Spike: pre-A, follows WAVE-D-S01 (rejected `systemPrompt.context` and
-`agent.inject`)
+Spike: pre-A, follows WAVE-D-S01 (this seam carries the Go direction; the Work
+direction keeps `systemPrompt.context`, see the hybrid-delivery section below)
 
 Pinned DSH: `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`
 
@@ -12,11 +12,12 @@ Pinned package line: `0.1.1-rc.2` (agent / agent-loop / llm / session /
 system-prompt / scope / tools)
 
 Runtime used for the recorded execution: local Node `v26.10.0` against the
-exact pinned checkout (pnpm `11.7.0`). No Node `v24.11.1` exists on this
-machine, so the gate runner's version-equality preflight was not executed;
-the same vitest command the runner uses was executed directly. DSH `engines`
-accepts `^22.19.0 || >=24.0.0`. CI (Ubuntu, Node `24.11.1`) remains the
-authoritative toolchain for this fixture.
+exact pinned checkout (pnpm `11.7.0`). No `v24.11.1` was in use when this run
+was recorded, so the gate runner's version-equality preflight was not executed
+and the same vitest command the runner uses was executed directly. A separate
+`v24.11.1` toolchain is available in this environment, and the runner does pass
+its preflight with it. DSH `engines` accepts `^22.19.0 || >=24.0.0`, and CI
+(Ubuntu, Node `24.11.1`) remains the authoritative toolchain for this fixture.
 
 ## Conclusion
 
@@ -277,21 +278,19 @@ treat the section approach as viable pending a with-key measurement of Q7.
   Go lane sees only the latest WorkSnapshot and the Work lane only the latest
   GameNotice, with zero model requests from updates.
 
-Documentation consequence (judgment only, nothing changed here):
+Documentation consequence (as recorded when this probe ran):
 
-- **Spec §9.1 must change.** It currently *prefers* `ctx.systemPrompt.context`
-  and states that DSH materializes a new snapshot only when the rendered
-  snapshot changed — the executed D-S01 probe shows the superseded snapshot
-  stays in durable history, so the preferred mechanism contradicts §39.6's
-  "only the latest rendered" acceptance. The section mechanism satisfies §39.6
-  but is a different seam, so §9.1's preferred-mechanism sentence has to be
-  amended before implementation. Per `AGENTS.md`, that amendment is an
-  `ESCALATION_REQUIRED` event; it is not performed by this spike.
-- **Baseline must change.** The D-S01 row records the context/inject seams as
-  `VERIFIED_FACT_NOT_INTEGRATED` with a failing delivery conclusion; a
-  section-seam entry pointing at this record and
-  `tests/upgrade-gates/system-prompt-section/` is needed when the seam is
-  integrated.
+- **Spec §9.1 had to change.** It then *preferred* `ctx.systemPrompt.context`
+  for both directions and stated that DSH materializes a new snapshot only when
+  the rendered snapshot changed — the executed D-S01 probe shows the superseded
+  snapshot stays in durable history, so that single-mechanism preference
+  contradicts §39.6's latest-only acceptance for the Go direction. The section
+  mechanism satisfies §39.6 and is a different seam. Per `AGENTS.md` that
+  amendment was an `ESCALATION_REQUIRED` event at the time; **it has since been
+  performed**: the owner decided the hybrid assignment on 2026-11-06 and
+  R2.4.3 §9.1 records it (PR #113).
+- **Baseline changed accordingly.** BL-BR-03 is `VERIFIED_FACT_NOT_INTEGRATED`
+  and the delivery implementation belongs to WAVE-D-T03 (#31).
 
 ## Known limitations
 
@@ -301,6 +300,43 @@ Documentation consequence (judgment only, nothing changed here):
   interaction, subagent scopes, and disposal of a live agent.
 - The token-cost instrument is unexecuted (skip path only); its with-key path
   is unverified.
-- No CI workflow was added for this gate; the run script mirrors the existing
-  gate layout but has only been exercised locally.
-- Local run used Node `v26.10.0`, not the pinned gate's `v24.11.1`.
+- No CI workflow existed when this probe was first recorded; see the next
+  section for the gate that now runs it.
+- The recorded local run used Node `v26.10.0`; the pinned `v24.11.1` run is the
+  CI execution referenced in the next section.
+
+## CI gate and hybrid-delivery consequence (added by PR #64, 2026-11-06)
+
+The probe above ran locally only; its "Known limitations" recorded that no CI
+workflow existed. `.github/workflows/system-prompt-section-gate.yml` now runs
+this gate on every pull request that touches the fixture, this record, the
+workflow itself, or the DSH pins, against the pinned checkout at
+`b150a551...` with Node `24.11.1` / pnpm `11.7.0`. The runner is fail-closed on
+the repository pin: `peerDependencies` and `devDependencies` for
+`@deepseek-ai/dsh-agent`, `@deepseek-ai/dsh-llm`, and `@deepseek-ai/dsh-session`
+must equal the probed package line before any probe work, so a future pin
+upgrade turns the gate RED instead of silently probing an older DSH.
+
+This record is the single section-seam record in the repository. An earlier
+draft kept a second copy under `DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`; that
+draft documented a different 13-assertion fixture which was replaced by the
+reviewed six-assertion fixture above when `main` was merged, so it was removed
+with it and **its conclusions are not inherited**: the formal acceptance matrix
+in that draft, its GitHub Actions run `33782409492`, and its 13/13 claim do not
+describe this record. The workflow's path filter points here, so the repository
+has one account of the seam.
+
+The executed pinned run for this record is GitHub Actions run `42179314592`
+(job `127764974291`, head `d18a132`, Node `v24.11.1`, 6/6 passed), and the same
+runner was executed locally against the pinned checkout with the same result.
+
+Consequence for the delivery decision (owner 2026-11-06, Spec R2.4.3 §9.1):
+this seam carries the **Go** direction only. The Work direction keeps
+`ctx.systemPrompt.context`, because the GameNotice changes every move and the
+durable-snapshot cost documented above is paid per change, while the Work
+conversation is long. The section seam is chosen for Go precisely because a
+superseded WorkSnapshot never enters model-visible history. R2.4.3 §39.6 (PR
+#113 — not R2.4.2, whose §39.6 still says only "bounded enough") states the
+resulting long-sequence bound as numbers: a ceiling of 300 characters per
+rendered notice and 20 x 300 = 6000 characters over 400 moves at one natural
+Work request every 20 moves.
