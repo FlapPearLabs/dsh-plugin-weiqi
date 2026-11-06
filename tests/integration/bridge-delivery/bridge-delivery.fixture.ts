@@ -78,6 +78,16 @@ async function harness(script: ConstructorParameters<typeof MockAdapter>[0]): Pr
   const runtime = new BridgeRuntime()
   bindBridgeDelivery({ work: work.ctx.systemPrompt, go: go.ctx.systemPrompt }, new CrossLaneAwareness(runtime))
 
+  // A competing runtime-context contributor, as a real DSH consumer such as
+  // `user-approval` (order 115) provides. DSH orders runtime-context entries by
+  // ascending `order`, so case 8 only proves "newest notice is last" while this
+  // entry sorts before the Bridge notice.
+  work.ctx.systemPrompt.context({
+    name: 'd-t03-gate:competing-runtime-context',
+    order: 115,
+    text: 'competing runtime context from another contributor',
+  })
+
   liveContexts.push(ctx)
   return { ctx, work, go, runtime, adapter }
 }
