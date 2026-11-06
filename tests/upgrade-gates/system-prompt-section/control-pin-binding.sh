@@ -29,7 +29,7 @@ expected_version=0.1.1-rc.2
 divergent_version=0.1.2-rc.1
 
 work=$(mktemp -d)
-trap '/usr/bin/rm -rf "$work"' EXIT
+trap 'rm -rf "$work"' EXIT
 
 mirror="$work/repo"
 mkdir -p "$mirror/tests/upgrade-gates/system-prompt-section" "$work/dsh-stub"

@@ -57,6 +57,9 @@ jobs:
           TRACE_LOG: ${{ runner.temp }}/system-prompt-section-trace.log
         run: bash tests/upgrade-gates/system-prompt-section/run-system-prompt-section.sh
 
+      - name: Prove the pin binding fails closed
+        run: bash tests/upgrade-gates/system-prompt-section/control-pin-binding.sh
+
       - name: Upload executed trace
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

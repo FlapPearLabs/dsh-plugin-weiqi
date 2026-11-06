@@ -425,11 +425,11 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 - **Type:** SPIKE | **Wave:** D (gate) | **Spec Phase:** Pre-A | **Baseline IDs:** BL-BR-03
 - **Current Baseline State:** BL-BR-03: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** VERIFIED_FACT_NOT_INTEGRATED
 - **Spec Authority:** §9.1 (as amended by R2.4.3: hybrid per-direction delivery)
-- **Scope:** Probe agent scope/registration/rendering/materialization/O(1) delivery on pinned DSH.
+- **Scope:** Probe agent scope/registration/rendering/materialization/O(1) delivery on pinned DSH for **both** directions, and record which seam each direction can use.
 - **Explicit Non-Goals:** No Bridge implementation; no DSH core patch.
 - **Dependencies / blocked_by:** none
-- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the D-S01-verified pinned agent-scoped passive Bridge-delivery seams. Outcome and owner decision (2026-11-06, R2.4.3 §9.1): `ctx.systemPrompt.context` cannot carry the Go direction because a changed value leaves the superseded snapshot in durable model-facing history (`docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`), while `agent.ctx.systemPrompt.section` + `agent.ctx.systemPrompt.variable` delivers latest-only with no history growth (`docs/validation/DSH_SYSTEM_PROMPT_SECTION_SEAM_PROBE.md`, gate `tests/upgrade-gates/system-prompt-section/`, CI workflow `.github/workflows/system-prompt-section-gate.yml`). `agent.inject` is ruled out (PR #108). The delivery is therefore hybrid: Go uses section + variable, Work uses `ctx.systemPrompt.context`. BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
-- **Acceptance Criteria (PASS):** provider registers agent-scoped; reads only Runtime-held snapshot (no rescan); materializes only on change; O(1)-suitable. **FAIL:** record the seam that fails and which direction it disqualifies; note D-T03 impact.
+- **Outcome (recorded):** `ctx.systemPrompt.context` fails latest-only for the Go direction (superseded snapshots stay in durable model-facing history), `agent.inject` is ruled out as a Bridge seam, and `agent.ctx.systemPrompt.section` + `variable` passes latest-only with no message-history growth. The owner's 2026-11-06 decision (R2.4.3 §9.1) therefore splits delivery by direction: Go uses section + variable, Work uses `ctx.systemPrompt.context`. BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; the integration and the no-wake guarantee are WAVE-D-T03's atomic delivery boundary; no re-ticketization (Post-Spike Stability Rule).
+- **Acceptance Criteria (PASS):** every probe registers agent-scoped, reads only a Runtime-held value (no rescan), materializes nothing on update alone, and reports an O(1)-suitable read; the record states which direction each verified seam carries.
 - **Required Review Evidence:** probe trace; assertions.
 - **Stop / Escalation Condition:** new mechanism / DSH patch → `ESCALATION_REQUIRED`.
 
@@ -830,7 +830,7 @@ F-T03 is the Phase A core e2e milestone; **F-T04** is the Phase A exit gate (con
 | BL-RT-11 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-A-T07 | A | A-T02, A-T04 | COVERED |
 | BL-BR-01 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
 | BL-BR-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
-| BL-BR-03 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-D-T03 | Pre-A | none | COVERED |
+| BL-BR-03 | VERIFIED_FACT_NOT_INTEGRATED | IMPLEMENTATION_TICKET (predeclared consumer) | WAVE-D-T03 | A | D-T01, D-S01, A-T02 | COVERED |
 | BL-BR-04 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T02 | A | D-T01 | COVERED |
 | BL-BR-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T03 | A | D-T01, D-S01, A-T02 | COVERED |
 | BL-GR-01 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-B-T01 | A | none | COVERED |
