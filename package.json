@@ -52,5 +52,8 @@
     "@types/node": "22.20.0",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
+  },
+  "dependencies": {
+    "tenuki": "0.3.1"
   }
 }

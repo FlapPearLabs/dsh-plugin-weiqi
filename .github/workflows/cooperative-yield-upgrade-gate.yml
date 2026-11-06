@@ -3,7 +3,14 @@ name: DSH cooperative-yield upgrade gate
 on:
   push:
     branches:
-      - work/bootstrap-foundation-v1
+      - main
+    paths:
+      - tests/upgrade-gates/cooperative-yield/**
+      - .github/workflows/cooperative-yield-upgrade-gate.yml
+      - package.json
+  pull_request:
+    branches:
+      - main
     paths:
       - tests/upgrade-gates/cooperative-yield/**
       - .github/workflows/cooperative-yield-upgrade-gate.yml
