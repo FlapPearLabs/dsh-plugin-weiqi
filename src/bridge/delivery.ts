@@ -43,7 +43,10 @@ export const WORK_NOTICE_VARIABLE = 'work_game_notice'
 
 export const GO_SNAPSHOT_ORDER = 40
 
-export const WORK_NOTICE_ORDER = 40
+// DSH orders runtime-context contributors by ascending `order`, so the Work
+// notice must sort after every other contributor (e.g. `user-approval` at 115
+// and `sandbox:policy` at 110) to stay the last entry of the snapshot.
+export const WORK_NOTICE_ORDER = 900
 
 /**
  * Fixed line that opens every delivered projection.
