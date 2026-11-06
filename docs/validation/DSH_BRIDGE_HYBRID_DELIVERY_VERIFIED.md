@@ -67,7 +67,7 @@ measured maximum of 296 and the resulting 5920, which sits inside that ceiling.
 
 ## Falsifiability check
 
-`tests/integration/bridge-delivery/run-mutation-check.sh` applies two mutants to a
+`tests/integration/bridge-delivery/run-mutation-check.sh` applies three mutants to a
 throwaway copy of `src/` inside the pinned tests directory; both must turn the
 guard assertions red, and a surviving mutant makes the script exit non-zero.
 
@@ -90,6 +90,7 @@ RESULT: PASS — every mutant was killed by an assertion
 |---|---|---|
 | `context-seam-for-go` | the Go direction registers `context(...)` instead of `section` + `variable` | assertion 1 red: the system slot no longer carries the snapshot |
 | `no-go-registration` | the Go registrations are removed entirely | assertion 1 red |
+| `frozen-work-projection` | the Work provider renders once and then returns the cached text | assertions 2 and 4 red: the newest block no longer carries `moveNumber: 21` / `moveNumber: 400` |
 | `frozen-work-projection` | the Work provider renders once and then returns the cached text, so later GameNotices never reach the model | assertions 2 and 4 red: the newest block no longer carries `moveNumber: 21` / `moveNumber: 400` |
 
 The `frozen-work-projection` mutant exists because review r1 found it surviving the

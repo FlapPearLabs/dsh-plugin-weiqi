@@ -1889,7 +1889,7 @@ Verify against the current DSH runtime:
 
 ### Bounded long-sequence delivery (Work direction)
 
-The Work direction's runtime-context seam appends one durable snapshot per natural request that observes a change, so the long-sequence bound is stated on a concrete, reproducible synthetic sequence. The projection has this fixed shape, one line per element:
+The Work direction's runtime-context seam appends one durable snapshot per natural request that observes a change, so the long-sequence bound is stated on a concrete, reproducible synthetic sequence. The projection has this fixed shape, one line per field with one extra line per `affectedGroups` element:
 
 ```text
 GAME_NOTICE
@@ -1912,7 +1912,7 @@ The maximum over the 400 notices is 296 characters, reached at moves 11, 13, 15,
 36 + 30 + 34 = 284 characters of line bodies, plus 12 separators between 13
 lines. Across the sequence the length ranges from 289 to 296 characters.
 
-The bound below uses a **ceiling of L <= 300 characters** rather than the tight per-move maximum, so the contract does not depend on one argmax. The ceiling belongs to this fixed synthetic sequence and to one natural requests cadence (defined below): a different game id length or a different owner composition changes L by exactly the difference in those strings, which the same derivation yields by substitution — an all-`deepseek` composition, for example, adds 8 characters.
+The bound below uses a **ceiling of L <= 300 characters** rather than the tight per-move maximum, so the contract does not depend on one argmax. The ceiling belongs to this fixed synthetic sequence and to one natural-request cadence (defined below): a different game id length or a different owner composition changes L by exactly the difference in those strings, which the same derivation yields by substitution — an all-`deepseek` composition, for example, adds 8 characters.
 
 A **natural Work request** below means one Work-lane model request (one prompt assembly), not one user turn; a single user turn may contain several requests.
 
@@ -1920,7 +1920,7 @@ For this fixed synthetic sequence and that cadence:
 
 - 400 moves with one natural Work request every 20 moves (20 requests): at most **20 runtime-context entries**, carrying at most **20 x 300 = 6000 characters** of GameNotice text. This counts the projection text only: DSH writes a fixed preamble per entry (recorded as `This snapshot supersedes earlier runtime-context snapshots.` in `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`), and any supersede marker it adds is outside the count;
 - 400 updates arriving between two natural requests: at most **1 entry** and **300 characters**, because several changes between two requests coalesce behind the latest value;
-- given at most one natural Work request per 20 moves, the GameNotice text visible in the Work history for this sequence stays at or below **6000 characters**, so a long game cannot materially degrade Work context;
+- given at most one natural Work request per 20 moves, the GameNotice text visible in the Work history for this sequence stays at or below **6000 characters**, so this sequence's Work history cannot materially degrade Work context;
 - in general the entry count follows natural requests, not updates: a 400-move game with one natural request per move adds at most 400 entries and 400 x 300 characters, which is inherent to the sticky-note seam and is why the request cadence is part of this bound. The character figure scales with the projection length exactly as the substitution above states.
 
 Coalescing the latest value, not trimming history, is what bounds the growth: entries follow natural requests rather than updates, and no truncation, history edit, or bounded-history mechanism is introduced.

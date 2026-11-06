@@ -3,7 +3,7 @@
 **Status:** APPROVED — FROZEN FOR EXECUTION
 **Planning Freeze:** normal Ticket/Spike completion updates Baseline evidence and execution readiness only; reopen this Graph only under the Post-Spike Stability / `ESCALATION_REQUIRED` conditions.
 **Supersedes for review:** `TICKET_GRAPH_V1.2.md`
-**Current Spec Authority:** `docs/spec/SPEC_LEAN_V0.1_R2.4.2_VERIFIED.md`
+**Current Spec Authority:** `docs/spec/SPEC_LEAN_V0.1_R2.4.3_VERIFIED.md`
 **Reason (narrow fix, 4 items):**
 - DeepSeek resign authoritative action path (`go.resign` model tool; surface 8 go.* + 2 companion.* = 10) — R2.4.2
 - Spec Phase ticket count correction (A=31, B=7; V1.2 wrongly stated A=30/B=8)
@@ -876,7 +876,7 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 
 ## 10. Duplicate / Orphan Audit
 
-- **duplicate owners = 0** — 51 actionable rows → 44 primary owners. Multi-gap Tickets (5) own 14 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04/07 = budget execution + lifecycle rule + verified request-cap seam, one enforcement boundary), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-E-T01 (BL-UI-02/BL-RT-10/BL-UI-04 = core board incl. click path + verified conversation.view seam, one production boundary). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
+- **duplicate owners = 0** — 51 actionable rows → 41 primary owners. Multi-gap Tickets (6) own 16 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04/07 = budget execution + lifecycle rule + verified request-cap seam, one enforcement boundary), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-D-T03 (BL-BR-03/05 = the verified seam integration and the no-evaluation-wake guarantee, one delivery boundary), WAVE-E-T01 (BL-UI-02/BL-RT-10/BL-UI-04 = core board incl. click path + verified conversation.view seam, one production boundary). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
 - **orphan actionable gaps = 0** — all 51 actionable rows have a primary owner.
 - **orphan tickets = 0** — every Ticket/Spike references ≥1 Baseline ID.
 - **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; two remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03) → one Spike each; BL-BR-03 is closed by D-S01 evidence and its `VERIFIED_FACT_NOT_INTEGRATED → IMPLEMENTED_VERIFIED` transition belongs to its integration owner WAVE-D-T03 (Rule 8), not to the Spike; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
