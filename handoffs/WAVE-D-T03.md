@@ -49,9 +49,10 @@ bash tests/integration/bridge-delivery/run-bridge-delivery.sh
 Result: `Test Files 1 passed (1)`, `Tests 5 passed (5)`. The pinned tree was
 left clean.
 
-Falsifiability: two mutants (`context-seam-for-go`, `no-go-registration`) both
-turn test 1 red for the expected reason; logs and method are in the validation
-record.
+Falsifiability: `run-mutation-check.sh` applies three mutants — `context-seam-for-go`,
+`no-go-registration`, and `frozen-work-projection` (killed by assertions 2 and 4) —
+and every one must turn an assertion red; a surviving mutant exits non-zero. Logs
+and method are in the validation record.
 
 ## Regression surface
 
