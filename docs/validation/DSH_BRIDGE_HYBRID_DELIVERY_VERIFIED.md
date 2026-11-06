@@ -62,16 +62,32 @@ What each assertion exercises, on the real pinned `agent-loop`, `agent`,
 
 ## Falsifiability check
 
-Two mutants were applied to a throwaway copy of `src/` inside the pinned tests
-directory; both must turn the guard assertions red, and both did:
+`tests/integration/bridge-delivery/run-mutation-check.sh` applies two mutants to a
+throwaway copy of `src/` inside the pinned tests directory; both must turn the
+guard assertions red, and a surviving mutant makes the script exit non-zero.
+
+```sh
+DSH_PINNED_ROOT=../dsh-plugin-weiqi-wt/DSH-PINNED \
+bash tests/integration/bridge-delivery/run-mutation-check.sh
+```
+
+Recorded result:
+
+```text
+mutant context-seam-for-go killed by an assertion
+AssertionError: expected 'You are an AI agent powered by DeepSe…' to contain 'work summary 1'
+mutant no-go-registration killed by an assertion
+AssertionError: expected 'You are an AI agent powered by DeepSe…' to contain 'work summary 1'
+RESULT: PASS — every mutant was killed by an assertion
+```
 
 | Mutant | Change | Observed |
 |---|---|---|
-| `context-seam-for-go` | the Go direction registers `context(...)` instead of `section` + `variable` | test 1 red: the system slot no longer contains the snapshot |
-| `no-go-registration` | the Go registrations are removed entirely | test 1 red: `expected 'You are an AI agent powered by DeepSe…' to contain 'work summary 1'` |
+| `context-seam-for-go` | the Go direction registers `context(...)` instead of `section` + `variable` | assertion 1 red: the system slot no longer carries the snapshot |
+| `no-go-registration` | the Go registrations are removed entirely | assertion 1 red |
 
-The mutants live only under the pinned tests directory and were removed
-afterwards; `git -C "$DSH_PINNED_ROOT" status --porcelain` is empty.
+The mutants live only under the pinned tests directory and are removed on exit;
+`git -C "$DSH_PINNED_ROOT" status --porcelain` is empty afterwards.
 
 ## Repository-level evidence
 
