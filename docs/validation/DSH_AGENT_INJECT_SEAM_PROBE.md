@@ -2,6 +2,10 @@
 
 Status: **FAIL — `agent.inject()` does not satisfy latest-only delivery**
 
+Still current: R2.4.3 §9.1 (PR #113, 2026-11-06) states explicitly that
+`agent.inject()` is not a Bridge delivery seam. Its remaining allowance for
+non-Bridge one-shot sourced context is unaffected by this record.
+
 Issue: WAVE-D-S01 / #28
 
 Pinned DSH: `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`

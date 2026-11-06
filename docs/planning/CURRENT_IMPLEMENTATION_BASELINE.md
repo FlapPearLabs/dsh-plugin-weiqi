@@ -216,10 +216,7 @@ feasibility Spike.
 
 # REAL UNKNOWNS — SPIKE CANDIDATES
 
-| Baseline ID | Unknown | Why not directly implement | Dependent decision | Why current evidence is insufficient |
-|---|---|---|---|---|
-
-No open spike candidate remains: BL-BR-03 is answered by WAVE-D-S01 and its
+None. BL-BR-03 is answered by WAVE-D-S01 and its
 `VERIFIED_FACT_NOT_INTEGRATED → IMPLEMENTED_VERIFIED` transition is owned by
 WAVE-D-T03 (Rule 8). The two rows this branch's older base carried here
 (BL-PKG-06, BL-GR-03) were already removed on `main`, where both are recorded as
