@@ -17,8 +17,8 @@ export * from './contracts/index.js'
 /** Cordis plugin name used by DSH Loader diagnostics. */
 export const name = 'companion-go'
 
-/** AgentRegistry delegates real Agent/Session creation to the active AgentLoop. */
-export const inject = ['agents', 'llm'] as const
+/** AgentRegistry delegates real Agent/Session creation to the active AgentLoop; the Bridge registers prompt contributions on both lane agents. */
+export const inject = ['agents', 'llm', 'systemPrompt'] as const
 
 /** Foundation config remains intentionally empty. */
 export interface Config {}

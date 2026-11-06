@@ -73,7 +73,7 @@ function promptSeamRecorder(): PromptSeamRecorder {
 describe('Companion Go Cordis entry', () => {
   it('uses the named function-plugin namespace required by Loader', () => {
     expect(CompanionGo.name).toBe('companion-go')
-    expect(CompanionGo.inject).toEqual(['agents', 'llm'])
+    expect(CompanionGo.inject).toEqual(['agents', 'llm', 'systemPrompt'])
     expect(typeof CompanionGo.apply).toBe('function')
     expect('default' in CompanionGo).toBe(false)
   })
