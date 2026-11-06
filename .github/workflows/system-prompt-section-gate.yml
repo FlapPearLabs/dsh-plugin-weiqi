@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - tests/upgrade-gates/system-prompt-section/**
-      - docs/validation/DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md
+      - docs/validation/DSH_SYSTEM_PROMPT_SECTION_SEAM_PROBE.md
       - .github/workflows/system-prompt-section-gate.yml
       - package.json
       - pnpm-lock.yaml

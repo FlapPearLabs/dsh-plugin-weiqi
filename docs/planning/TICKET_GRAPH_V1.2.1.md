@@ -36,10 +36,10 @@ Counted by unique `BL-*` ID extraction; the closing SPIKE-CANDIDATES table repea
 | `IMPLEMENTED_VERIFIED` / NO_ACTION | 8 |
 | `KEEP_AS_UPGRADE_GATE` | 1 (BL-PKG-09) |
 | `DEFERRED` | 2 (BL-UI-03, BL-HARD-04) |
-| `NEEDS_SPIKE` | 3 (BL-PKG-06, BL-GR-03, BL-BR-03) |
+| `NEEDS_SPIKE` | 2 (BL-PKG-06, BL-GR-03) |
 | `FOUNDATION_ONLY` | 7 (BL-RT-03/05/08, BL-BR-01/04, BL-CMP-01/04) |
-| `VERIFIED_FACT_NOT_INTEGRATED` | 5 (BL-RT-06/07/11, BL-BUD-07, BL-UI-04) |
-| `NOT_IMPLEMENTED` | 36 |
+| `VERIFIED_FACT_NOT_INTEGRATED` | 6 (BL-RT-06/07/11, BL-BUD-07, BL-UI-04, BL-BR-03) |
+| `NOT_IMPLEMENTED` | 35 |
 
 Breakdown check: 8 + 1 + 2 + 3 + 7 + 5 + 36 = 62 ✓
 
@@ -423,13 +423,13 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 
 #### WAVE-D-S01 — `ctx.systemPrompt.context` provider spike
 - **Type:** SPIKE | **Wave:** D (gate) | **Spec Phase:** Pre-A | **Baseline IDs:** BL-BR-03
-- **Current Baseline State:** BL-BR-03: NEEDS_SPIKE | **Target State:** VERIFIED_FACT_NOT_INTEGRATED
-- **Spec Authority:** §9.1
+- **Current Baseline State:** BL-BR-03: VERIFIED_FACT_NOT_INTEGRATED | **Target State:** VERIFIED_FACT_NOT_INTEGRATED
+- **Spec Authority:** §9.1 (as amended by R2.4.3: hybrid per-direction delivery)
 - **Scope:** Probe agent scope/registration/rendering/materialization/O(1) delivery on pinned DSH.
 - **Explicit Non-Goals:** No Bridge implementation; no DSH core patch.
 - **Dependencies / blocked_by:** none
-- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the D-S01-verified pinned agent-scoped passive Bridge-delivery seam ("per D-S01 findings"; `ctx.systemPrompt.context` FAILed §39.6 latest-only delivery per the merged record `docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`, and `agent.ctx.systemPrompt.section` is the verified fallback per `docs/validation/DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`). On PASS: BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
-- **Acceptance Criteria (PASS):** provider registers agent-scoped; reads only Runtime-held snapshot (no rescan); materializes only on change; O(1)-suitable. **FAIL:** record; fallback `agent.inject`; note D-T03 impact.
+- **Post-Spike Consumer (predeclared):** WAVE-D-T03 — already `blocked_by` this Spike; its approved Scope consumes the D-S01-verified pinned agent-scoped passive Bridge-delivery seams. Outcome and owner decision (2026-11-06, R2.4.3 §9.1): `ctx.systemPrompt.context` cannot carry the Go direction because a changed value leaves the superseded snapshot in durable model-facing history (`docs/validation/DSH_SYSTEM_PROMPT_CONTEXT_SEAM_VERIFIED.md`), while `agent.ctx.systemPrompt.section` + `agent.ctx.systemPrompt.variable` delivers latest-only with no history growth (`docs/validation/DSH_SYSTEM_PROMPT_SECTION_SEAM_PROBE.md`, gate `tests/upgrade-gates/system-prompt-section/`, CI workflow `.github/workflows/system-prompt-section-gate.yml`). `agent.inject` is ruled out (PR #108). The delivery is therefore hybrid: Go uses section + variable, Work uses `ctx.systemPrompt.context`. BL-BR-03 → `VERIFIED_FACT_NOT_INTEGRATED`; D-T03 consumes the merged evidence; no re-ticketization (Post-Spike Stability Rule).
+- **Acceptance Criteria (PASS):** provider registers agent-scoped; reads only Runtime-held snapshot (no rescan); materializes only on change; O(1)-suitable. **FAIL:** record the seam that fails and which direction it disqualifies; note D-T03 impact.
 - **Required Review Evidence:** probe trace; assertions.
 - **Stop / Escalation Condition:** new mechanism / DSH patch → `ESCALATION_REQUIRED`.
 
@@ -462,12 +462,12 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 #### WAVE-D-T03 — No Bridge-only evaluation wake (Phase A core)
 - **Type:** IMPLEMENTATION_TICKET | **Wave:** D | **Spec Phase:** A | **Baseline IDs:** BL-BR-05
 - **Current Baseline State:** BL-BR-05: NOT_IMPLEMENTED | **Target State:** IMPLEMENTED_VERIFIED
-- **Spec Authority:** §9.1 (no evaluation-only wake; no cooldown timer), §39.6
-- **Scope:** Deliver latest snapshots per D-S01 findings; Bridge changes never create evaluation-only wakes; unchanged snapshots add no repeated prompt material.
-- **Explicit Non-Goals:** No attention policy (D-T06); no focus scheduling (D-T07).
+- **Spec Authority:** §9.1 (hybrid seams; no evaluation-only wake; no cooldown timer), §39.6 (including the numeric long-sequence bound)
+- **Scope:** Deliver latest snapshots through the D-S01-verified hybrid seams — Go reads `latestWorkSnapshot` via `agent.ctx.systemPrompt.section` + `variable`, Work reads `latestGameNotice` via `agent.ctx.systemPrompt.context`; Bridge changes never create evaluation-only wakes; unchanged snapshots add no repeated prompt material.
+- **Explicit Non-Goals:** No attention policy (D-T06); no focus scheduling (D-T07); no queue, event bus, trimming, or history edit.
 - **Dependencies / blocked_by:** WAVE-D-T01, WAVE-D-S01, WAVE-A-T02
-- **Expected Surfaces:** `src/bridge/delivery.ts`, pinned DSH D-S01-verified Bridge-delivery seam
-- **Acceptance Criteria:** §39.6 smoke: 20 rapid GameNotice updates → zero attention-evaluation requests (request-count trace); idle Manual lane not woken; next natural request sees newest snapshot.
+- **Expected Surfaces:** `src/bridge/delivery.ts`, the pinned DSH hybrid delivery seams
+- **Acceptance Criteria:** §39.6 smoke: 20 rapid GameNotice updates → zero attention-evaluation requests (request-count trace); idle Manual lane not woken; the next natural Go request carries only the newest WorkSnapshot; the Work direction stays within the §39.6 numeric bound (≤ 20 runtime-context entries and ≤ 5920 rendered characters over 400 moves with one natural request every 20 moves).
 - **Required Review Evidence:** request-count trace; assertions.
 - **Stop / Escalation Condition:** cooldown/new mechanism → `ESCALATION_REQUIRED`.
 
@@ -684,7 +684,7 @@ Wave labels are organizational; Spec Phase is the execution gate. Phase B Ticket
 | INFRA-S01 | BL-PKG-06 | `github:` spec resolve/build/activate on pinned DSH? | real command succeeds; bundle reconciliation + fiber active; trace | record; fallback tarball docs | Wave F installation acceptance |
 | WAVE-B-S01 | BL-GR-03 | Tenuki satisfying area + positional-superko + komi 7.5 passing §31? | candidate passes; pin; conformance record | → ESCALATION_REQUIRED | B-T02→B-T03/04/06→B-T05→E-T01, C-T02, F-T01/02/03/04/05 |
 | WAVE-C-S01 | BL-BUD-07 | pinned-DSH request-level max-token seam? | probe; seam doc; hard-cap assertable; usable by C-T07 without core patch | record; DSH-core patch / frozen change → ESCALATION_REQUIRED | C-T07→C-T02→C-T08→C-T10→F-T03/F-T04/F-T05 |
-| WAVE-D-S01 | BL-BR-03 | `ctx.systemPrompt.context` semantics? | agent-scoped; no rescan; materialize-on-change; O(1) | record; fallback agent.inject; D-T03 impact | D-T03→F-T04 |
+| WAVE-D-S01 | BL-BR-03 | Which pinned agent-scoped seam delivers each Bridge direction? | Go: section + variable latest-only; Work: `context` append-on-change with DSH-marked supersede; both agent-scoped; no rescan; O(1) reads | record which seam fails and for which direction; D-T03 impact | D-T03→F-T04 |
 | WAVE-E-S01 | BL-UI-04 | Go view mount in DSH Web; coexistence; no fusion? | §34 five items + view-mount evidence | record; simplify UX before E-T01 | E-T01→F-T03/F-T04; E-T02 (placement) |
 
 ---
@@ -829,7 +829,7 @@ F-T03 is the Phase A core e2e milestone; **F-T04** is the Phase A exit gate (con
 | BL-RT-11 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET | WAVE-A-T07 | A | A-T02, A-T04 | COVERED |
 | BL-BR-01 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
 | BL-BR-02 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T01 | A | A-T01 | COVERED |
-| BL-BR-03 | NEEDS_SPIKE | SPIKE | WAVE-D-S01 | Pre-A | none | COVERED |
+| BL-BR-03 | VERIFIED_FACT_NOT_INTEGRATED | INTEGRATION_TICKET (predeclared consumer WAVE-D-T03) | WAVE-D-S01 | Pre-A | none | COVERED |
 | BL-BR-04 | FOUNDATION_ONLY | IMPLEMENTATION_TICKET | WAVE-D-T02 | A | D-T01 | COVERED |
 | BL-BR-05 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-D-T03 | A | D-T01, D-S01, A-T02 | COVERED |
 | BL-GR-01 | NOT_IMPLEMENTED | IMPLEMENTATION_TICKET | WAVE-B-T01 | A | none | COVERED |
@@ -878,7 +878,7 @@ Coverage check: COVERED = 51 (actionable), NO_ACTION = 9 (8 IMPLEMENTED_VERIFIED
 - **duplicate owners = 0** — 51 actionable rows → 44 primary owners. Multi-gap Tickets (5) own 14 rows with stated atomicity: WAVE-A-T02 (BL-RT-02/03/04/08 = one focus machine), WAVE-C-T04 (BL-CAP-01/02 = isolation both faces), WAVE-C-T07 (BL-BUD-02/04/07 = budget execution + lifecycle rule + verified request-cap seam, one enforcement boundary), WAVE-D-T01 (BL-BR-01/02 = bridge shape+behavior), WAVE-E-T01 (BL-UI-02/BL-RT-10/BL-UI-04 = core board incl. click path + verified conversation.view seam, one production boundary). D-T04/D-T08 now own BL-CMP-01 / BL-CMP-03 separately (no phase-cross bundle).
 - **orphan actionable gaps = 0** — all 51 actionable rows have a primary owner.
 - **orphan tickets = 0** — every Ticket/Spike references ≥1 Baseline ID.
-- **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; three remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03/BL-BR-03) → one Spike each; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
+- **repeated feasibility spikes = 0** — BL-RT-06/07/11 and BL-BUD-07/BL-UI-04 → INTEGRATION_TICKET owners only; two remaining NEEDS_SPIKE rows (BL-PKG-06/BL-GR-03) → one Spike each; BL-BR-03 is closed by D-S01 evidence and is now an INTEGRATION_TICKET owned by WAVE-D-S01 with WAVE-D-T03 as its predeclared consumer; BL-BUD-06 is an IMPLEMENTATION_TICKET (calibration), not a Spike.
 
 ---
 

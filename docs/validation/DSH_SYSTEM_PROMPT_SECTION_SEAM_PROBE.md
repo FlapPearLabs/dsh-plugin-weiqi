@@ -304,3 +304,28 @@ Documentation consequence (judgment only, nothing changed here):
 - No CI workflow was added for this gate; the run script mirrors the existing
   gate layout but has only been exercised locally.
 - Local run used Node `v26.10.0`, not the pinned gate's `v24.11.1`.
+
+## CI gate and hybrid-delivery consequence (added by PR #64, 2026-11-06)
+
+The probe above ran locally only; its "Known limitations" recorded that no CI
+workflow existed. `.github/workflows/system-prompt-section-gate.yml` now runs
+this gate on every pull request that touches the fixture, this record, the
+workflow itself, or the DSH pins, against the pinned checkout at
+`b150a551...` with Node `24.11.1` / pnpm `11.7.0`. The runner is fail-closed on
+the repository pin: `peerDependencies` and `devDependencies` for
+`@deepseek-ai/dsh-agent`, `@deepseek-ai/dsh-llm`, and `@deepseek-ai/dsh-session`
+must equal the probed package line before any probe work, so a future pin
+upgrade turns the gate RED instead of silently probing an older DSH.
+
+This record is the single section-seam record in the repository. An earlier
+draft kept a second copy under `DSH_SYSTEMPROMPT_SECTION_SEAM_VERIFIED.md`;
+it is merged into this file so the repository has one account of the seam, and
+the workflow's path filter points here.
+
+Consequence for the delivery decision (owner 2026-11-06, Spec R2.4.3 §9.1):
+this seam carries the **Go** direction only. The Work direction keeps
+`ctx.systemPrompt.context`, because the GameNotice changes every move and the
+durable-snapshot cost documented above is paid per change, while the Work
+conversation is long. The section seam is chosen for Go precisely because a
+superseded WorkSnapshot never enters model-visible history. §39.6 states the
+resulting long-sequence bound as numbers instead of "bounded enough".

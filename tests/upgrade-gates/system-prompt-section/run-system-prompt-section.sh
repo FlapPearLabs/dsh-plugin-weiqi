@@ -13,17 +13,7 @@ fi
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-# P2 fail-closed pin binding (same discipline as run-system-prompt-context.sh):
-# the DSH line adopted by THIS plugin repository must equal the line this gate
-# probes (PLUGIN REPOSITORY PIN <-> EXPECTED PROBE VERSION <-> PINNED DSH
-# CHECKOUT). A future repository DSH pin upgrade (package.json / pnpm-lock.yaml)
-# must turn this gate RED until the probe fixture / commit / version authority
-# is intentionally updated -- never probe an older pinned DSH behind a newer
-# repository adoption.
 plugin_root=$(cd "$script_dir/../../.." && pwd)
-# Read the plugin manifest relative to the resolved root so the preflight works
-# on both Linux CI (POSIX) and Windows hosts (physical cwd) without MSYS path
-# translation leaking into node.
 (cd "$plugin_root" && node --input-type=module - "$expected_dsh_version" <<'NODE'
 import { readFileSync } from 'node:fs'
 
