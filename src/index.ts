@@ -8,6 +8,9 @@ import { bindPinnedDshCooperativeYield } from './runtime/focus-yield.js'
 import { bindPinnedDshLaneResume, emitLaneSwitched } from './runtime/focus-resume.js'
 import { composeGoLaneScope } from './runtime/go-capability-guard.js'
 import { GO_PRESET_ID } from './preset/go-preset.js'
+import { BridgeRuntime } from './bridge/runtime.js'
+import { CrossLaneAwareness } from './bridge/awareness.js'
+import { bindBridgeDelivery } from './bridge/delivery.js'
 
 export * from './contracts/index.js'
 
@@ -47,6 +50,10 @@ export async function apply(ctx: Context, _config: Config = {}): Promise<void> {
   }
 
   const focusOwner = new RuntimeFocusOwner('work')
+  bindBridgeDelivery(
+    { go: agents.go.ctx.systemPrompt, work: agents.work.ctx.systemPrompt },
+    new CrossLaneAwareness(new BridgeRuntime()),
+  )
   bindPinnedDshFocusBoundary(ctx, focusOwner, agents)
   bindPinnedDshCooperativeYield(ctx, focusOwner, agents, {
     onLaneSwitch: transition => emitLaneSwitched(ctx, transition),
