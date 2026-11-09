@@ -91,7 +91,10 @@ every move and asserts the exact maximum.
 throwaway copy of `src/` inside the pinned tests directory; every one must make
 at least one gate test fail. A mutant is counted as killed only when the run
 reports a failing test (`Tests N failed`); a compile or import error now counts
-as surviving, so the script cannot pass without a real red assertion.
+as surviving, so the script cannot pass without a real red assertion. The
+three-mutant set recorded on `main` also carried `frozen-work-projection`; the
+branch's `f3d87b6` replaced it with the broader `stale` mutant and added `pad`,
+`noop`, and `notice-not-last`, so six mutants are current.
 
 ```sh
 DSH_PINNED_ROOT=../dsh-plugin-weiqi-wt/DSH-PINNED \
@@ -124,6 +127,10 @@ RESULT: PASS — every mutant was killed by a failing test
 | `stale` | the Work variable forever renders the first GameNotice it saw | cases 2 and 4 red: the newest block no longer carries `moveNumber: 21` / `moveNumber: 400` |
 | `noop` | `renderGameNotice` returns an empty string, so the notice is never delivered | cases 2 and 4 red: no `GAME_NOTICE` block exists |
 | `notice-not-last` | the Work entry places the fixed boundary after the projection | case 8 red: the entry and snapshot text no longer end with the newest projection |
+
+The earlier three-mutant set on `main` also carried `frozen-work-projection`
+(the Work provider cached its first render); `f3d87b6` replaced it with the
+broader `stale` mutant, which keeps the variable seam but pins the first notice.
 
 Review r2 found the gate measuring a truncated block (`affectedGroups: ` in the
 scanner against a rendered `affectedGroups:`), so the `pad` mutant survived; it

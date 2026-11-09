@@ -2,6 +2,11 @@
 
 Status: **FAIL — WAVE-D-S01 / BL-BR-03 full frozen delivery acceptance**
 
+The FAIL verdict above applies to the single-seam reading of §39.6 that was
+current when this probe ran. **Superseded by R2.4.3 §9.1 (PR #113, 2026-11-06):**
+the Work direction now uses exactly this seam, and its append-on-change
+behaviour is the intended "sticky note", bounded by the §39.6 numeric ceiling.
+
 Issue: WAVE-D-S01 / #28
 
 Pinned DSH: `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`

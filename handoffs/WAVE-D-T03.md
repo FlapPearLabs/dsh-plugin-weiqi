@@ -59,6 +59,10 @@ newest notice is the last runtime-context entry against a competing order-115
 contributor. Recorded result: `RESULT: PASS — every mutant was killed by a failing
 test`. Logs and method are in the validation record.
 
+The three-mutant set recorded on `main` also carried `frozen-work-projection`
+(the Work provider cached its first render); the branch's `f3d87b6` replaced it
+with the broader `stale` mutant and added `pad`, `noop`, and `notice-not-last`.
+
 ## Regression surface
 
 `src/index.test.ts` had to grow a `systemPrompt` service on its stand-in agent
