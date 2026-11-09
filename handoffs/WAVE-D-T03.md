@@ -12,10 +12,10 @@
 | File | Change |
 |---|---|
 | `src/bridge/delivery.ts` | new: `bindBridgeDelivery`, `renderWorkSnapshot`, `renderGameNotice`, `PromptSeam`, `DeliveryTargets`, name/order constants |
-| `src/bridge/delivery.test.ts` | new: registration contract, empty-render, latest-only, stale suppression, 296-character bound |
+| `src/bridge/delivery.test.ts` | new: registration contract, empty-render, latest-only, stale suppression, 296-character bound, worst-case 296 / 20 x 296 <= 6000 bound, Work text without the boundary line |
 | `src/bridge/index.ts` | re-exports the delivery surface |
 | `src/index.ts` | `apply()` binds both seams on the two lane agents |
-| `src/index.test.ts` | the lane factory supplies a `systemPrompt` recorder; new test pins that `apply()` registers one section + one variable on Go and one context on Work |
+| `src/index.test.ts` | the lane factory supplies a `systemPrompt` recorder; new test pins that `apply()` registers one section + one variable on Go and one context + one variable on Work |
 | `tests/integration/bridge-delivery/bridge-delivery.fixture.ts` | new: nine pinned-DSH assertions from §39.6, including a competing `order` 115 runtime-context contributor |
 | `tests/integration/bridge-delivery/run-bridge-delivery.sh` | new: fail-closed pin-checking runner |
 | `.github/workflows/bridge-delivery-gate.yml` | new: runs the runner on PRs touching the delivery surface |
@@ -34,9 +34,21 @@ Error: Failed to resolve import "./delivery.js"
 Green after the implementation:
 
 ```text
-pnpm test  ->  50 files / 591 tests passed
-pnpm verify -> typecheck OK, 50 files / 591 tests passed, clean + build OK
+pnpm test  ->  50 files / 592 tests passed
+pnpm verify -> typecheck OK, 50 files / 592 tests passed, clean + build OK
 ```
+
+## Work boundary line (owner decision 2026-11-09)
+
+The Work runtime-context text is the projection alone. The review measured each
+boundary-prefixed entry at up to 382 characters and twenty of them at 7630,
+over the §39.6 ceiling of `L <= 300` and `20 x 300 = 6000`; the owner decided
+to drop the Work boundary line and keep the Go one. The gate now measures the
+actual section text DSH stores: maximum 291 characters over the twenty observed
+entries and 5810 in total, with the 400-move render argmax pinned at 296. The
+89-character boundary line and its two newlines are what the old 382 / 7630
+figures counted. `escapeBridgeField` already keeps a value from forging a line,
+so no protection was lost.
 
 ## Pinned-DSH gate
 
@@ -56,8 +68,11 @@ five cases and two mutants after review r1 proved the first version let a frozen
 Work projection pass 5/5; it now asserts the newest block's `moveNumber` after the
 twenty-update burst and at the end of the 400-move sequence, and case 8 asserts the
 newest notice is the last runtime-context entry against a competing order-115
-contributor. Recorded result: `RESULT: PASS — every mutant was killed by a failing
-test`. Logs and method are in the validation record.
+`approval:policy` contributor, and cases 4 and 6 require the Work entry to carry
+no boundary line. The `notice-not-last` mutant now appends the boundary after
+the projection, so it turns cases 4, 6, and 8 red. Recorded result:
+`RESULT: PASS — every mutant was killed by a failing test`. Logs and method are
+in the validation record.
 
 The three-mutant set recorded on `main` also carried `frozen-work-projection`
 (the Work provider cached its first render); the branch's `f3d87b6` replaced it
@@ -74,7 +89,9 @@ header, Go capability scope, collision propagation).
 
 - r1 (deepseek-v4.1-flash): **APPROVE**, no P0/P1. One P2 — the frozen-projection
   mutant survived — fixed in `b27f3f1` together with the two new assertions.
-- r2: see `.omo/reviews/bridge-dt03/`.
+- r2 and the post-fix review: no P0/P1; the fix-round findings (P2-1 boundary
+  length, P2-2 running-status wording, P2-3 escaping wording, P3 handoff
+  details) are addressed in this handoff and the validation record.
 
 ## Not verified / known gaps
 
