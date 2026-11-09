@@ -58,7 +58,7 @@ work_context_block='  targets.work.context({
     text: () =>
       awareness.forWorkLane().latestGameNotice === undefined
         ? '"''"'
-        : `${BRIDGE_DATA_BOUNDARY}\n\n{{${WORK_NOTICE_VARIABLE}}}`,
+        : `{{${WORK_NOTICE_VARIABLE}}}`,
   })
 '
 
