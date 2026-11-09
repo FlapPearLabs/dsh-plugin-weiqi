@@ -8,13 +8,16 @@ export {
 } from './awareness.js'
 export {
   bindBridgeDelivery,
+  escapeBridgeField,
   renderGameNotice,
   renderWorkSnapshot,
+  BRIDGE_DATA_BOUNDARY,
   GO_SNAPSHOT_ORDER,
   GO_SNAPSHOT_SECTION,
   GO_SNAPSHOT_VARIABLE,
   WORK_NOTICE_ORDER,
   WORK_NOTICE_CONTEXT,
+  WORK_NOTICE_VARIABLE,
   type DeliveryTargets,
   type PromptSeam,
 } from './delivery.js'

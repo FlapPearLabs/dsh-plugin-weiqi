@@ -5,9 +5,10 @@ set -uo pipefail
 # property the fixture claims, so the matching assertion must go red.
 # Mutants live only in the pinned test directory and are removed on exit.
 #
-# Exit codes: 0 = every mutant was killed (tests failed); 1 = a mutant
-# survived (tests passed), so the fixture does not prove that property;
-# 2 = setup/infrastructure problem, results untrustworthy.
+# Exit codes: 0 = every mutant was killed by a failing test; 1 = a mutant
+# survived (it stayed green) or produced no failing test, so the fixture does
+# not prove that property; 2 = setup/infrastructure problem, results
+# untrustworthy.
 
 if [[ -z "${DSH_PINNED_ROOT:-}" ]]; then
   echo "DSH_PINNED_ROOT must point to the pinned deepseek-harness checkout" >&2
@@ -21,18 +22,21 @@ tests_dir="$dsh_root/packages/core/agent-loop/tests"
 log_dir="${LOG_DIR:-$(mktemp -d)}"
 mkdir -p "$log_dir"
 
-GO_SECTION_BLOCK='  targets.go.variable(GO_SNAPSHOT_VARIABLE, () => {
+section_block='  targets.go.variable(GO_SNAPSHOT_VARIABLE, () => {
     const snapshot = awareness.forGoLane().latestWorkSnapshot
     return snapshot === undefined ? undefined : renderWorkSnapshot(snapshot)
   })
   targets.go.section({
     name: GO_SNAPSHOT_SECTION,
     order: GO_SNAPSHOT_ORDER,
-    text: () => (awareness.forGoLane().latestWorkSnapshot === undefined ? '"''"' : `{{${GO_SNAPSHOT_VARIABLE}}}`),
+    text: () =>
+      awareness.forGoLane().latestWorkSnapshot === undefined
+        ? '"''"'
+        : `${BRIDGE_DATA_BOUNDARY}\n\n{{${GO_SNAPSHOT_VARIABLE}}}`,
   })
 '
 
-GO_CONTEXT_BLOCK='  targets.go.context({
+context_block='  targets.go.context({
     name: GO_SNAPSHOT_SECTION,
     order: GO_SNAPSHOT_ORDER,
     text: () => {
@@ -42,29 +46,58 @@ GO_CONTEXT_BLOCK='  targets.go.context({
   })
 '
 
-WORK_CONTEXT_BLOCK='  targets.work.context({
-    name: WORK_NOTICE_CONTEXT,
-    order: WORK_NOTICE_ORDER,
-    text: () => {
-      const notice = awareness.forWorkLane().latestGameNotice
-      return notice === undefined ? '"''"' : renderGameNotice(notice)
-    },
+work_variable_block='  targets.work.variable(WORK_NOTICE_VARIABLE, () => {
+    const notice = awareness.forWorkLane().latestGameNotice
+    return notice === undefined ? undefined : renderGameNotice(notice)
   })
 '
 
-WORK_FROZEN_BLOCK='  let frozenWorkProjection: string | undefined
-  targets.work.context({
+work_context_block='  targets.work.context({
     name: WORK_NOTICE_CONTEXT,
     order: WORK_NOTICE_ORDER,
-    text: () => {
-      if (frozenWorkProjection === undefined) {
-        const notice = awareness.forWorkLane().latestGameNotice
-        frozenWorkProjection = notice === undefined ? '"''"' : renderGameNotice(notice)
-      }
-      return frozenWorkProjection
-    },
+    text: () =>
+      awareness.forWorkLane().latestGameNotice === undefined
+        ? '"''"'
+        : `{{${WORK_NOTICE_VARIABLE}}}`,
   })
 '
+
+notice_not_last_block='  targets.work.context({
+    name: WORK_NOTICE_CONTEXT,
+    order: WORK_NOTICE_ORDER,
+    text: () =>
+      awareness.forWorkLane().latestGameNotice === undefined
+        ? '"''"'
+        : `{{${WORK_NOTICE_VARIABLE}}}\n\n${BRIDGE_DATA_BOUNDARY}`,
+  })
+'
+
+stale_work_variable_block='  let firstNotice: GameNotice | undefined
+  targets.work.variable(WORK_NOTICE_VARIABLE, () => {
+    const notice = awareness.forWorkLane().latestGameNotice
+    if (notice === undefined) return undefined
+    firstNotice ??= notice
+    return renderGameNotice(firstNotice)
+  })
+'
+
+pad_from='      lines.push(
+        `- ${group.owner} stones=${group.stones} liberties ${group.libertiesBefore}->${group.libertiesAfter}`,
+      )'
+
+pad_to='      lines.push(
+        `- ${group.owner} stones=${group.stones} liberties ${group.libertiesBefore}->${group.libertiesAfter}${'"'"'x'"'"'.repeat(1000)}`,
+      )'
+
+noop_from='  return lines.join('"'"'\n'"'"')
+}
+
+export function bindBridgeDelivery'
+
+noop_to='  return '"''"'
+}
+
+export function bindBridgeDelivery'
 
 survived=0
 run_mutant() {
@@ -99,21 +132,24 @@ NODE
   if [[ $code -eq 0 ]]; then
     echo "mutant $name SURVIVED (fixture stayed green) — see $log"
     survived=$((survived + 1))
-  elif grep -q 'AssertionError\|expected' "$log"; then
-    echo "mutant $name killed by an assertion — see $log"
+  elif grep -qE 'Tests +[0-9]+ failed' "$log"; then
+    echo "mutant $name killed by a failing test — see $log"
     grep -m1 -E 'AssertionError' "$log" | cut -c1-160
   else
-    echo "mutant $name produced no real red assertion (compile/import failure) — see $log"
+    echo "mutant $name produced no failing test (compile/import failure) — see $log"
     survived=$((survived + 1))
   fi
 }
 
-run_mutant context-seam-for-go "$GO_SECTION_BLOCK" "$GO_CONTEXT_BLOCK"
-run_mutant no-go-registration "$GO_SECTION_BLOCK" ''
-run_mutant frozen-work-projection "$WORK_CONTEXT_BLOCK" "$WORK_FROZEN_BLOCK"
+run_mutant context-seam-for-go "$section_block" "$context_block"
+run_mutant no-go-registration "$section_block" ''
+run_mutant pad "$pad_from" "$pad_to"
+run_mutant stale "$work_variable_block" "$stale_work_variable_block"
+run_mutant noop "$noop_from" "$noop_to"
+run_mutant notice-not-last "$work_context_block" "$notice_not_last_block"
 
 if [[ $survived -ne 0 ]]; then
   echo "RESULT: FAIL — $survived mutant(s) survived; the gate does not prove the property"
   exit 1
 fi
-echo "RESULT: PASS — every mutant was killed by an assertion"
+echo "RESULT: PASS — every mutant was killed by a failing test"
