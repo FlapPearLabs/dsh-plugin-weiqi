@@ -269,5 +269,11 @@ describe('rendered projections', () => {
 
     expect(Math.max(...lengths)).toBe(296)
     expect(Math.min(...lengths)).toBeGreaterThanOrEqual(280)
+
+    // The gate observes moves 20, 40, ... 400; pin their exact total so the
+    // recorded 5810 is measured, not inferred from the per-move maximum.
+    const observed = lengths.filter((_, index) => (index + 1) % 20 === 0)
+    expect(observed).toHaveLength(20)
+    expect(observed.reduce((total, length) => total + length, 0)).toBe(5810)
   })
 })

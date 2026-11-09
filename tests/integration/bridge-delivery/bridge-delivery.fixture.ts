@@ -256,7 +256,9 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     for (const entry of entries) expect(entry.text).not.toContain(BOUNDARY)
     expect(Math.max(...entryLengths)).toBe(291)
     expect(Math.max(...entryLengths)).toBeLessThanOrEqual(300)
-    expect(entryLengths.reduce((total, length) => total + length, 0)).toBeLessThanOrEqual(6000)
+    const entryTotal = entryLengths.reduce((total, length) => total + length, 0)
+    expect(entryTotal).toBe(5810)
+    expect(entryTotal).toBeLessThanOrEqual(6000)
 
     // The schema bounds field types, not string lengths, so the reproducible
     // worst case is this synthetic sequence's argmax (move 11, 296 characters).
