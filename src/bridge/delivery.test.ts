@@ -6,6 +6,7 @@ import {
   bindBridgeDelivery,
   renderGameNotice,
   renderWorkSnapshot,
+  WORK_NOTICE_VARIABLE,
   type PromptSeam,
 } from './delivery.js'
 
@@ -111,7 +112,8 @@ describe('bindBridgeDelivery', () => {
     expect(variable?.provider?.({})).toBeUndefined()
 
     runtime.updateGame(notice(1), 1)
-    expect(textOf(context)).toBe(`${BOUNDARY}\n\n{{${variable?.name}}}`)
+    expect(textOf(context)).toBe(`{{${variable?.name}}}`)
+    expect(textOf(context)).not.toContain(BOUNDARY)
     expect(variable?.provider?.({})).toBe(renderGameNotice(notice(1)))
 
     runtime.updateGame(notice(2), 2)
@@ -135,7 +137,8 @@ describe('bindBridgeDelivery', () => {
     const noticeVariable = work.registrations.find(entry => entry.kind === 'variable')
     expect(variable?.provider?.({})).toBe(renderWorkSnapshot(snapshot(2)))
     expect(noticeVariable?.provider?.({})).toBe(renderGameNotice(notice(2)))
-    expect(textOf(context)).toBe(`${BOUNDARY}\n\n{{${noticeVariable?.name}}}`)
+    expect(textOf(context)).toBe(`{{${noticeVariable?.name}}}`)
+    expect(textOf(context)).not.toContain(BOUNDARY)
   })
 })
 
@@ -175,7 +178,7 @@ describe('model-facing injection surface', () => {
     expect(lines).not.toContain(FORGED)
   })
 
-  it('marks the delivered value as data with one fixed boundary line', () => {
+  it('marks the Go direction as data with one fixed boundary line and keeps Work free of it', () => {
     const go = recorder()
     const work = recorder()
     const runtime = new BridgeRuntime()
@@ -185,9 +188,38 @@ describe('model-facing injection surface', () => {
 
     const section = go.registrations.find(entry => entry.kind === 'section')
     const context = work.registrations.find(entry => entry.kind === 'context')
-    for (const text of [textOf(section), textOf(context)]) {
-      expect(text.split('\n')[0]).toBe(BOUNDARY)
+    expect(textOf(section).split('\n')[0]).toBe(BOUNDARY)
+    expect(textOf(context)).toBe(`{{${WORK_NOTICE_VARIABLE}}}`)
+    expect(textOf(context)).not.toContain(BOUNDARY)
+  })
+
+  it('keeps the worst-case GameNotice inside the §39.6 single-entry and 20-entry bound', () => {
+    // The frozen schema (src/bridge/schema.ts) bounds field types, not string
+    // lengths, so the reproducible worst case is the Spec §39.6 synthetic
+    // sequence: every optional field present, the longest enum members, and the
+    // five-group composition. Its argmax over moves 1..400 is move 11 at 296
+    // characters, so the Work context text (the projection alone after the
+    // boundary line was removed) stays inside L <= 300 and 20 x 300 = 6000.
+    const worstCase: GameNotice = {
+      gameId: 'synthetic-400',
+      lastMove: 'l12',
+      moveNumber: 11,
+      toPlay: 'deepseek',
+      captures: 2,
+      status: 'playing',
+      affectedGroups: [
+        { owner: 'deepseek', stones: 28, libertiesBefore: 12, libertiesAfter: 1 },
+        { owner: 'user', stones: 18, libertiesBefore: 11, libertiesAfter: 2 },
+        { owner: 'deepseek', stones: 16, libertiesBefore: 10, libertiesAfter: 3 },
+        { owner: 'user', stones: 6, libertiesBefore: 9, libertiesAfter: 1 },
+        { owner: 'deepseek', stones: 4, libertiesBefore: 8, libertiesAfter: 2 },
+      ],
     }
+
+    const rendered = renderGameNotice(worstCase)
+    expect(rendered.length).toBe(296)
+    expect(rendered.length).toBeLessThanOrEqual(300)
+    expect(20 * rendered.length).toBeLessThanOrEqual(6000)
   })
 })
 

@@ -79,7 +79,7 @@ async function harness(script: ConstructorParameters<typeof MockAdapter>[0]): Pr
   bindBridgeDelivery({ work: work.ctx.systemPrompt, go: go.ctx.systemPrompt }, new CrossLaneAwareness(runtime))
 
   // A competing runtime-context contributor, as a real DSH consumer such as
-  // `user-approval` (order 115) provides. DSH orders runtime-context entries by
+  // `approval:policy` (order 115) provides. DSH orders runtime-context entries by
   // ascending `order`, so case 8 only proves "newest notice is last" while this
   // entry sorts before the Bridge notice.
   work.ctx.systemPrompt.context({
@@ -244,6 +244,27 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     }
     expect(Math.max(...blocks)).toBeLessThanOrEqual(296)
     expect(blocks.reduce((total, length) => total + length, 0)).toBeLessThanOrEqual(20 * 296)
+
+    // The delivered runtime-context text is the projection alone, so measure
+    // the actual section text DSH stores: the §39.6 bound counts projection
+    // text, and the Work direction must carry no boundary line at all.
+    const entries = snapshotMessages(work)
+      .flatMap(message => message.sections)
+      .filter(section => section.name === WORK_NOTICE_CONTEXT)
+    expect(entries).toHaveLength(20)
+    const entryLengths = entries.map(entry => entry.text.length)
+    for (const entry of entries) expect(entry.text).not.toContain(BOUNDARY)
+    expect(Math.max(...entryLengths)).toBe(291)
+    expect(Math.max(...entryLengths)).toBeLessThanOrEqual(300)
+    expect(entryLengths.reduce((total, length) => total + length, 0)).toBeLessThanOrEqual(6000)
+
+    // The schema bounds field types, not string lengths, so the reproducible
+    // worst case is this synthetic sequence's argmax (move 11, 296 characters).
+    const worstCase = renderGameNotice(notice(11))
+    expect(worstCase.length).toBe(296)
+    expect(worstCase.length).toBeLessThanOrEqual(300)
+    expect(20 * worstCase.length).toBeLessThanOrEqual(6000)
+
     const newest = visible.slice(visible.lastIndexOf('GAME_NOTICE'))
     expect(newest).toContain('moveNumber: 400')
   })
@@ -281,7 +302,7 @@ describe('WAVE-D-T03 hybrid Bridge delivery on the pinned DSH AgentLoop', () => 
     const context = modelVisibleText(work)
     expect(context).toContain('GAME_NOTICE')
     expect(context.split('\n')).not.toContain(forged)
-    expect(context).toContain(BOUNDARY)
+    expect(context).not.toContain(BOUNDARY)
   })
 
   it('7. a Bridge value containing double braces still yields one request and stays verbatim', async () => {
