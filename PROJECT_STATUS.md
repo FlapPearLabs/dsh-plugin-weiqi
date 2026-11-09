@@ -9,7 +9,7 @@
 - Spec Phase A: **Minimal Technical Vertical Slice**
 - Implementation Wave A: **IN PROGRESS — WAVE-A-T01 / T02 / T03 / T04 / T05 / T07 MERGED**
 - Implementation Wave C: **IN PROGRESS — C-T10 real request path merged (PR #110), DeepSeek calibration pending**
-- Implementation Wave D: **IN PROGRESS — D-S01 closed with the hybrid delivery decision (PR #64, `bbc3d97`; issue #28 closed); D-T03 hybrid delivery implementation in review**
+- Implementation Wave D: **IN PROGRESS — D-S01 closed with the hybrid delivery decision (PR #64, `bbc3d97`; issue #28 closed); D-T03 hybrid delivery merged (PR #114, `999f85a`; hardened in PR #116, `5f75cb4`; issue #31 closed)**
 - Implementation Wave E: **IN PROGRESS — E-T01 Core UI partial merged (PR #111), React host mount blocked; issue #38 open**
 - Ticketization: **COMPLETE**
 
