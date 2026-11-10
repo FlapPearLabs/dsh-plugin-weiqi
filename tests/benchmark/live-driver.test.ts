@@ -47,11 +47,22 @@ function wireBodyOf(init: RequestInit): WireBody {
 /** Identify the fixture from the position text the harness put in the request. */
 function fixtureOf(body: WireBody): BenchmarkFixture {
   const user = body.messages.find(message => message.role === 'user')
-  const fixture = BENCHMARK_FIXTURES.find(candidate => candidate.position === user?.content)
+  const content = user?.content ?? ''
+  const fixture = BENCHMARK_FIXTURES.find(candidate => content.startsWith(candidate.position))
   if (fixture === undefined) {
     throw new Error(`live stub could not identify the fixture from ${String(user?.content)}`)
   }
   return fixture
+}
+
+/** The harness must hand a live model the authoritative game id. */
+function gameIdOf(body: WireBody): string {
+  const user = body.messages.find(message => message.role === 'user')
+  const match = /Authoritative gameId: (\S+)\./.exec(user?.content ?? '')
+  if (match?.[1] === undefined) {
+    throw new Error('live stub found no authoritative gameId in the user message')
+  }
+  return match[1]
 }
 
 /**
@@ -71,11 +82,15 @@ function createStubFetch(): {
     calls: () => calls,
     fetch: async (_input: string, init: RequestInit): Promise<Response> => {
       calls += 1
-      const fixture = fixtureOf(wireBodyOf(init))
+      const body = wireBodyOf(init)
+      const fixture = fixtureOf(body)
+      const gameId = gameIdOf(body)
+      if (gameId !== `benchmark-${fixture.name}`) {
+        throw new Error(`live stub received gameId ${gameId} for fixture ${fixture.name}`)
+      }
       const call = (callsPerFixture.get(fixture.name) ?? 0) + 1
       callsPerFixture.set(fixture.name, call)
 
-      const gameId = `benchmark-${fixture.name}`
       const action = fixture.expectedFinalAction
       const toolCall = call % 2 === 1
         ? { name: 'go_state', arguments: JSON.stringify({ gameId }) }

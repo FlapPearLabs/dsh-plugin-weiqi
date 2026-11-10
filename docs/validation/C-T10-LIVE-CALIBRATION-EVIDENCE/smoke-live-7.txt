@@ -1,0 +1,28 @@
+
+ RUN  v4.1.8 <worktree>
+
+ ❯ tests/benchmark/run-live-calibration.paid.test.ts (1 test | 1 failed) 11120ms
+   × runs the live calibration and records every request usage 11119ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+BenchmarkProviderFailureError: Benchmark provider call failed: {"kind":"error","failure":{"message":"live benchmark provider transport failed (ECONNRESET: Client network socket disconnected before secure TLS connection was established)","code":"NETWORK"}}
+ ❯ Object.request tests/benchmark/llm-request-path.ts:407:15
+    405|           reportedModel,
+    406|         })
+    407|         throw new BenchmarkProviderFailureError(finish, kind)
+       |               ^
+    408|       }
+    409|
+ ❯ runFixture tests/benchmark/harness.ts:364:24
+ ❯ tests/benchmark/run-live-calibration.paid.test.ts:225:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  23:09:55
+   Duration  11.32s (transform 86ms, setup 0ms, import 118ms, tests 11.12s, environment 0ms)
+

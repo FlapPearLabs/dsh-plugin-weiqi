@@ -1,0 +1,22 @@
+
+ RUN  v4.1.8 <worktree>
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S1 opening-spread step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=4000 rawUsage={"prompt_tokens":1287,"completion_tokens":51,"total_tokens":1338,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003549,"allowance":0.00002129,"tokens":{"input":7,"output":51,"reasoning":0,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=7/51 latencyMs=2805.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S2 opening-spread step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=4000 rawUsage={"prompt_tokens":1515,"completion_tokens":508,"total_tokens":2023,"prompt_tokens_details":{"cached_tokens":1408},"completion_tokens_details":{"reasoning_tokens":358},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00032507,"allowance":0.00019504,"tokens":{"input":107,"output":508,"reasoning":358,"cache_read":1408,"cache_write_5m":0,"cache_write_1h":0}}} mapped=107/508 latencyMs=7653.0 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S3 opening-spread step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=4000 rawUsage={"prompt_tokens":2281,"completion_tokens":678,"total_tokens":2959,"prompt_tokens_details":{"cached_tokens":1408},"completion_tokens_details":{"reasoning_tokens":607},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00054197,"allowance":0.00032518,"tokens":{"input":873,"output":678,"reasoning":607,"cache_read":1408,"cache_write_5m":0,"cache_write_1h":0}}} mapped=873/678 latencyMs=13988.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+live calibration smoke: requests=3 turns=1 completed=1 failed=0 wall=24.5s costUsd=0.001805076 costCny=0.0128160396
+
+ ✓ tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage 24462ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  23:38:43
+   Duration  25.01s (transform 220ms, setup 0ms, import 338ms, tests 24.46s, environment 0ms)
+

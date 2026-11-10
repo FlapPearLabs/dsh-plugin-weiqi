@@ -1,0 +1,14 @@
+$ pnpm run typecheck && pnpm run test && pnpm run clean && pnpm run build
+$ tsc -p tsconfig.json --noEmit
+$ vitest run
+
+ RUN  v4.1.8 <worktree>
+
+
+ Test Files  53 passed | 3 skipped (56)
+      Tests  600 passed | 6 skipped (606)
+   Start at  21:31:13
+   Duration  1.29s (transform 1.63s, setup 0ms, import 3.19s, tests 2.06s, environment 3ms)
+
+$ node --eval "require('node:fs').rmSync('lib', { recursive: true, force: true })"
+$ tsc -p tsconfig.build.json

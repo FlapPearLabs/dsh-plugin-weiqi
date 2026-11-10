@@ -1,0 +1,33 @@
+
+ RUN  v4.1.8 <worktree>
+
+ ❯ tests/benchmark/budget-gate.test.ts (29 tests | 1 failed) 56ms
+     × keeps a released reservation as unsettled spend instead of forgetting it 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/budget-gate.test.ts > benchmark spend/request gates (WAVE-C-T10) > keeps a released reservation as unsettled spend instead of forgetting it
+AssertionError: expected undefined to be +0 // Object.is equality
+
+- Expected:
+0
+
++ Received:
+undefined
+
+ ❯ tests/benchmark/budget-gate.test.ts:703:46
+    701|
+    702|     gate.beginRequest(input)
+    703|     expect(gate.snapshot().unsettledCostUsd).toBe(0)
+       |                                              ^
+    704|     expect(gate.releaseRequest(1)).toBe(true)
+    705|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 28 passed (29)
+   Start at  21:29:23
+   Duration  261ms (transform 105ms, setup 0ms, import 139ms, tests 56ms, environment 0ms)
+

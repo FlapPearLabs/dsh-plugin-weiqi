@@ -1,0 +1,148 @@
+
+ RUN  v4.1.8 <worktree>
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S1 opening-spread step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1287,"completion_tokens":50,"total_tokens":1337,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":6},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003489,"allowance":0.00002093,"tokens":{"input":7,"output":50,"reasoning":6,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=7/50 latencyMs=3659.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S2 opening-spread step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1515,"completion_tokens":2297,"total_tokens":3812,"prompt_tokens_details":{"cached_tokens":1408},"completion_tokens_details":{"reasoning_tokens":2147},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00139847,"allowance":0.00083908,"tokens":{"input":107,"output":2297,"reasoning":2147,"cache_read":1408,"cache_write_5m":0,"cache_write_1h":0}}} mapped=107/2297 latencyMs=29897.1 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S3 opening-spread step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2081,"completion_tokens":71,"total_tokens":2152,"prompt_tokens_details":{"cached_tokens":1536},"completion_tokens_details":{"reasoning_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00012896,"allowance":0.00007737,"tokens":{"input":545,"output":71,"reasoning":0,"cache_read":1536,"cache_write_5m":0,"cache_write_1h":0}}} mapped=545/71 latencyMs=4951.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T02-S1 opening-spread step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1287,"completion_tokens":187,"total_tokens":1474,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":65},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00011709,"allowance":0.00007025,"tokens":{"input":7,"output":187,"reasoning":65,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=7/187 latencyMs=9985.3 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T02-S2 opening-spread step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2131,"completion_tokens":1324,"total_tokens":3455,"prompt_tokens_details":{"cached_tokens":2048},"completion_tokens_details":{"reasoning_tokens":1191},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00081299,"allowance":0.0004878,"tokens":{"input":83,"output":1324,"reasoning":1191,"cache_read":2048,"cache_write_5m":0,"cache_write_1h":0}}} mapped=83/1324 latencyMs=19552.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T02-S3 opening-spread step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2433,"completion_tokens":1046,"total_tokens":3479,"prompt_tokens_details":{"cached_tokens":2176},"completion_tokens_details":{"reasoning_tokens":975},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00067268,"allowance":0.00040361,"tokens":{"input":257,"output":1046,"reasoning":975,"cache_read":2176,"cache_write_5m":0,"cache_write_1h":0}}} mapped=257/1046 latencyMs=16676.5 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T03-S1 opening-spread step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1287,"completion_tokens":50,"total_tokens":1337,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":6},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003489,"allowance":0.00002093,"tokens":{"input":7,"output":50,"reasoning":6,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=7/50 latencyMs=2648.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T03-S2 opening-spread step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1515,"completion_tokens":2873,"total_tokens":4388,"prompt_tokens_details":{"cached_tokens":1408},"completion_tokens_details":{"reasoning_tokens":2723},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00174407,"allowance":0.00104644,"tokens":{"input":107,"output":2873,"reasoning":2723,"cache_read":1408,"cache_write_5m":0,"cache_write_1h":0}}} mapped=107/2873 latencyMs=35797.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T03-S3 opening-spread step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2297,"completion_tokens":2517,"total_tokens":4814,"prompt_tokens_details":{"cached_tokens":1536},"completion_tokens_details":{"reasoning_tokens":2384},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00162896,"allowance":0.00097737,"tokens":{"input":761,"output":2517,"reasoning":2384,"cache_read":1536,"cache_write_5m":0,"cache_write_1h":0}}} mapped=761/2517 latencyMs=35350.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T03-S4 opening-spread step=4 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2599,"completion_tokens":293,"total_tokens":2892,"prompt_tokens_details":{"cached_tokens":2176},"completion_tokens_details":{"reasoning_tokens":222},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00024578,"allowance":0.00014747,"tokens":{"input":423,"output":293,"reasoning":222,"cache_read":2176,"cache_write_5m":0,"cache_write_1h":0}}} mapped=423/293 latencyMs=6307.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T04-S1 simple-capture-single-stone step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1303,"completion_tokens":121,"total_tokens":1424,"prompt_tokens_details":{"cached_tokens":1280,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":6},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00007989,"allowance":0.00004793,"tokens":{"input":23,"output":121,"reasoning":6,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=23/121 latencyMs=2339.5 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T04-S2 simple-capture-single-stone step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1698,"completion_tokens":154,"total_tokens":1852,"prompt_tokens_details":{"cached_tokens":1664,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":77},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00010249,"allowance":0.0000615,"tokens":{"input":34,"output":154,"reasoning":77,"cache_read":1664,"cache_write_5m":0,"cache_write_1h":0}}} mapped=34/154 latencyMs=1636.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T04-S3 simple-capture-single-stone step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1868,"completion_tokens":76,"total_tokens":1944,"prompt_tokens_details":{"cached_tokens":1792,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00006238,"allowance":0.00003743,"tokens":{"input":76,"output":76,"reasoning":0,"cache_read":1792,"cache_write_5m":0,"cache_write_1h":0}}} mapped=76/76 latencyMs=2180.0 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T05-S1 simple-capture-single-stone step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1303,"completion_tokens":129,"total_tokens":1432,"prompt_tokens_details":{"cached_tokens":1280,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":14},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00008469,"allowance":0.00005081,"tokens":{"input":23,"output":129,"reasoning":14,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=23/129 latencyMs=1627.5 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T05-S2 simple-capture-single-stone step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1698,"completion_tokens":90,"total_tokens":1788,"prompt_tokens_details":{"cached_tokens":1664,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":13},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00006409,"allowance":0.00003846,"tokens":{"input":34,"output":90,"reasoning":13,"cache_read":1664,"cache_write_5m":0,"cache_write_1h":0}}} mapped=34/90 latencyMs=2239.5 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T05-S3 simple-capture-single-stone step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1868,"completion_tokens":79,"total_tokens":1947,"prompt_tokens_details":{"cached_tokens":1792,"cache_write_tokens":null},"completion_tokens_details":{"reasoning_tokens":3},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00006418,"allowance":0.00003851,"tokens":{"input":76,"output":79,"reasoning":3,"cache_read":1792,"cache_write_5m":0,"cache_write_1h":0}}} mapped=76/79 latencyMs=14235.1 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T07-S1 escape-from-atari step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1309,"completion_tokens":202,"total_tokens":1511,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":7},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00012939,"allowance":0.00007763,"tokens":{"input":29,"output":202,"reasoning":7,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=29/202 latencyMs=5176.0 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T07-S2 escape-from-atari step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2300,"completion_tokens":313,"total_tokens":2613,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":240},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00034464,"allowance":0.00020678,"tokens":{"input":1020,"output":313,"reasoning":240,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=1020/313 latencyMs=4622.9 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T07-S3 escape-from-atari step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2444,"completion_tokens":190,"total_tokens":2634,"prompt_tokens_details":{"cached_tokens":2176},"completion_tokens_details":{"reasoning_tokens":118},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00016073,"allowance":0.00009644,"tokens":{"input":268,"output":190,"reasoning":118,"cache_read":2176,"cache_write_5m":0,"cache_write_1h":0}}} mapped=268/190 latencyMs=3149.4 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T08-S1 escape-from-atari step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1309,"completion_tokens":193,"total_tokens":1502,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":68},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00012399,"allowance":0.00007439,"tokens":{"input":29,"output":193,"reasoning":68,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=29/193 latencyMs=2834.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T08-S2 escape-from-atari step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2183,"completion_tokens":348,"total_tokens":2531,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":275},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00034809,"allowance":0.00020885,"tokens":{"input":903,"output":348,"reasoning":275,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=903/348 latencyMs=2755.4 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T08-S3 escape-from-atari step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2327,"completion_tokens":122,"total_tokens":2449,"prompt_tokens_details":{"cached_tokens":2176},"completion_tokens_details":{"reasoning_tokens":50},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00010238,"allowance":0.00006143,"tokens":{"input":151,"output":122,"reasoning":50,"cache_read":2176,"cache_write_5m":0,"cache_write_1h":0}}} mapped=151/122 latencyMs=2068.9 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T09-S1 escape-from-atari step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1309,"completion_tokens":136,"total_tokens":1445,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":11},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00008979,"allowance":0.00005387,"tokens":{"input":29,"output":136,"reasoning":11,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=29/136 latencyMs=1711.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T09-S2 escape-from-atari step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2183,"completion_tokens":290,"total_tokens":2473,"prompt_tokens_details":{"cached_tokens":2176},"completion_tokens_details":{"reasoning_tokens":217},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00018158,"allowance":0.00010895,"tokens":{"input":7,"output":290,"reasoning":217,"cache_read":2176,"cache_write_5m":0,"cache_write_1h":0}}} mapped=7/290 latencyMs=3973.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T09-S3 escape-from-atari step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2327,"completion_tokens":90,"total_tokens":2417,"prompt_tokens_details":{"cached_tokens":2304},"completion_tokens_details":{"reasoning_tokens":18},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00006436,"allowance":0.00003862,"tokens":{"input":23,"output":90,"reasoning":18,"cache_read":2304,"cache_write_5m":0,"cache_write_1h":0}}} mapped=23/90 latencyMs=1513.4 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T10-S1 local-fight-contact step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1299,"completion_tokens":54,"total_tokens":1353,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003909,"allowance":0.00002345,"tokens":{"input":19,"output":54,"reasoning":0,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=19/54 latencyMs=2228.4 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T10-S2 local-fight-contact step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1561,"completion_tokens":2857,"total_tokens":4418,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":2581},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00176019,"allowance":0.00105611,"tokens":{"input":281,"output":2857,"reasoning":2581,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=281/2857 latencyMs=22907.1 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T10-S3 local-fight-contact step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2564,"completion_tokens":8192,"total_tokens":10756,"prompt_tokens_details":{"cached_tokens":1536},"completion_tokens_details":{"reasoning_tokens":8192},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00507401,"allowance":0.0030444,"tokens":{"input":1028,"output":8192,"reasoning":8192,"cache_read":1536,"cache_write_5m":0,"cache_write_1h":0}}} mapped=1028/8192 latencyMs=70317.2 finish=length
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T10-S4 local-fight-contact step=4 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2564,"completion_tokens":4555,"total_tokens":7119,"prompt_tokens_details":{"cached_tokens":2560},"completion_tokens_details":{"reasoning_tokens":4420},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00274128,"allowance":0.00164477,"tokens":{"input":4,"output":4555,"reasoning":4420,"cache_read":2560,"cache_write_5m":0,"cache_write_1h":0}}} mapped=4/4555 latencyMs=39166.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T10-S5 local-fight-contact step=5 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2854,"completion_tokens":1469,"total_tokens":4323,"prompt_tokens_details":{"cached_tokens":2560},"completion_tokens_details":{"reasoning_tokens":1397},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00093318,"allowance":0.00055991,"tokens":{"input":294,"output":1469,"reasoning":1397,"cache_read":2560,"cache_write_5m":0,"cache_write_1h":0}}} mapped=294/1469 latencyMs=14483.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T11-S1 local-fight-contact step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1299,"completion_tokens":53,"total_tokens":1352,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003849,"allowance":0.00002309,"tokens":{"input":19,"output":53,"reasoning":0,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=19/53 latencyMs=2131.3 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T11-S2 local-fight-contact step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1561,"completion_tokens":314,"total_tokens":1875,"prompt_tokens_details":{"cached_tokens":1536},"completion_tokens_details":{"reasoning_tokens":38},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00019676,"allowance":0.00011805,"tokens":{"input":25,"output":314,"reasoning":38,"cache_read":1536,"cache_write_5m":0,"cache_write_1h":0}}} mapped=25/314 latencyMs=2722.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T11-S3 local-fight-contact step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2428,"completion_tokens":5077,"total_tokens":7505,"prompt_tokens_details":{"cached_tokens":1792},"completion_tokens_details":{"reasoning_tokens":4880},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00314698,"allowance":0.00188819,"tokens":{"input":636,"output":5077,"reasoning":4880,"cache_read":1792,"cache_write_5m":0,"cache_write_1h":0}}} mapped=636/5077 latencyMs=44503.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T11-S4 local-fight-contact step=4 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2845,"completion_tokens":3964,"total_tokens":6809,"prompt_tokens_details":{"cached_tokens":2304},"completion_tokens_details":{"reasoning_tokens":3891},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00246646,"allowance":0.00147988,"tokens":{"input":541,"output":3964,"reasoning":3891,"cache_read":2304,"cache_write_5m":0,"cache_write_1h":0}}} mapped=541/3964 latencyMs=34215.6 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T11-S5 local-fight-contact step=5 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":3004,"completion_tokens":2682,"total_tokens":5686,"prompt_tokens_details":{"cached_tokens":2816},"completion_tokens_details":{"reasoning_tokens":2610},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00164585,"allowance":0.00098751,"tokens":{"input":188,"output":2682,"reasoning":2610,"cache_read":2816,"cache_write_5m":0,"cache_write_1h":0}}} mapped=188/2682 latencyMs=26469.3 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T12-S1 local-fight-contact step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1299,"completion_tokens":169,"total_tokens":1468,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":45},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00010809,"allowance":0.00006485,"tokens":{"input":19,"output":169,"reasoning":45,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=19/169 latencyMs=3048.7 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T12-S2 local-fight-contact step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2082,"completion_tokens":8192,"total_tokens":10274,"prompt_tokens_details":{"cached_tokens":2048},"completion_tokens_details":{"reasoning_tokens":8192},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00492644,"allowance":0.00295587,"tokens":{"input":34,"output":8192,"reasoning":8192,"cache_read":2048,"cache_write_5m":0,"cache_write_1h":0}}} mapped=34/8192 latencyMs=67401.9 finish=length
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T12-S3 local-fight-contact step=3 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2082,"completion_tokens":7974,"total_tokens":10056,"prompt_tokens_details":{"cached_tokens":2048},"completion_tokens_details":{"reasoning_tokens":7715},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00479564,"allowance":0.00287739,"tokens":{"input":34,"output":7974,"reasoning":7715,"cache_read":2048,"cache_write_5m":0,"cache_write_1h":0}}} mapped=34/7974 latencyMs=70455.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T12-S4 local-fight-contact step=4 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":2657,"completion_tokens":2810,"total_tokens":5467,"prompt_tokens_details":{"cached_tokens":2048},"completion_tokens_details":{"reasoning_tokens":2738},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00178349,"allowance":0.0010701,"tokens":{"input":609,"output":2810,"reasoning":2738,"cache_read":2048,"cache_write_5m":0,"cache_write_1h":0}}} mapped=609/2810 latencyMs=31235.0 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T14-S1 ko-immediate-recapture step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=8192 rawUsage={"prompt_tokens":1304,"completion_tokens":135,"total_tokens":1439,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":1280,"cache_creation_input_tokens":0,"cache_write_tokens":0},"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":6,"rejected_prediction_tokens":0},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00008844,"allowance":0.00005306,"tokens":{"input":24,"output":135,"reasoning":6,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=24/135 latencyMs=8956.5 finish=tool_calls
+
+ × tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage 1800008ms
+   → Test timed out in 1800000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+Error: Test timed out in 1800000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/benchmark/run-live-calibration.paid.test.ts:196:18
+    194| }
+    195|
+    196| it.runIf(ENABLED)('runs the live calibration and records every request…
+       |                  ^
+    197|   const mode = MODE === 'full' ? 'full' : 'smoke'
+    198|   const config = loadLiveBenchmarkConfig(process.env)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  00:04:34
+   Duration  1800.26s (transform 73ms, setup 0ms, import 103ms, tests 1800.01s, environment 0ms)
+

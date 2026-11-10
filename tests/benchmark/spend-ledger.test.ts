@@ -37,6 +37,8 @@ describe('durable benchmark spend ledger (WAVE-C-T10)', () => {
         cacheWriteTokens: 10,
         settledCostUsd: 0.0021,
         reservedCostUsd: 0.0004,
+        unsettledRequests: 0,
+        unsettledCostUsd: 0,
       })
 
       expect(ledger.load()).toEqual({
@@ -48,6 +50,8 @@ describe('durable benchmark spend ledger (WAVE-C-T10)', () => {
         cacheWriteTokens: 10,
         settledCostUsd: 0.0021,
         reservedCostUsd: 0.0004,
+        unsettledRequests: 0,
+        unsettledCostUsd: 0,
       })
     } finally {
       rmSync(dir, { recursive: true, force: true })

@@ -1,0 +1,27 @@
+ RUN  v4.1.8 <worktree>
+
+ FAIL  tests/benchmark/live-provider.test.ts > live benchmark provider entry (WAVE-C-T10) > maps the Go endpoint cache-hit field onto the disjoint DSH tokens
+AssertionError: expected { Object (inputTokens, outputTokens) } to deeply equal { inputTokens: 34, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "cacheReadTokens": 1200,
+-   "inputTokens": 34,
++   "inputTokens": 1234,
+    "outputTokens": 567,
+  }
+
+ ❯ tests/benchmark/live-provider.test.ts:387:9
+    385|       completion_tokens: 567,
+    386|       prompt_tokens_details: { cached_tokens: 1200 },
+    387|     })).toEqual({ inputTokens: 34, outputTokens: 567, cacheReadTokens:…
+       |         ^
+    388|
+    389|     expect(usageFromProvider({
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  23:16:58
+   Duration  353ms (transform 110ms, setup 0ms, import 217ms, tests 24ms, environment 0ms)

@@ -143,6 +143,14 @@ export type BenchmarkBudgetGateSnapshot = Readonly<{
   /** Worst-case reservations still held, in USD and CNY. */
   readonly reservedCostUsd: number
   readonly reservedCostCny: number
+  /**
+   * Reservations released for requests that were dispatched but produced no
+   * usage. They remain an upper bound on unsettled spend, so they are charged
+   * against the session cap instead of being forgotten.
+   */
+  readonly unsettledRequests: number
+  readonly unsettledCostUsd: number
+  readonly unsettledCostCny: number
   readonly maxEstimatedCostCny: number
   readonly usdToCnyRate: number
   readonly ledgerPath: string | null
@@ -264,6 +272,8 @@ export type BenchmarkSpendLedgerState = Readonly<{
   readonly cacheWriteTokens: number
   readonly settledCostUsd: number
   readonly reservedCostUsd: number
+  readonly unsettledRequests: number
+  readonly unsettledCostUsd: number
 }>
 
 export const EMPTY_BENCHMARK_SPEND_LEDGER: BenchmarkSpendLedgerState = Object.freeze({
@@ -275,6 +285,8 @@ export const EMPTY_BENCHMARK_SPEND_LEDGER: BenchmarkSpendLedgerState = Object.fr
   cacheWriteTokens: 0,
   settledCostUsd: 0,
   reservedCostUsd: 0,
+  unsettledRequests: 0,
+  unsettledCostUsd: 0,
 })
 
 export class BenchmarkSpendLedgerError extends Error {
@@ -356,6 +368,12 @@ export class BenchmarkSpendLedger {
       cacheWriteTokens: readLedgerInteger(record, 'cacheWriteTokens', this.path),
       settledCostUsd: readLedgerAmount(record, 'settledCostUsd', this.path),
       reservedCostUsd: readLedgerAmount(record, 'reservedCostUsd', this.path),
+      unsettledRequests: record.unsettledRequests === undefined
+        ? 0
+        : readLedgerInteger(record, 'unsettledRequests', this.path),
+      unsettledCostUsd: record.unsettledCostUsd === undefined
+        ? 0
+        : readLedgerAmount(record, 'unsettledCostUsd', this.path),
     })
   }
 
@@ -385,6 +403,8 @@ export class BenchmarkBudgetGate {
   private cacheWriteTokenCount = 0
   private costUsd = 0
   private reservedCostUsd = 0
+  private unsettledRequestCount = 0
+  private unsettledCostUsd = 0
   private lastStep: number | undefined
   private readonly stopLog: BenchmarkBudgetStop[] = []
   private readonly reservations = new Map<number, number>()
@@ -444,6 +464,8 @@ export class BenchmarkBudgetGate {
       this.cacheWriteTokenCount = persisted.cacheWriteTokens
       this.costUsd = persisted.settledCostUsd
       this.reservedCostUsd = persisted.reservedCostUsd
+      this.unsettledRequestCount = persisted.unsettledRequests
+      this.unsettledCostUsd = persisted.unsettledCostUsd
     }
   }
 
@@ -519,7 +541,9 @@ export class BenchmarkBudgetGate {
       this.pricing,
     )
     const rate = this.config.usdToCnyRate
-    const projectedUsd = roundCost(this.costUsd + this.reservedCostUsd + reservation)
+    const projectedUsd = roundCost(
+      this.costUsd + this.reservedCostUsd + this.unsettledCostUsd + reservation,
+    )
     const projectedCny = roundCost(projectedUsd * rate)
     if (projectedCny > this.config.maxEstimatedCostCny) {
       throw this.stop(
@@ -621,7 +645,7 @@ export class BenchmarkBudgetGate {
       )
     }
 
-    const spentUsd = roundCost(this.costUsd + this.reservedCostUsd)
+    const spentUsd = roundCost(this.costUsd + this.reservedCostUsd + this.unsettledCostUsd)
     const spentCny = roundCost(spentUsd * this.config.usdToCnyRate)
     if (spentCny > this.config.maxEstimatedCostCny) {
       throw this.stop(
@@ -652,6 +676,8 @@ export class BenchmarkBudgetGate {
     if (reservation === undefined) return undefined
     this.reservations.delete(step)
     this.reservedCostUsd = roundCost(Math.max(0, this.reservedCostUsd - reservation))
+    this.unsettledRequestCount += 1
+    this.unsettledCostUsd = roundCost(this.unsettledCostUsd + reservation)
     return reservation
   }
 
@@ -682,6 +708,9 @@ export class BenchmarkBudgetGate {
       estimatedCostCny: roundCost(this.costUsd * this.config.usdToCnyRate),
       reservedCostUsd: this.reservedCostUsd,
       reservedCostCny: roundCost(this.reservedCostUsd * this.config.usdToCnyRate),
+      unsettledRequests: this.unsettledRequestCount,
+      unsettledCostUsd: this.unsettledCostUsd,
+      unsettledCostCny: roundCost(this.unsettledCostUsd * this.config.usdToCnyRate),
       maxEstimatedCostCny: this.config.maxEstimatedCostCny,
       usdToCnyRate: this.config.usdToCnyRate,
       ledgerPath: this.ledgerPath,
@@ -699,6 +728,8 @@ export class BenchmarkBudgetGate {
       cacheWriteTokens: this.cacheWriteTokenCount,
       settledCostUsd: this.costUsd,
       reservedCostUsd: this.reservedCostUsd,
+      unsettledRequests: this.unsettledRequestCount,
+      unsettledCostUsd: this.unsettledCostUsd,
     })
   }
 
