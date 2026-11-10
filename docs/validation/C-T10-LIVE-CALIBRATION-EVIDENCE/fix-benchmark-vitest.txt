@@ -1,0 +1,9 @@
+
+ RUN  v4.1.8 <worktree>
+
+
+ Test Files  12 passed | 3 skipped (15)
+      Tests  86 passed | 6 skipped (92)
+   Start at  21:30:55
+   Duration  2.10s (transform 630ms, setup 0ms, import 1.27s, tests 2.66s, environment 2ms)
+

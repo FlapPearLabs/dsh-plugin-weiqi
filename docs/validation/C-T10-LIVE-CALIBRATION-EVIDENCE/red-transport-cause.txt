@@ -1,0 +1,30 @@
+
+ RUN  v4.1.8 <worktree>
+
+ ❯ tests/benchmark/live-provider.test.ts (8 tests | 1 failed) 24ms
+     × surfaces the transport cause without leaking the credential 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/live-provider.test.ts > live benchmark provider entry (WAVE-C-T10) > surfaces the transport cause without leaking the credential
+AssertionError: expected 'LlmError: live benchmark provider tra…' to contain 'UND_ERR_CONNECT_TIMEOUT'
+
+Expected: "UND_ERR_CONNECT_TIMEOUT"
+Received: "LlmError: live benchmark provider transport failed"
+
+ ❯ tests/benchmark/live-provider.test.ts:194:28
+    192|     }
+    193|
+    194|     expect(String(caught)).toContain('UND_ERR_CONNECT_TIMEOUT')
+       |                            ^
+    195|     expect(String(caught)).not.toContain(STUB_CREDENTIAL)
+    196|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  21:40:45
+   Duration  205ms (transform 82ms, setup 0ms, import 117ms, tests 24ms, environment 0ms)
+

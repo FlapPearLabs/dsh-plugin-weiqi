@@ -1,0 +1,33 @@
+
+ RUN  v4.1.8 <worktree>
+
+ ❯ tests/benchmark/live-provider.test.ts (7 tests | 1 failed) 21ms
+     × sends the Go session header and a benchmark-specific user agent 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/live-provider.test.ts > live benchmark provider entry (WAVE-C-T10) > sends the Go session header and a benchmark-specific user agent
+AssertionError: expected undefined to be 'benchmark-live-stub' // Object.is equality
+
+- Expected:
+"benchmark-live-stub"
+
++ Received:
+undefined
+
+ ❯ tests/benchmark/live-provider.test.ts:167:49
+    165|     expect(chunks.length).toBeGreaterThan(0)
+    166|     expect(captured).toHaveLength(1)
+    167|     expect(captured[0]?.['x-opencode-session']).toBe('benchmark-live-s…
+       |                                                 ^
+    168|     expect(captured[0]?.['user-agent']).toMatch(/^dsh-plugin-weiqi-ben…
+    169|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  21:35:38
+   Duration  220ms (transform 83ms, setup 0ms, import 114ms, tests 21ms, environment 0ms)
+

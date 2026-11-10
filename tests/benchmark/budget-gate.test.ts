@@ -687,4 +687,35 @@ describe('benchmark spend/request gates (WAVE-C-T10)', () => {
     expect((caught as BenchmarkBudgetStopError).stop.limit).toBe(7.1)
     expect(gate.snapshot().requests).toBe(1)
   })
+
+  it('keeps a released reservation as unsettled spend instead of forgetting it', () => {
+    const gate = new BenchmarkBudgetGate(
+      {
+        maxEstimatedCostCny: 0.001,
+        usdToCnyRate: 1,
+        maxInputTokensPerRequest: 1_000_000,
+      },
+      { inputUsdPerMillionTokens: 0, outputUsdPerMillionTokens: 1 },
+    )
+    const input = { step: 1, estimatedInputTokens: 10, proposedMaxTokens: 1_000, toolNames: [] }
+
+    gate.beginRequest(input)
+    expect(gate.snapshot().unsettledCostUsd).toBe(0)
+    expect(gate.releaseRequest(1)).toBe(true)
+
+    const snapshot = gate.snapshot()
+    expect(snapshot.reservedCostUsd).toBe(0)
+    expect(snapshot.unsettledRequests).toBe(1)
+    expect(snapshot.unsettledCostUsd).toBeCloseTo(0.001, 12)
+    expect(snapshot.unsettledCostCny).toBeCloseTo(0.001, 12)
+
+    let caught: unknown
+    try {
+      gate.beginRequest({ ...input, step: 2 })
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(BenchmarkBudgetStopError)
+    expect((caught as BenchmarkBudgetStopError).stop.gate).toBe('estimated-cost')
+  })
 })

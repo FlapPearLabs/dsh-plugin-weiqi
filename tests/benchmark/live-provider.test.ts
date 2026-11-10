@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createUserMessage, type ToolSchema } from '@deepseek-ai/dsh-llm'
+import { SessionId } from '@deepseek-ai/dsh-session'
 import { createGoTurnEnforcement } from '../../src/budget/enforcement.js'
 import { GoCapabilityGuard } from '../../src/runtime/go-capability-guard.js'
 import { createTenukiGoRulesPort } from '../../src/rules/tenuki-adapter.js'
@@ -13,7 +14,9 @@ import {
   LIVE_BENCHMARK_ENV_VARS,
   LiveBenchmarkProvider,
   benchmarkProviderMode,
+  type LiveRequestObservation,
   loadLiveBenchmarkConfig,
+  usageFromProvider,
   type BenchmarkEnv,
   type LiveBenchmarkConfig,
 } from './live-provider.js'
@@ -137,6 +140,62 @@ describe('live benchmark provider entry (WAVE-C-T10)', () => {
     expect(body.stream).toBe(true)
   })
 
+  it('sends the Go session header and a benchmark-specific user agent', async () => {
+    const captured: Record<string, string>[] = []
+    const provider = new LiveBenchmarkProvider(liveConfig(), {
+      fetch: async (_input, init) => {
+        captured.push({ ...(init.headers as Record<string, string>) })
+        return jsonResponse({
+          model: STUB_MODEL,
+          choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 10, completion_tokens: 2 },
+        })
+      },
+    })
+
+    const chunks = []
+    for await (const chunk of provider.stream({
+      provider: BENCHMARK_LIVE_PROVIDER_ID,
+      model: STUB_MODEL,
+      messages: [userMessage()],
+      sessionId: SessionId('benchmark-live-stub'),
+    })) {
+      chunks.push(chunk)
+    }
+
+    expect(chunks.length).toBeGreaterThan(0)
+    expect(captured).toHaveLength(1)
+    expect(captured[0]?.['x-opencode-session']).toBe('benchmark-live-stub')
+    expect(captured[0]?.['user-agent']).toMatch(/^dsh-plugin-weiqi-benchmark\//)
+  })
+
+  it('surfaces the transport cause without leaking the credential', async () => {
+    const provider = new LiveBenchmarkProvider(liveConfig(), {
+      fetch: async () => {
+        const cause = Object.assign(new Error('Connect Timeout Error'), {
+          code: 'UND_ERR_CONNECT_TIMEOUT',
+        })
+        throw new TypeError('fetch failed', { cause })
+      },
+    })
+
+    let caught: unknown
+    try {
+      for await (const chunk of provider.stream({
+        provider: BENCHMARK_LIVE_PROVIDER_ID,
+        model: STUB_MODEL,
+        messages: [userMessage()],
+      })) {
+        void chunk
+      }
+    } catch (error) {
+      caught = error
+    }
+
+    expect(String(caught)).toContain('UND_ERR_CONNECT_TIMEOUT')
+    expect(String(caught)).not.toContain(STUB_CREDENTIAL)
+  })
+
   it('restores provider tool names and dispatches them through the real Go registry', async () => {
     const toolCallArguments = JSON.stringify({
       gameId: 'live-stub-game',
@@ -241,6 +300,98 @@ describe('live benchmark provider entry (WAVE-C-T10)', () => {
     expect(nameDeltas).toEqual(['go.play', 'go.pass'])
     const toolBlocks = blocks.filter(block => block.type === 'tool-call')
     expect(toolBlocks.map(block => (block as { name: string }).name)).toEqual(['go.play', 'go.pass'])
+  })
+
+  it('observes every request with the provider usage object verbatim', async () => {
+    const rawUsage = {
+      prompt_tokens: 1234,
+      completion_tokens: 567,
+      prompt_cache_hit_tokens: 34,
+    }
+    const sse = [
+      'data: {"model":"stub-deepseek-chat","choices":[{"delta":{"content":"reading"}}]}',
+      `data: {"model":"stub-deepseek-chat","choices":[{"delta":{},"finish_reason":"stop"}],`
+      + `"usage":${JSON.stringify(rawUsage)}}`,
+      'data: [DONE]',
+      '',
+    ].join('\n\n')
+
+    const observations: LiveRequestObservation[] = []
+    const provider = new LiveBenchmarkProvider(liveConfig(), {
+      fetch: async () => new Response(sse, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      }),
+      observe: observation => observations.push(observation),
+    })
+
+    for await (const _chunk of provider.stream({
+      provider: BENCHMARK_LIVE_PROVIDER_ID,
+      model: STUB_MODEL,
+      messages: [userMessage()],
+      tools: [...goToolSchemas()],
+      maxTokens: 1024,
+    })) {
+      // Drain the stream so the observer fires.
+    }
+
+    expect(observations).toHaveLength(1)
+    expect(observations[0]).toMatchObject({
+      wireFormat: 'sse',
+      httpStatus: 200,
+      requestedMaxTokens: 1024,
+      reportedModel: STUB_MODEL,
+      finishReason: 'stop',
+      rawUsage,
+      usage: { inputTokens: 1200, outputTokens: 567, cacheReadTokens: 34 },
+    })
+    expect(observations[0]?.durationMs).toBeGreaterThanOrEqual(0)
+
+    const jsonObservations: LiveRequestObservation[] = []
+    const jsonProvider = new LiveBenchmarkProvider(liveConfig(), {
+      fetch: async () => jsonResponse({
+        model: STUB_MODEL,
+        choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }],
+        usage: rawUsage,
+      }),
+      observe: observation => jsonObservations.push(observation),
+    })
+
+    for await (const _chunk of jsonProvider.stream({
+      provider: BENCHMARK_LIVE_PROVIDER_ID,
+      model: STUB_MODEL,
+      messages: [userMessage()],
+      maxTokens: 256,
+    })) {
+      // Drain the stream so the observer fires.
+    }
+
+    expect(jsonObservations).toHaveLength(1)
+    expect(jsonObservations[0]).toMatchObject({
+      wireFormat: 'json',
+      requestedMaxTokens: 256,
+      rawUsage,
+      usage: { inputTokens: 1200, outputTokens: 567, cacheReadTokens: 34 },
+    })
+  })
+
+  it('maps the Go endpoint cache-hit field onto the disjoint DSH tokens', () => {
+    // The official Go entry reports cache hits under
+    // `prompt_tokens_details.cached_tokens` rather than
+    // `prompt_cache_hit_tokens`; treating them as uncached input would inflate
+    // every turn total the calibration is trying to measure.
+    expect(usageFromProvider({
+      prompt_tokens: 1234,
+      completion_tokens: 567,
+      prompt_tokens_details: { cached_tokens: 1200 },
+    })).toEqual({ inputTokens: 34, outputTokens: 567, cacheReadTokens: 1200 })
+
+    expect(usageFromProvider({
+      prompt_tokens: 1234,
+      completion_tokens: 567,
+      prompt_cache_hit_tokens: 34,
+      prompt_tokens_details: { cached_tokens: 1200 },
+    })).toEqual({ inputTokens: 1200, outputTokens: 567, cacheReadTokens: 34 })
   })
 
   it('reports usage exactly as the server returned it', async () => {

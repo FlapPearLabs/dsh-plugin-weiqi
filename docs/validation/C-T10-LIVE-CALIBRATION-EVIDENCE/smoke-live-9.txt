@@ -1,0 +1,34 @@
+
+ RUN  v4.1.8 <worktree>
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S1 opening-spread step=1 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=4000 rawUsage={"prompt_tokens":1287,"completion_tokens":50,"total_tokens":1337,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":6},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00003489,"allowance":0.00002093,"tokens":{"input":7,"output":50,"reasoning":6,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=1287/50 latencyMs=3986.8 finish=tool_calls
+
+stdout | tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+T01-S2 opening-spread step=2 http=200 wire=sse model=deepseek-v4.1-flash requestedMaxTokens=4000 rawUsage={"prompt_tokens":1515,"completion_tokens":2193,"total_tokens":3708,"prompt_tokens_details":{"cached_tokens":1280},"completion_tokens_details":{"reasoning_tokens":2043},"cost":0,"opencode":{"billing_source":"go","list_cost":0.00135489,"allowance":0.00081293,"tokens":{"input":235,"output":2193,"reasoning":2043,"cache_read":1280,"cache_write_5m":0,"cache_write_1h":0}}} mapped=1515/2193 latencyMs=31195.1 finish=tool_calls
+
+ ❯ tests/benchmark/run-live-calibration.paid.test.ts (1 test | 1 failed) 40220ms
+   × runs the live calibration and records every request usage 40219ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/run-live-calibration.paid.test.ts > runs the live calibration and records every request usage
+BenchmarkProviderFailureError: Benchmark provider call failed: {"kind":"error","failure":{"message":"live benchmark provider transport failed (ECONNRESET: Client network socket disconnected before secure TLS connection was established)","code":"NETWORK"}}
+ ❯ Object.request tests/benchmark/llm-request-path.ts:407:15
+    405|           reportedModel,
+    406|         })
+    407|         throw new BenchmarkProviderFailureError(finish, kind)
+       |               ^
+    408|       }
+    409|
+ ❯ runFixture tests/benchmark/harness.ts:364:24
+ ❯ tests/benchmark/run-live-calibration.paid.test.ts:254:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  23:13:56
+   Duration  40.42s (transform 83ms, setup 0ms, import 113ms, tests 40.22s, environment 0ms)
+

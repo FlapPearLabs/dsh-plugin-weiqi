@@ -74,7 +74,20 @@ const BENCHMARK_SYSTEM_PROMPT = [
   'You are the DeepSeek Go lane of a companion Go game.',
   'Read the position with go.inspect_*, probe with go.try_move, and commit exactly',
   'one authoritative go.play / go.pass / go.resign. Never search the web.',
+  'Pass the authoritative gameId from the user message verbatim on every go.* call.',
 ].join(' ')
+
+/**
+ * The request text for one fixture turn.
+ *
+ * A live model must be told the game id: every `go.*` tool requires it and the
+ * scripted adapter used to supply it itself. The fixture position stays first
+ * so a transport stub can identify the fixture by prefix.
+ */
+export function benchmarkUserMessageText(fixture: BenchmarkFixture, gameId: string): string {
+  return `${fixture.position}\n\nAuthoritative gameId: ${gameId}. `
+    + 'Pass this exact string as gameId on every go.* call.'
+}
 
 export class CognitionBenchmarkBypassError extends Error {
   readonly toolPath: string
@@ -316,7 +329,7 @@ export async function runFixture(
   const tools = toolSchemas()
   const messages: Message[] = [
     createUserMessage({
-      content: [{ type: 'text', text: fixture.position }],
+      content: [{ type: 'text', text: benchmarkUserMessageText(fixture, gameId) }],
       source: { kind: 'user' },
     }),
   ]
@@ -335,6 +348,12 @@ export async function runFixture(
   // A scripted provider declares its exact plan length. A live provider cannot,
   // so the turn budget bounds the loop: `maxModelSteps` plus the one §23 boost.
   const stepLimit = provider.stepCount ?? budget.maxModelSteps + 1
+  // Live requests must carry the ceiling the calibration is configured to
+  // exercise; the scripted adapter keeps its oversized proposal so the C-S01
+  // clamp it was written to exercise still applies.
+  const proposedMaxTokens = options.live === true
+    ? budget.perRequestMaxTokens
+    : SCRIPTED_PROPOSED_MAX_TOKENS
 
   try {
     for (let index = 0; index < stepLimit; index += 1) {
@@ -345,7 +364,7 @@ export async function runFixture(
         async () => ({
           provider: providerId,
           model,
-          maxTokens: SCRIPTED_PROPOSED_MAX_TOKENS,
+          maxTokens: proposedMaxTokens,
         }),
       )
       const response = await path.request({
@@ -357,7 +376,7 @@ export async function runFixture(
         tools,
       })
       requestCaps.push(response.maxTokens)
-      if (response.maxTokens < SCRIPTED_PROPOSED_MAX_TOKENS) oversizedProposalsClamped += 1
+      if (response.maxTokens < proposedMaxTokens) oversizedProposalsClamped += 1
       if (response.maxTokens > budget.perRequestMaxTokens) {
         throw new CognitionBenchmarkBypassError(
           'agent/request',

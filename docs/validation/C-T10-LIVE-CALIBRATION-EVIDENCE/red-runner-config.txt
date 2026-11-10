@@ -1,0 +1,89 @@
+
+ RUN  v4.1.8 <worktree>
+
+ ❯ tests/benchmark/live-calibration-budget.test.ts (1 test | 1 failed) 2ms
+     × keeps the smoke and full caps inside the approved ¥6.66 round envelope 2ms
+ ❯ tests/benchmark/run-live-calibration-runner.test.ts (3 tests | 2 failed) 3312ms
+     × defaults to the official OpenCode Go chat-completions entry 3195ms
+     × preserves an explicitly supplied base URL, key, model and price schedule 103ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/benchmark/live-calibration-budget.test.ts > C-T10 live calibration round budget > keeps the smoke and full caps inside the approved ¥6.66 round envelope
+AssertionError: expected undefined to be 6.66 // Object.is equality
+
+- Expected:
+6.66
+
++ Received:
+undefined
+
+ ❯ tests/benchmark/live-calibration-budget.test.ts:10:36
+      8| describe('C-T10 live calibration round budget', () => {
+      9|   it('keeps the smoke and full caps inside the approved ¥6.66 round en…
+     10|     expect(C_T10_ROUND_BUDGET_CNY).toBe(6.66)
+       |                                    ^
+     11|     expect(C_T10_SMOKE_BUDGET_CNY).toBe(0.5)
+     12|     expect(C_T10_FULL_BUDGET_CNY).toBe(6.16)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/benchmark/run-live-calibration-runner.test.ts > live calibration runner configuration > defaults to the official OpenCode Go chat-completions entry
+AssertionError: expected { PROVIDER: 'live', …(6) } to match object { PROVIDER: 'live', …(4) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "API_KEY": "test-key-not-real",
+-   "BASE_URL": "https://opencode.ai/inference/go/openai/v1",
++   "BASE_URL": "https://opencode.ai/zen/v1",
+    "MODE": "smoke",
+    "MODEL": "deepseek-v4.1-flash",
+    "PROVIDER": "live",
+  }
+
+ ❯ tests/benchmark/run-live-calibration-runner.test.ts:92:25
+     90|
+     91|     expect(result.status).toBe(0)
+     92|     expect(result.dump).toMatchObject({
+       |                         ^
+     93|       PROVIDER: 'live',
+     94|       BASE_URL: OFFICIAL_GO_BASE_URL,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/benchmark/run-live-calibration-runner.test.ts > live calibration runner configuration > preserves an explicitly supplied base URL, key, model and price schedule
+AssertionError: expected { PROVIDER: 'live', …(6) } to match object { …(4) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "API_KEY": "explicit-key-not-real",
+-   "BASE_URL": "https://example.invalid/custom/v1",
++   "API_KEY": "ignored-when-explicit-key-is-set",
++   "BASE_URL": "https://opencode.ai/zen/v1",
+    "MODEL": "explicit-model",
+-   "PRICING": "{\"inputUsdPerMillionTokens\":9,\"outputUsdPerMillionTokens\":18,\"cacheReadUsdPerMillionTokens\":0.09}",
++   "PRICING": "{\"inputUsdPerMillionTokens\":0.3,\"outputUsdPerMillionTokens\":1.2,\"cacheReadUsdPerMillionTokens\":0.006}",
+  }
+
+ ❯ tests/benchmark/run-live-calibration-runner.test.ts:114:25
+    112|
+    113|     expect(result.status).toBe(0)
+    114|     expect(result.dump).toMatchObject({
+       |                         ^
+    115|       BASE_URL: 'https://example.invalid/custom/v1',
+    116|       API_KEY: 'explicit-key-not-real',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 1 passed (4)
+   Start at  21:27:55
+   Duration  3.40s (transform 33ms, setup 0ms, import 44ms, tests 3.31s, environment 0ms)
+

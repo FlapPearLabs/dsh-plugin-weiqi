@@ -128,11 +128,11 @@ export type BenchmarkRequestPathStats = Readonly<{
   readonly configuredModel: string
   /** The seam the observed requests actually left through. */
   readonly seam: 'dsh-llm-runtime'
-  /** Adapter stream invocations (prepared calls dispatched). */
+  /** Adapter stream invocations dispatched while this path was open. */
   readonly llmRequests: number
-  /** Attempts the adapter itself reported for those invocations. */
+  /** Attempts the adapter itself reported while this path was open. */
   readonly transportAttempts: number
-  /** Requests the spend gate admitted. */
+  /** Requests the spend gate admitted on this path. */
   readonly admittedRequests: number
   /** Transport attempts beyond admitted requests: retries the gate never saw. */
   readonly retryAttempts: number
@@ -276,6 +276,17 @@ export async function openBenchmarkRequestPath(
   // these counters off the adapter, so an adapter that does not report them
   // would make every retry invisible.
   assertAdapterCounters(provider)
+
+  // The adapter counters are lifetime totals, and one adapter can serve every
+  // turn of a run. Recording where they stood when this path opened makes the
+  // path report its own turn, so a previous turn's dispatches are not read as
+  // this turn's retries while a real extra attempt inside the turn stays
+  // visible.
+  const counterBaseline = Object.freeze({
+    physicalCalls: physicalCallsOf(provider),
+    loopMarkedRequests: loopMarkedCallsOf(provider),
+    transportAttempts: transportAttemptsOf(provider),
+  })
 
   const providerId = options.providerId ?? BENCHMARK_PROVIDER_ID
   const model = options.model ?? SCRIPTED_MODEL_ID
@@ -483,7 +494,7 @@ export async function openBenchmarkRequestPath(
     },
 
     stats(): BenchmarkRequestPathStats {
-      const transportAttempts = transportAttemptsOf(provider)
+      const transportAttempts = transportAttemptsOf(provider) - counterBaseline.transportAttempts
       const snapshot = gate.snapshot()
       const pricing = snapshot.pricing
       const cacheReadPrice = pricing.cacheReadUsdPerMillionTokens
@@ -501,11 +512,11 @@ export async function openBenchmarkRequestPath(
         model,
         configuredModel: model,
         seam: 'dsh-llm-runtime',
-        llmRequests: physicalCallsOf(provider),
+        llmRequests: physicalCallsOf(provider) - counterBaseline.physicalCalls,
         transportAttempts,
         admittedRequests,
         retryAttempts: Math.max(0, transportAttempts - admittedRequests),
-        loopMarkedRequests: loopMarkedCallsOf(provider),
+        loopMarkedRequests: loopMarkedCallsOf(provider) - counterBaseline.loopMarkedRequests,
         streamSeamRequests,
         retryPolicy: retryFacts,
         reportedModels: Object.freeze(reportedModels),

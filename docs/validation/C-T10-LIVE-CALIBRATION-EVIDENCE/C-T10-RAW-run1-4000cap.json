@@ -1,0 +1,4671 @@
+{
+  "schema": "c-t10-live-calibration",
+  "version": 1,
+  "ticket": "WAVE-C-T10",
+  "generatedAt": "2026-11-06T15:42:14.174Z",
+  "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+  "model": "deepseek-v4.1-flash",
+  "providerMode": "live",
+  "priceSchedule": {
+    "inputUsdPerMillionTokens": 0.3,
+    "outputUsdPerMillionTokens": 1.2,
+    "cacheReadUsdPerMillionTokens": 0.006
+  },
+  "caps": {
+    "maxRequests": 120,
+    "maxInputTokensPerRequest": 8000,
+    "maxOutputTokensPerRequest": 4000,
+    "maxEstimatedCostCny": 6.16,
+    "usdToCnyRate": 7.1
+  },
+  "turnBudget": {
+    "maxModelSteps": 6,
+    "maxInspectCalls": 8,
+    "maxTryMoves": 6,
+    "perRequestMaxTokens": 4000,
+    "maxTurnTokens": 64000
+  },
+  "session": {
+    "startedAt": "2026-11-06T15:42:14.174Z",
+    "finishedAt": "2026-11-06T16:01:24.407Z",
+    "wallMs": 1150226.038291,
+    "gate": {
+      "config": {
+        "maxRequests": 120,
+        "maxInputTokensPerRequest": 8000,
+        "maxOutputTokensPerRequest": 4000,
+        "maxEstimatedCostCny": 6.16,
+        "usdToCnyRate": 7.1,
+        "allowRetries": false,
+        "allowSearchFetch": false
+      },
+      "mode": "live",
+      "pricing": {
+        "inputUsdPerMillionTokens": 0.3,
+        "outputUsdPerMillionTokens": 1.2,
+        "cacheReadUsdPerMillionTokens": 0.006
+      },
+      "pricingSource": "explicit",
+      "requests": 80,
+      "inputTokens": 29348,
+      "outputTokens": 98467,
+      "cacheReadTokens": 113536,
+      "cacheWriteTokens": 0,
+      "estimatedCostUsd": 0.127646016,
+      "estimatedCostCny": 0.9062867136,
+      "reservedCostUsd": 0,
+      "reservedCostCny": 0,
+      "unsettledRequests": 3,
+      "unsettledCostUsd": 0.0164556,
+      "unsettledCostCny": 0.11683476,
+      "maxEstimatedCostCny": 6.16,
+      "usdToCnyRate": 7.1,
+      "ledgerPath": null,
+      "stops": []
+    }
+  },
+  "turns": [
+    {
+      "id": "T01",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 1,
+      "outcome": "completed",
+      "error": null,
+      "latencyMs": 31691.336209,
+      "modelSteps": 3,
+      "inspectCalls": 0,
+      "tryMoveCalls": 2,
+      "deepThinkRequests": 0,
+      "committedAction": "play",
+      "finalMove": "play (3,5)",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 379,
+        "outputTokens": 1675,
+        "cacheReadTokens": 4224,
+        "totalTokens": 2054
+      }
+    },
+    {
+      "id": "T02",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 7 transport attempts for 4 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 4,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1362,
+        "outputTokens": 2685,
+        "cacheReadTokens": 6272,
+        "totalTokens": 4047
+      }
+    },
+    {
+      "id": "T03",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 10 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 859,
+        "outputTokens": 1596,
+        "cacheReadTokens": 4224,
+        "totalTokens": 2455
+      }
+    },
+    {
+      "id": "T04",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 13 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1813,
+        "outputTokens": 230,
+        "cacheReadTokens": 2816,
+        "totalTokens": 2043
+      }
+    },
+    {
+      "id": "T05",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 16 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 645,
+        "outputTokens": 300,
+        "cacheReadTokens": 4224,
+        "totalTokens": 945
+      }
+    },
+    {
+      "id": "T06",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 18 transport attempts for 2 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 2,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 57,
+        "outputTokens": 208,
+        "cacheReadTokens": 2944,
+        "totalTokens": 265
+      }
+    },
+    {
+      "id": "T07",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 21 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1889,
+        "outputTokens": 370,
+        "cacheReadTokens": 2944,
+        "totalTokens": 2259
+      }
+    },
+    {
+      "id": "T08",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 24 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1072,
+        "outputTokens": 529,
+        "cacheReadTokens": 4480,
+        "totalTokens": 1601
+      }
+    },
+    {
+      "id": "T09",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 27 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 643,
+        "outputTokens": 411,
+        "cacheReadTokens": 4608,
+        "totalTokens": 1054
+      }
+    },
+    {
+      "id": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Go turn budget exhausted: maxModelSteps (6/6)",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 6,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 2263,
+        "outputTokens": 20136,
+        "cacheReadTokens": 9984,
+        "totalTokens": 22399
+      }
+    },
+    {
+      "id": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Go turn budget exhausted: maxModelSteps (6/6)",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 6,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1263,
+        "outputTokens": 20130,
+        "cacheReadTokens": 11264,
+        "totalTokens": 21393
+      }
+    },
+    {
+      "id": "T12",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 43 transport attempts for 4 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 4,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1336,
+        "outputTokens": 9331,
+        "cacheReadTokens": 6784,
+        "totalTokens": 10667
+      }
+    },
+    {
+      "id": "T13",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Benchmark provider call failed: {\"kind\":\"error\",\"failure\":{\"message\":\"live benchmark provider transport failed (UND_ERR_CONNECT_TIMEOUT: Connect Timeout Error (attempted address: opencode.ai:443, timeout: 10000ms))\",\"code\":\"NETWORK\"}}",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 1,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1304,
+        "outputTokens": 53,
+        "cacheReadTokens": 0,
+        "totalTokens": 1357
+      }
+    },
+    {
+      "id": "T14",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Benchmark provider call failed: {\"kind\":\"error\",\"failure\":{\"message\":\"live benchmark provider transport failed (ECONNRESET: Client network socket disconnected before secure TLS connection was established)\",\"code\":\"NETWORK\"}}",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 0,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "totalTokens": 0
+      }
+    },
+    {
+      "id": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Go turn budget exhausted: maxModelSteps (6/6)",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 6,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 927,
+        "outputTokens": 18235,
+        "cacheReadTokens": 10752,
+        "totalTokens": 19162
+      }
+    },
+    {
+      "id": "T16",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 56 transport attempts for 4 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 4,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 3273,
+        "outputTokens": 3271,
+        "cacheReadTokens": 5632,
+        "totalTokens": 6544
+      }
+    },
+    {
+      "id": "T17",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 60 transport attempts for 4 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 4,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1492,
+        "outputTokens": 8395,
+        "cacheReadTokens": 7168,
+        "totalTokens": 9887
+      }
+    },
+    {
+      "id": "T18",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 63 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1093,
+        "outputTokens": 2821,
+        "cacheReadTokens": 4736,
+        "totalTokens": 3914
+      }
+    },
+    {
+      "id": "T19",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 66 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 2356,
+        "outputTokens": 386,
+        "cacheReadTokens": 2816,
+        "totalTokens": 2742
+      }
+    },
+    {
+      "id": "T20",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 69 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 401,
+        "outputTokens": 482,
+        "cacheReadTokens": 4352,
+        "totalTokens": 883
+      }
+    },
+    {
+      "id": "T21",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 72 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1239,
+        "outputTokens": 385,
+        "cacheReadTokens": 4864,
+        "totalTokens": 1624
+      }
+    },
+    {
+      "id": "T22",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 1,
+      "outcome": "failed",
+      "error": "Benchmark provider call failed: {\"kind\":\"error\",\"failure\":{\"message\":\"live benchmark provider transport failed (ECONNRESET: Client network socket disconnected before secure TLS connection was established)\",\"code\":\"NETWORK\"}}",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 1,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1302,
+        "outputTokens": 57,
+        "cacheReadTokens": 0,
+        "totalTokens": 1359
+      }
+    },
+    {
+      "id": "T23",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 2,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 77 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1182,
+        "outputTokens": 2800,
+        "cacheReadTokens": 4096,
+        "totalTokens": 3982
+      }
+    },
+    {
+      "id": "T24",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 3,
+      "outcome": "failed",
+      "error": "Cognition benchmark enforcement bypass: request_path: adapter made 80 transport attempts for 3 admitted requests; retries are forbidden",
+      "latencyMs": 0,
+      "modelSteps": 0,
+      "inspectCalls": 0,
+      "tryMoveCalls": 0,
+      "deepThinkRequests": 0,
+      "committedAction": null,
+      "finalMove": "none",
+      "requests": 3,
+      "retryAttempts": 0,
+      "failureKinds": [
+        "run-failed"
+      ],
+      "stopGate": null,
+      "usage": {
+        "inputTokens": 1198,
+        "outputTokens": 3981,
+        "cacheReadTokens": 4352,
+        "totalTokens": 5179
+      }
+    }
+  ],
+  "requests": [
+    {
+      "id": "T01-S1",
+      "turnId": "T01",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 1,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 163.73175,
+      "finishedAtMs": 4846.567875,
+      "latencyMs": 4682.836125,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1287,
+        "completion_tokens": 84,
+        "total_tokens": 1371,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 33
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00005529,
+          "allowance": 0.00003317,
+          "tokens": {
+            "input": 7,
+            "output": 84,
+            "reasoning": 33,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 7,
+        "outputTokens": 84,
+        "cacheReadTokens": 1280,
+        "totalTokens": 91
+      }
+    },
+    {
+      "id": "T01-S2",
+      "turnId": "T01",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 2,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 4851.728625,
+      "finishedAtMs": 25311.706875,
+      "latencyMs": 20459.97825,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1515,
+        "completion_tokens": 1479,
+        "total_tokens": 2994,
+        "prompt_tokens_details": {
+          "cached_tokens": 1408
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1346
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00090767,
+          "allowance": 0.0005446,
+          "tokens": {
+            "input": 107,
+            "output": 1479,
+            "reasoning": 1346,
+            "cache_read": 1408,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 107,
+        "outputTokens": 1479,
+        "cacheReadTokens": 1408,
+        "totalTokens": 1586
+      }
+    },
+    {
+      "id": "T01-S3",
+      "turnId": "T01",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 3,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 25317.841958,
+      "finishedAtMs": 31849.842458,
+      "latencyMs": 6532.000499999998,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1801,
+        "completion_tokens": 112,
+        "total_tokens": 1913,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 41
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00011156,
+          "allowance": 0.00006693,
+          "tokens": {
+            "input": 265,
+            "output": 112,
+            "reasoning": 41,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 265,
+        "outputTokens": 112,
+        "cacheReadTokens": 1536,
+        "totalTokens": 377
+      }
+    },
+    {
+      "id": "T02-S1",
+      "turnId": "T02",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 4,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 31858.374166,
+      "finishedAtMs": 37164.980291,
+      "latencyMs": 5306.606124999998,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1287,
+        "completion_tokens": 50,
+        "total_tokens": 1337,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00003489,
+          "allowance": 0.00002093,
+          "tokens": {
+            "input": 7,
+            "output": 50,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 7,
+        "outputTokens": 50,
+        "cacheReadTokens": 1280,
+        "totalTokens": 57
+      }
+    },
+    {
+      "id": "T02-S2",
+      "turnId": "T02",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 5,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 37167.329833,
+      "finishedAtMs": 53886.171708,
+      "latencyMs": 16718.841875,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1515,
+        "completion_tokens": 1203,
+        "total_tokens": 2718,
+        "prompt_tokens_details": {
+          "cached_tokens": 1408
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1053
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00074207,
+          "allowance": 0.00044524,
+          "tokens": {
+            "input": 107,
+            "output": 1203,
+            "reasoning": 1053,
+            "cache_read": 1408,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 107,
+        "outputTokens": 1203,
+        "cacheReadTokens": 1408,
+        "totalTokens": 1310
+      }
+    },
+    {
+      "id": "T02-S3",
+      "turnId": "T02",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 6,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 53888.885125,
+      "finishedAtMs": 65135.937083,
+      "latencyMs": 11247.051957999996,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2281,
+        "completion_tokens": 848,
+        "total_tokens": 3129,
+        "prompt_tokens_details": {
+          "cached_tokens": 1408
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 715
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00064397,
+          "allowance": 0.00038638,
+          "tokens": {
+            "input": 873,
+            "output": 848,
+            "reasoning": 715,
+            "cache_read": 1408,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 873,
+        "outputTokens": 848,
+        "cacheReadTokens": 1408,
+        "totalTokens": 1721
+      }
+    },
+    {
+      "id": "T02-S4",
+      "turnId": "T02",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 2,
+      "step": 4,
+      "requestIndex": 7,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 65138.086208,
+      "finishedAtMs": 80041.427833,
+      "latencyMs": 14903.341624999994,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2551,
+        "completion_tokens": 584,
+        "total_tokens": 3135,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 513
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00041318,
+          "allowance": 0.00024791,
+          "tokens": {
+            "input": 375,
+            "output": 584,
+            "reasoning": 513,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 375,
+        "outputTokens": 584,
+        "cacheReadTokens": 2176,
+        "totalTokens": 959
+      }
+    },
+    {
+      "id": "T03-S1",
+      "turnId": "T03",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 8,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 80048.296541,
+      "finishedAtMs": 85567.099291,
+      "latencyMs": 5518.802750000003,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1287,
+        "completion_tokens": 49,
+        "total_tokens": 1336,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 5
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00003429,
+          "allowance": 0.00002057,
+          "tokens": {
+            "input": 7,
+            "output": 49,
+            "reasoning": 5,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 7,
+        "outputTokens": 49,
+        "cacheReadTokens": 1280,
+        "totalTokens": 56
+      }
+    },
+    {
+      "id": "T03-S2",
+      "turnId": "T03",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 9,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 85568.943083,
+      "finishedAtMs": 97997.625958,
+      "latencyMs": 12428.682874999999,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1515,
+        "completion_tokens": 732,
+        "total_tokens": 2247,
+        "prompt_tokens_details": {
+          "cached_tokens": 1408
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 582
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00045947,
+          "allowance": 0.00027568,
+          "tokens": {
+            "input": 107,
+            "output": 732,
+            "reasoning": 582,
+            "cache_read": 1408,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 107,
+        "outputTokens": 732,
+        "cacheReadTokens": 1408,
+        "totalTokens": 839
+      }
+    },
+    {
+      "id": "T03-S3",
+      "turnId": "T03",
+      "fixture": "opening-spread",
+      "class": "opening",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 10,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 98000.52525,
+      "finishedAtMs": 112238.801583,
+      "latencyMs": 14238.276332999987,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2281,
+        "completion_tokens": 815,
+        "total_tokens": 3096,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 744
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00060536,
+          "allowance": 0.00036321,
+          "tokens": {
+            "input": 745,
+            "output": 815,
+            "reasoning": 744,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 745,
+        "outputTokens": 815,
+        "cacheReadTokens": 1536,
+        "totalTokens": 1560
+      }
+    },
+    {
+      "id": "T04-S1",
+      "turnId": "T04",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 11,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 112247.453041,
+      "finishedAtMs": 115599.316166,
+      "latencyMs": 3351.8631250000035,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1303,
+        "completion_tokens": 56,
+        "total_tokens": 1359,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00022905,
+          "allowance": 0.00013743,
+          "tokens": {
+            "input": 1303,
+            "output": 56,
+            "reasoning": 7,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1303,
+        "outputTokens": 56,
+        "cacheReadTokens": 0,
+        "totalTokens": 1359
+      }
+    },
+    {
+      "id": "T04-S2",
+      "turnId": "T04",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 12,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 115601.352208,
+      "finishedAtMs": 121010.935625,
+      "latencyMs": 5409.583417000002,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1578,
+        "completion_tokens": 95,
+        "total_tokens": 1673,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 18
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00010554,
+          "allowance": 0.00006332,
+          "tokens": {
+            "input": 298,
+            "output": 95,
+            "reasoning": 18,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 298,
+        "outputTokens": 95,
+        "cacheReadTokens": 1280,
+        "totalTokens": 393
+      }
+    },
+    {
+      "id": "T04-S3",
+      "turnId": "T04",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 13,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 121013.018083,
+      "finishedAtMs": 130597.954333,
+      "latencyMs": 9584.936249999999,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1748,
+        "completion_tokens": 79,
+        "total_tokens": 1827,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008381,
+          "allowance": 0.00005028,
+          "tokens": {
+            "input": 212,
+            "output": 79,
+            "reasoning": 3,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 212,
+        "outputTokens": 79,
+        "cacheReadTokens": 1536,
+        "totalTokens": 291
+      }
+    },
+    {
+      "id": "T05-S1",
+      "turnId": "T05",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 14,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 130604.999375,
+      "finishedAtMs": 132731.887083,
+      "latencyMs": 2126.8877080000093,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1303,
+        "completion_tokens": 121,
+        "total_tokens": 1424,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00007989,
+          "allowance": 0.00004793,
+          "tokens": {
+            "input": 23,
+            "output": 121,
+            "reasoning": 0,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 23,
+        "outputTokens": 121,
+        "cacheReadTokens": 1280,
+        "totalTokens": 144
+      }
+    },
+    {
+      "id": "T05-S2",
+      "turnId": "T05",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 15,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 132734.591333,
+      "finishedAtMs": 134980.89025,
+      "latencyMs": 2246.2989170000073,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1698,
+        "completion_tokens": 103,
+        "total_tokens": 1801,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 26
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00012834,
+          "allowance": 0.000077,
+          "tokens": {
+            "input": 418,
+            "output": 103,
+            "reasoning": 26,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 418,
+        "outputTokens": 103,
+        "cacheReadTokens": 1280,
+        "totalTokens": 521
+      }
+    },
+    {
+      "id": "T05-S3",
+      "turnId": "T05",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 16,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 134982.144958,
+      "finishedAtMs": 136799.866041,
+      "latencyMs": 1817.7210830000113,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1868,
+        "completion_tokens": 76,
+        "total_tokens": 1944,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008119,
+          "allowance": 0.00004872,
+          "tokens": {
+            "input": 204,
+            "output": 76,
+            "reasoning": 0,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 204,
+        "outputTokens": 76,
+        "cacheReadTokens": 1664,
+        "totalTokens": 280
+      }
+    },
+    {
+      "id": "T06-S1",
+      "turnId": "T06",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 17,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 136805.001916,
+      "finishedAtMs": 138769.164,
+      "latencyMs": 1964.1620839999814,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1303,
+        "completion_tokens": 123,
+        "total_tokens": 1426,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 8
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008109,
+          "allowance": 0.00004865,
+          "tokens": {
+            "input": 23,
+            "output": 123,
+            "reasoning": 8,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 23,
+        "outputTokens": 123,
+        "cacheReadTokens": 1280,
+        "totalTokens": 146
+      }
+    },
+    {
+      "id": "T06-S2",
+      "turnId": "T06",
+      "fixture": "simple-capture-single-stone",
+      "class": "simple capture",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 18,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 138771.220333,
+      "finishedAtMs": 140743.450958,
+      "latencyMs": 1972.2306249999965,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1698,
+        "completion_tokens": 85,
+        "total_tokens": 1783,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664,
+          "cache_write_tokens": null
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 9
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00006109,
+          "allowance": 0.00003666,
+          "tokens": {
+            "input": 34,
+            "output": 85,
+            "reasoning": 9,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 34,
+        "outputTokens": 85,
+        "cacheReadTokens": 1664,
+        "totalTokens": 119
+      }
+    },
+    {
+      "id": "T07-S1",
+      "turnId": "T07",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 19,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 140749.7865,
+      "finishedAtMs": 143895.521041,
+      "latencyMs": 3145.7345410000125,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1309,
+        "completion_tokens": 114,
+        "total_tokens": 1423,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00026475,
+          "allowance": 0.00015885,
+          "tokens": {
+            "input": 1309,
+            "output": 114,
+            "reasoning": 6,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1309,
+        "outputTokens": 114,
+        "cacheReadTokens": 0,
+        "totalTokens": 1423
+      }
+    },
+    {
+      "id": "T07-S2",
+      "turnId": "T07",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 20,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 143897.615791,
+      "finishedAtMs": 151757.510333,
+      "latencyMs": 7859.894542000024,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1690,
+        "completion_tokens": 87,
+        "total_tokens": 1777,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 14
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00011754,
+          "allowance": 0.00007052,
+          "tokens": {
+            "input": 410,
+            "output": 87,
+            "reasoning": 14,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 410,
+        "outputTokens": 87,
+        "cacheReadTokens": 1280,
+        "totalTokens": 497
+      }
+    },
+    {
+      "id": "T07-S3",
+      "turnId": "T07",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 21,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 151759.487083,
+      "finishedAtMs": 159241.376125,
+      "latencyMs": 7481.889041999995,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1834,
+        "completion_tokens": 169,
+        "total_tokens": 2003,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 97
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00013189,
+          "allowance": 0.00007914,
+          "tokens": {
+            "input": 170,
+            "output": 169,
+            "reasoning": 97,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 170,
+        "outputTokens": 169,
+        "cacheReadTokens": 1664,
+        "totalTokens": 339
+      }
+    },
+    {
+      "id": "T08-S1",
+      "turnId": "T08",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 22,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 159248.231916,
+      "finishedAtMs": 162177.782625,
+      "latencyMs": 2929.550709000003,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1309,
+        "completion_tokens": 131,
+        "total_tokens": 1440,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008679,
+          "allowance": 0.00005207,
+          "tokens": {
+            "input": 29,
+            "output": 131,
+            "reasoning": 0,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 29,
+        "outputTokens": 131,
+        "cacheReadTokens": 1280,
+        "totalTokens": 160
+      }
+    },
+    {
+      "id": "T08-S2",
+      "turnId": "T08",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 23,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 162179.010541,
+      "finishedAtMs": 166856.793541,
+      "latencyMs": 4677.782999999996,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1991,
+        "completion_tokens": 270,
+        "total_tokens": 2261,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 134
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00027249,
+          "allowance": 0.00016349,
+          "tokens": {
+            "input": 711,
+            "output": 270,
+            "reasoning": 134,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 711,
+        "outputTokens": 270,
+        "cacheReadTokens": 1280,
+        "totalTokens": 981
+      }
+    },
+    {
+      "id": "T08-S3",
+      "turnId": "T08",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 24,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 166859.122458,
+      "finishedAtMs": 169548.348458,
+      "latencyMs": 2689.225999999995,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2252,
+        "completion_tokens": 128,
+        "total_tokens": 2380,
+        "prompt_tokens_details": {
+          "cached_tokens": 1920
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 37
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00013236,
+          "allowance": 0.00007942,
+          "tokens": {
+            "input": 332,
+            "output": 128,
+            "reasoning": 37,
+            "cache_read": 1920,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 332,
+        "outputTokens": 128,
+        "cacheReadTokens": 1920,
+        "totalTokens": 460
+      }
+    },
+    {
+      "id": "T09-S1",
+      "turnId": "T09",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 25,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 169551.1335,
+      "finishedAtMs": 172942.927416,
+      "latencyMs": 3391.793915999995,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1309,
+        "completion_tokens": 120,
+        "total_tokens": 1429,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008019,
+          "allowance": 0.00004811,
+          "tokens": {
+            "input": 29,
+            "output": 120,
+            "reasoning": 0,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 29,
+        "outputTokens": 120,
+        "cacheReadTokens": 1280,
+        "totalTokens": 149
+      }
+    },
+    {
+      "id": "T09-S2",
+      "turnId": "T09",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 26,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 172945.095083,
+      "finishedAtMs": 176236.025291,
+      "latencyMs": 3290.930208000005,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1690,
+        "completion_tokens": 184,
+        "total_tokens": 1874,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 31
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00011929,
+          "allowance": 0.00007158,
+          "tokens": {
+            "input": 26,
+            "output": 184,
+            "reasoning": 31,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 26,
+        "outputTokens": 184,
+        "cacheReadTokens": 1664,
+        "totalTokens": 210
+      }
+    },
+    {
+      "id": "T09-S3",
+      "turnId": "T09",
+      "fixture": "escape-from-atari",
+      "class": "escape",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 27,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 176238.631166,
+      "finishedAtMs": 178644.455875,
+      "latencyMs": 2405.8247090000077,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2252,
+        "completion_tokens": 107,
+        "total_tokens": 2359,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 35
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00015739,
+          "allowance": 0.00009444,
+          "tokens": {
+            "input": 588,
+            "output": 107,
+            "reasoning": 35,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 588,
+        "outputTokens": 107,
+        "cacheReadTokens": 1664,
+        "totalTokens": 695
+      }
+    },
+    {
+      "id": "T10-S1",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 28,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 178649.570208,
+      "finishedAtMs": 182656.212375,
+      "latencyMs": 4006.6421670000127,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 136,
+        "total_tokens": 1435,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00027645,
+          "allowance": 0.00016587,
+          "tokens": {
+            "input": 1299,
+            "output": 136,
+            "reasoning": 0,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1299,
+        "outputTokens": 136,
+        "cacheReadTokens": 0,
+        "totalTokens": 1435
+      }
+    },
+    {
+      "id": "T10-S2",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 29,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 182657.382791,
+      "finishedAtMs": 215172.157166,
+      "latencyMs": 32514.77437499998,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2186,
+        "completion_tokens": 4000,
+        "total_tokens": 6186,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00253974,
+          "allowance": 0.00152384,
+          "tokens": {
+            "input": 906,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 906,
+        "outputTokens": 4000,
+        "cacheReadTokens": 1280,
+        "totalTokens": 4906
+      }
+    },
+    {
+      "id": "T10-S3",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 30,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 215173.983958,
+      "finishedAtMs": 249793.356875,
+      "latencyMs": 34619.372917,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2186,
+        "completion_tokens": 4000,
+        "total_tokens": 6186,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00240803,
+          "allowance": 0.00144482,
+          "tokens": {
+            "input": 10,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4010
+      }
+    },
+    {
+      "id": "T10-S4",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 4,
+      "requestIndex": 31,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 249793.69725,
+      "finishedAtMs": 288008.165916,
+      "latencyMs": 38214.46866600003,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2190,
+        "completion_tokens": 4000,
+        "total_tokens": 6190,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00240863,
+          "allowance": 0.00144518,
+          "tokens": {
+            "input": 14,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 14,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4014
+      }
+    },
+    {
+      "id": "T10-S5",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 5,
+      "requestIndex": 32,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 288008.723625,
+      "finishedAtMs": 320844.611875,
+      "latencyMs": 32835.88825000002,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2192,
+        "completion_tokens": 4000,
+        "total_tokens": 6192,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00240893,
+          "allowance": 0.00144536,
+          "tokens": {
+            "input": 16,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 16,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4016
+      }
+    },
+    {
+      "id": "T10-S6",
+      "turnId": "T10",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 1,
+      "step": 6,
+      "requestIndex": 33,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 320846.375416,
+      "finishedAtMs": 359783.626166,
+      "latencyMs": 38937.25074999995,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2194,
+        "completion_tokens": 4000,
+        "total_tokens": 6194,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00240923,
+          "allowance": 0.00144554,
+          "tokens": {
+            "input": 18,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 18,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4018
+      }
+    },
+    {
+      "id": "T11-S1",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 34,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 359791.002583,
+      "finishedAtMs": 363297.200916,
+      "latencyMs": 3506.1983330000076,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 130,
+        "total_tokens": 1429,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008469,
+          "allowance": 0.00005081,
+          "tokens": {
+            "input": 19,
+            "output": 130,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 19,
+        "outputTokens": 130,
+        "cacheReadTokens": 1280,
+        "totalTokens": 149
+      }
+    },
+    {
+      "id": "T11-S2",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 35,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 363298.640666,
+      "finishedAtMs": 402511.90175,
+      "latencyMs": 39213.261084,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2242,
+        "completion_tokens": 4000,
+        "total_tokens": 6242,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00254814,
+          "allowance": 0.00152888,
+          "tokens": {
+            "input": 962,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 962,
+        "outputTokens": 4000,
+        "cacheReadTokens": 1280,
+        "totalTokens": 4962
+      }
+    },
+    {
+      "id": "T11-S3",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 36,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 402515.291791,
+      "finishedAtMs": 436988.434833,
+      "latencyMs": 34473.14304200001,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2242,
+        "completion_tokens": 4000,
+        "total_tokens": 6242,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241643,
+          "allowance": 0.00144986,
+          "tokens": {
+            "input": 66,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 66,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4066
+      }
+    },
+    {
+      "id": "T11-S4",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 4,
+      "requestIndex": 37,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 436991.905416,
+      "finishedAtMs": 471623.395291,
+      "latencyMs": 34631.48987500003,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2246,
+        "completion_tokens": 4000,
+        "total_tokens": 6246,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241703,
+          "allowance": 0.00145022,
+          "tokens": {
+            "input": 70,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 70,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4070
+      }
+    },
+    {
+      "id": "T11-S5",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 5,
+      "requestIndex": 38,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 471625.880916,
+      "finishedAtMs": 503795.948416,
+      "latencyMs": 32170.067500000005,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2248,
+        "completion_tokens": 4000,
+        "total_tokens": 6248,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241733,
+          "allowance": 0.0014504,
+          "tokens": {
+            "input": 72,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 72,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4072
+      }
+    },
+    {
+      "id": "T11-S6",
+      "turnId": "T11",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 2,
+      "step": 6,
+      "requestIndex": 39,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 503798.409,
+      "finishedAtMs": 539390.863375,
+      "latencyMs": 35592.45437499997,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2250,
+        "completion_tokens": 4000,
+        "total_tokens": 6250,
+        "prompt_tokens_details": {
+          "cached_tokens": 2176
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241763,
+          "allowance": 0.00145058,
+          "tokens": {
+            "input": 74,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2176,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 74,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2176,
+        "totalTokens": 4074
+      }
+    },
+    {
+      "id": "T12-S1",
+      "turnId": "T12",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 40,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 539397.12,
+      "finishedAtMs": 547398.988125,
+      "latencyMs": 8001.868125000037,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 131,
+        "total_tokens": 1430,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008529,
+          "allowance": 0.00005117,
+          "tokens": {
+            "input": 19,
+            "output": 131,
+            "reasoning": 7,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 19,
+        "outputTokens": 131,
+        "cacheReadTokens": 1280,
+        "totalTokens": 150
+      }
+    },
+    {
+      "id": "T12-S2",
+      "turnId": "T12",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 41,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 547401.323875,
+      "finishedAtMs": 580976.304083,
+      "latencyMs": 33574.98020800005,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2082,
+        "completion_tokens": 4000,
+        "total_tokens": 6082,
+        "prompt_tokens_details": {
+          "cached_tokens": 1408
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00250532,
+          "allowance": 0.00150319,
+          "tokens": {
+            "input": 674,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 1408,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 674,
+        "outputTokens": 4000,
+        "cacheReadTokens": 1408,
+        "totalTokens": 4674
+      }
+    },
+    {
+      "id": "T12-S3",
+      "turnId": "T12",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 42,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 580978.753125,
+      "finishedAtMs": 604326.602083,
+      "latencyMs": 23347.84895799996,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2082,
+        "completion_tokens": 2838,
+        "total_tokens": 4920,
+        "prompt_tokens_details": {
+          "cached_tokens": 2048
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2579
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00171404,
+          "allowance": 0.00102843,
+          "tokens": {
+            "input": 34,
+            "output": 2838,
+            "reasoning": 2579,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 34,
+        "outputTokens": 2838,
+        "cacheReadTokens": 2048,
+        "totalTokens": 2872
+      }
+    },
+    {
+      "id": "T12-S4",
+      "turnId": "T12",
+      "fixture": "local-fight-contact",
+      "class": "local fight",
+      "run": 3,
+      "step": 4,
+      "requestIndex": 43,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 604328.919166,
+      "finishedAtMs": 625440.072875,
+      "latencyMs": 21111.153708999977,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2657,
+        "completion_tokens": 2362,
+        "total_tokens": 5019,
+        "prompt_tokens_details": {
+          "cached_tokens": 2048
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2260
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00151469,
+          "allowance": 0.00090882,
+          "tokens": {
+            "input": 609,
+            "output": 2362,
+            "reasoning": 2260,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 609,
+        "outputTokens": 2362,
+        "cacheReadTokens": 2048,
+        "totalTokens": 2971
+      }
+    },
+    {
+      "id": "T13-S1",
+      "turnId": "T13",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 44,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 625448.369625,
+      "finishedAtMs": 635050.19025,
+      "latencyMs": 9601.820624999935,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1304,
+        "completion_tokens": 53,
+        "total_tokens": 1357,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 6,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.0002274,
+          "allowance": 0.00013644,
+          "tokens": {
+            "input": 1304,
+            "output": 53,
+            "reasoning": 6,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1304,
+        "outputTokens": 53,
+        "cacheReadTokens": 0,
+        "totalTokens": 1357
+      }
+    },
+    {
+      "id": "T15-S1",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 45,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 650585.560291,
+      "finishedAtMs": 655612.058166,
+      "latencyMs": 5026.497875000001,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1304,
+        "completion_tokens": 162,
+        "total_tokens": 1466,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 33,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00010464,
+          "allowance": 0.00006278,
+          "tokens": {
+            "input": 24,
+            "output": 162,
+            "reasoning": 33,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 24,
+        "outputTokens": 162,
+        "cacheReadTokens": 1280,
+        "totalTokens": 186
+      }
+    },
+    {
+      "id": "T15-S2",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 46,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 655615.05225,
+      "finishedAtMs": 682509.135958,
+      "latencyMs": 26894.08370800002,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2065,
+        "completion_tokens": 4000,
+        "total_tokens": 6065,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 4000,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00252159,
+          "allowance": 0.00151295,
+          "tokens": {
+            "input": 785,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 785,
+        "outputTokens": 4000,
+        "cacheReadTokens": 1280,
+        "totalTokens": 4785
+      }
+    },
+    {
+      "id": "T15-S3",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 47,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 682511.11625,
+      "finishedAtMs": 723288.9405,
+      "latencyMs": 40777.82425000006,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2070,
+        "completion_tokens": 4000,
+        "total_tokens": 6070,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2048,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 4000,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00240944,
+          "allowance": 0.00144567,
+          "tokens": {
+            "input": 22,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 22,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2048,
+        "totalTokens": 4022
+      }
+    },
+    {
+      "id": "T15-S4",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 4,
+      "requestIndex": 48,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 723292.178166,
+      "finishedAtMs": 762181.615166,
+      "latencyMs": 38889.43699999992,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2075,
+        "completion_tokens": 4000,
+        "total_tokens": 6075,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2048,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 4000,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241019,
+          "allowance": 0.00144612,
+          "tokens": {
+            "input": 27,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 27,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2048,
+        "totalTokens": 4027
+      }
+    },
+    {
+      "id": "T15-S5",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 5,
+      "requestIndex": 49,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 762183.248583,
+      "finishedAtMs": 801306.155833,
+      "latencyMs": 39122.90724999993,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2080,
+        "completion_tokens": 4000,
+        "total_tokens": 6080,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2048,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 4000,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00241094,
+          "allowance": 0.00144657,
+          "tokens": {
+            "input": 32,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 32,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2048,
+        "totalTokens": 4032
+      }
+    },
+    {
+      "id": "T15-S6",
+      "turnId": "T15",
+      "fixture": "ko-immediate-recapture",
+      "class": "ko",
+      "run": 3,
+      "step": 6,
+      "requestIndex": 50,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 801307.781833,
+      "finishedAtMs": 817846.363666,
+      "latencyMs": 16538.581832999946,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2085,
+        "completion_tokens": 2073,
+        "total_tokens": 4158,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2048,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 1933,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00125549,
+          "allowance": 0.0007533,
+          "tokens": {
+            "input": 37,
+            "output": 2073,
+            "reasoning": 1933,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 37,
+        "outputTokens": 2073,
+        "cacheReadTokens": 2048,
+        "totalTokens": 2110
+      }
+    },
+    {
+      "id": "T16-S1",
+      "turnId": "T16",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 51,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 817852.315833,
+      "finishedAtMs": 823077.788208,
+      "latencyMs": 5225.472375000012,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 111,
+        "total_tokens": 1410,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00026145,
+          "allowance": 0.00015687,
+          "tokens": {
+            "input": 1299,
+            "output": 111,
+            "reasoning": 6,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1299,
+        "outputTokens": 111,
+        "cacheReadTokens": 0,
+        "totalTokens": 1410
+      }
+    },
+    {
+      "id": "T16-S2",
+      "turnId": "T16",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 52,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 823079.744583,
+      "finishedAtMs": 829822.913958,
+      "latencyMs": 6743.169375000056,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1778,
+        "completion_tokens": 276,
+        "total_tokens": 2054,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 126
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00024414,
+          "allowance": 0.00014648,
+          "tokens": {
+            "input": 498,
+            "output": 276,
+            "reasoning": 126,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 498,
+        "outputTokens": 276,
+        "cacheReadTokens": 1280,
+        "totalTokens": 774
+      }
+    },
+    {
+      "id": "T16-S3",
+      "turnId": "T16",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 53,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 829825.804375,
+      "finishedAtMs": 858044.253916,
+      "latencyMs": 28218.449541000067,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2699,
+        "completion_tokens": 2589,
+        "total_tokens": 5288,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2395
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00171364,
+          "allowance": 0.00102819,
+          "tokens": {
+            "input": 1035,
+            "output": 2589,
+            "reasoning": 2395,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1035,
+        "outputTokens": 2589,
+        "cacheReadTokens": 1664,
+        "totalTokens": 3624
+      }
+    },
+    {
+      "id": "T16-S4",
+      "turnId": "T16",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 1,
+      "step": 4,
+      "requestIndex": 54,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 858048.867333,
+      "finishedAtMs": 863673.263333,
+      "latencyMs": 5624.396000000066,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 3129,
+        "completion_tokens": 295,
+        "total_tokens": 3424,
+        "prompt_tokens_details": {
+          "cached_tokens": 2688
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 180
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00025121,
+          "allowance": 0.00015073,
+          "tokens": {
+            "input": 441,
+            "output": 295,
+            "reasoning": 180,
+            "cache_read": 2688,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 441,
+        "outputTokens": 295,
+        "cacheReadTokens": 2688,
+        "totalTokens": 736
+      }
+    },
+    {
+      "id": "T17-S1",
+      "turnId": "T17",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 55,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 863679.339625,
+      "finishedAtMs": 873210.660166,
+      "latencyMs": 9531.320540999994,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 128,
+        "total_tokens": 1427,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008349,
+          "allowance": 0.00005009,
+          "tokens": {
+            "input": 19,
+            "output": 128,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 19,
+        "outputTokens": 128,
+        "cacheReadTokens": 1280,
+        "totalTokens": 147
+      }
+    },
+    {
+      "id": "T17-S2",
+      "turnId": "T17",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 56,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 873212.285166,
+      "finishedAtMs": 899030.6745,
+      "latencyMs": 25818.38933399995,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2167,
+        "completion_tokens": 2762,
+        "total_tokens": 4929,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2568
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00179409,
+          "allowance": 0.00107645,
+          "tokens": {
+            "input": 887,
+            "output": 2762,
+            "reasoning": 2568,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 887,
+        "outputTokens": 2762,
+        "cacheReadTokens": 1280,
+        "totalTokens": 3649
+      }
+    },
+    {
+      "id": "T17-S3",
+      "turnId": "T17",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 57,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 899032.62675,
+      "finishedAtMs": 937489.008458,
+      "latencyMs": 38456.38170799997,
+      "finishReason": "length",
+      "rawUsage": {
+        "prompt_tokens": 2597,
+        "completion_tokens": 4000,
+        "total_tokens": 6597,
+        "prompt_tokens_details": {
+          "cached_tokens": 2048
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4000
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00248849,
+          "allowance": 0.0014931,
+          "tokens": {
+            "input": 549,
+            "output": 4000,
+            "reasoning": 4000,
+            "cache_read": 2048,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 549,
+        "outputTokens": 4000,
+        "cacheReadTokens": 2048,
+        "totalTokens": 4549
+      }
+    },
+    {
+      "id": "T17-S4",
+      "turnId": "T17",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 2,
+      "step": 4,
+      "requestIndex": 58,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 937492.729625,
+      "finishedAtMs": 955441.921416,
+      "latencyMs": 17949.19179099996,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2597,
+        "completion_tokens": 1505,
+        "total_tokens": 4102,
+        "prompt_tokens_details": {
+          "cached_tokens": 2560
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1434
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00091623,
+          "allowance": 0.00054974,
+          "tokens": {
+            "input": 37,
+            "output": 1505,
+            "reasoning": 1434,
+            "cache_read": 2560,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 37,
+        "outputTokens": 1505,
+        "cacheReadTokens": 2560,
+        "totalTokens": 1542
+      }
+    },
+    {
+      "id": "T18-S1",
+      "turnId": "T18",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 59,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 955449.4865,
+      "finishedAtMs": 958285.592208,
+      "latencyMs": 2836.1057080000173,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1299,
+        "completion_tokens": 112,
+        "total_tokens": 1411,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00007389,
+          "allowance": 0.00004433,
+          "tokens": {
+            "input": 19,
+            "output": 112,
+            "reasoning": 7,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 19,
+        "outputTokens": 112,
+        "cacheReadTokens": 1280,
+        "totalTokens": 131
+      }
+    },
+    {
+      "id": "T18-S2",
+      "turnId": "T18",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 60,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 958287.192208,
+      "finishedAtMs": 964337.4245,
+      "latencyMs": 6050.2322919999715,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1778,
+        "completion_tokens": 439,
+        "total_tokens": 2217,
+        "prompt_tokens_details": {
+          "cached_tokens": 1664
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 167
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00028549,
+          "allowance": 0.0001713,
+          "tokens": {
+            "input": 114,
+            "output": 439,
+            "reasoning": 167,
+            "cache_read": 1664,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 114,
+        "outputTokens": 439,
+        "cacheReadTokens": 1664,
+        "totalTokens": 553
+      }
+    },
+    {
+      "id": "T18-S3",
+      "turnId": "T18",
+      "fixture": "large-group-pressure",
+      "class": "large-group pressure",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 61,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 964339.635208,
+      "finishedAtMs": 989142.741875,
+      "latencyMs": 24803.106666999985,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2752,
+        "completion_tokens": 2270,
+        "total_tokens": 5022,
+        "prompt_tokens_details": {
+          "cached_tokens": 1792
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2199
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00151138,
+          "allowance": 0.00090683,
+          "tokens": {
+            "input": 960,
+            "output": 2270,
+            "reasoning": 2199,
+            "cache_read": 1792,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 960,
+        "outputTokens": 2270,
+        "cacheReadTokens": 1792,
+        "totalTokens": 3230
+      }
+    },
+    {
+      "id": "T19-S1",
+      "turnId": "T19",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 62,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 989148.737791,
+      "finishedAtMs": 992714.264625,
+      "latencyMs": 3565.526833999902,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1307,
+        "completion_tokens": 53,
+        "total_tokens": 1360,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 7,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00022785,
+          "allowance": 0.00013671,
+          "tokens": {
+            "input": 1307,
+            "output": 53,
+            "reasoning": 7,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1307,
+        "outputTokens": 53,
+        "cacheReadTokens": 0,
+        "totalTokens": 1360
+      }
+    },
+    {
+      "id": "T19-S2",
+      "turnId": "T19",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 1,
+      "step": 2,
+      "requestIndex": 63,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 992715.711625,
+      "finishedAtMs": 1001721.3395,
+      "latencyMs": 9005.627875000006,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1638,
+        "completion_tokens": 205,
+        "total_tokens": 1843,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 50,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00018054,
+          "allowance": 0.00010832,
+          "tokens": {
+            "input": 358,
+            "output": 205,
+            "reasoning": 50,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 358,
+        "outputTokens": 205,
+        "cacheReadTokens": 1280,
+        "totalTokens": 563
+      }
+    },
+    {
+      "id": "T19-S3",
+      "turnId": "T19",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 1,
+      "step": 3,
+      "requestIndex": 64,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1001723.940708,
+      "finishedAtMs": 1005558.30975,
+      "latencyMs": 3834.369042000035,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2227,
+        "completion_tokens": 128,
+        "total_tokens": 2355,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1536,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 55,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00018506,
+          "allowance": 0.00011103,
+          "tokens": {
+            "input": 691,
+            "output": 128,
+            "reasoning": 55,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 691,
+        "outputTokens": 128,
+        "cacheReadTokens": 1536,
+        "totalTokens": 819
+      }
+    },
+    {
+      "id": "T20-S1",
+      "turnId": "T20",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 65,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1005565.829041,
+      "finishedAtMs": 1008502.718541,
+      "latencyMs": 2936.8895000000484,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1307,
+        "completion_tokens": 52,
+        "total_tokens": 1359,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 6,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00003909,
+          "allowance": 0.00002345,
+          "tokens": {
+            "input": 27,
+            "output": 52,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 27,
+        "outputTokens": 52,
+        "cacheReadTokens": 1280,
+        "totalTokens": 79
+      }
+    },
+    {
+      "id": "T20-S2",
+      "turnId": "T20",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 66,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1008503.078125,
+      "finishedAtMs": 1014253.433083,
+      "latencyMs": 5750.354958000011,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1638,
+        "completion_tokens": 293,
+        "total_tokens": 1931,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1536,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 219,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00019571,
+          "allowance": 0.00011742,
+          "tokens": {
+            "input": 102,
+            "output": 293,
+            "reasoning": 219,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 102,
+        "outputTokens": 293,
+        "cacheReadTokens": 1536,
+        "totalTokens": 395
+      }
+    },
+    {
+      "id": "T20-S3",
+      "turnId": "T20",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 67,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1014254.984666,
+      "finishedAtMs": 1022340.449625,
+      "latencyMs": 8085.4649590000045,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1808,
+        "completion_tokens": 137,
+        "total_tokens": 1945,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1536,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 64,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00012761,
+          "allowance": 0.00007656,
+          "tokens": {
+            "input": 272,
+            "output": 137,
+            "reasoning": 64,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 272,
+        "outputTokens": 137,
+        "cacheReadTokens": 1536,
+        "totalTokens": 409
+      }
+    },
+    {
+      "id": "T21-S1",
+      "turnId": "T21",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 68,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1022346.296791,
+      "finishedAtMs": 1027410.8825,
+      "latencyMs": 5064.585709000006,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1307,
+        "completion_tokens": 133,
+        "total_tokens": 1440,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 6,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00008769,
+          "allowance": 0.00005261,
+          "tokens": {
+            "input": 27,
+            "output": 133,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 27,
+        "outputTokens": 133,
+        "cacheReadTokens": 1280,
+        "totalTokens": 160
+      }
+    },
+    {
+      "id": "T21-S2",
+      "turnId": "T21",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 69,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1027413.058166,
+      "finishedAtMs": 1032739.684833,
+      "latencyMs": 5326.626667000004,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2313,
+        "completion_tokens": 130,
+        "total_tokens": 2443,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1280,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 56,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00023679,
+          "allowance": 0.00014207,
+          "tokens": {
+            "input": 1033,
+            "output": 130,
+            "reasoning": 56,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1033,
+        "outputTokens": 130,
+        "cacheReadTokens": 1280,
+        "totalTokens": 1163
+      }
+    },
+    {
+      "id": "T21-S3",
+      "turnId": "T21",
+      "fixture": "endgame-dame-fill",
+      "class": "endgame",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 70,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1032741.762666,
+      "finishedAtMs": 1038460.71625,
+      "latencyMs": 5718.953584000003,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2483,
+        "completion_tokens": 122,
+        "total_tokens": 2605,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2304,
+          "cache_creation_input_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 21,
+          "rejected_prediction_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00010696,
+          "allowance": 0.00006418,
+          "tokens": {
+            "input": 179,
+            "output": 122,
+            "reasoning": 21,
+            "cache_read": 2304,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 179,
+        "outputTokens": 122,
+        "cacheReadTokens": 2304,
+        "totalTokens": 301
+      }
+    },
+    {
+      "id": "T22-S1",
+      "turnId": "T22",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 1,
+      "step": 1,
+      "requestIndex": 71,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1038466.9805,
+      "finishedAtMs": 1044193.403583,
+      "latencyMs": 5726.4230830000015,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1302,
+        "completion_tokens": 57,
+        "total_tokens": 1359,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.0002295,
+          "allowance": 0.0001377,
+          "tokens": {
+            "input": 1302,
+            "output": 57,
+            "reasoning": 0,
+            "cache_read": 0,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1302,
+        "outputTokens": 57,
+        "cacheReadTokens": 0,
+        "totalTokens": 1359
+      }
+    },
+    {
+      "id": "T23-S1",
+      "turnId": "T23",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 2,
+      "step": 1,
+      "requestIndex": 72,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1049203.087,
+      "finishedAtMs": 1059357.66075,
+      "latencyMs": 10154.573749999981,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1302,
+        "completion_tokens": 51,
+        "total_tokens": 1353,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00003774,
+          "allowance": 0.00002264,
+          "tokens": {
+            "input": 22,
+            "output": 51,
+            "reasoning": 6,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 22,
+        "outputTokens": 51,
+        "cacheReadTokens": 1280,
+        "totalTokens": 73
+      }
+    },
+    {
+      "id": "T23-S2",
+      "turnId": "T23",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 2,
+      "step": 2,
+      "requestIndex": 73,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1059359.655833,
+      "finishedAtMs": 1082955.130875,
+      "latencyMs": 23595.475041999947,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1564,
+        "completion_tokens": 1763,
+        "total_tokens": 3327,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1611
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00110424,
+          "allowance": 0.00066254,
+          "tokens": {
+            "input": 284,
+            "output": 1763,
+            "reasoning": 1611,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 284,
+        "outputTokens": 1763,
+        "cacheReadTokens": 1280,
+        "totalTokens": 2047
+      }
+    },
+    {
+      "id": "T23-S3",
+      "turnId": "T23",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 2,
+      "step": 3,
+      "requestIndex": 74,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1082957.916083,
+      "finishedAtMs": 1096483.077541,
+      "latencyMs": 13525.161458000075,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2412,
+        "completion_tokens": 986,
+        "total_tokens": 3398,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 791
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00072761,
+          "allowance": 0.00043656,
+          "tokens": {
+            "input": 876,
+            "output": 986,
+            "reasoning": 791,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 876,
+        "outputTokens": 986,
+        "cacheReadTokens": 1536,
+        "totalTokens": 1862
+      }
+    },
+    {
+      "id": "T24-S1",
+      "turnId": "T24",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 3,
+      "step": 1,
+      "requestIndex": 75,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1096489.042208,
+      "finishedAtMs": 1100412.574541,
+      "latencyMs": 3923.5323329998646,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1302,
+        "completion_tokens": 52,
+        "total_tokens": 1354,
+        "prompt_tokens_details": {
+          "cached_tokens": 1280
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00003834,
+          "allowance": 0.000023,
+          "tokens": {
+            "input": 22,
+            "output": 52,
+            "reasoning": 7,
+            "cache_read": 1280,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 22,
+        "outputTokens": 52,
+        "cacheReadTokens": 1280,
+        "totalTokens": 74
+      }
+    },
+    {
+      "id": "T24-S2",
+      "turnId": "T24",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 3,
+      "step": 2,
+      "requestIndex": 76,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1100413.691458,
+      "finishedAtMs": 1139796.086958,
+      "latencyMs": 39382.39549999987,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 1564,
+        "completion_tokens": 3224,
+        "total_tokens": 4788,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3072
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00194321,
+          "allowance": 0.00116592,
+          "tokens": {
+            "input": 28,
+            "output": 3224,
+            "reasoning": 3072,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 28,
+        "outputTokens": 3224,
+        "cacheReadTokens": 1536,
+        "totalTokens": 3252
+      }
+    },
+    {
+      "id": "T24-S3",
+      "turnId": "T24",
+      "fixture": "ambiguous-wide-board",
+      "class": "ambiguous position",
+      "run": 3,
+      "step": 3,
+      "requestIndex": 77,
+      "endpoint": "https://opencode.ai/inference/go/openai/v1/chat/completions",
+      "configuredModel": "deepseek-v4.1-flash",
+      "reportedModel": "deepseek-v4.1-flash",
+      "wireFormat": "sse",
+      "httpStatus": 200,
+      "requestedMaxTokens": 4000,
+      "startedAtMs": 1139798.45625,
+      "finishedAtMs": 1150383.795833,
+      "latencyMs": 10585.339582999935,
+      "finishReason": "tool_calls",
+      "rawUsage": {
+        "prompt_tokens": 2684,
+        "completion_tokens": 705,
+        "total_tokens": 3389,
+        "prompt_tokens_details": {
+          "cached_tokens": 1536
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 633
+        },
+        "cost": 0,
+        "opencode": {
+          "billing_source": "go",
+          "list_cost": 0.00059981,
+          "allowance": 0.00035988,
+          "tokens": {
+            "input": 1148,
+            "output": 705,
+            "reasoning": 633,
+            "cache_read": 1536,
+            "cache_write_5m": 0,
+            "cache_write_1h": 0
+          }
+        }
+      },
+      "usage": {
+        "inputTokens": 1148,
+        "outputTokens": 705,
+        "cacheReadTokens": 1536,
+        "totalTokens": 1853
+      }
+    }
+  ]
+}

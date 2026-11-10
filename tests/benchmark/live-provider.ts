@@ -46,6 +46,14 @@ import { fromProviderToolName, isKnownToolName, toProviderToolName } from './too
 
 export const BENCHMARK_LIVE_PROVIDER_ID = 'benchmark-live'
 
+/**
+ * OpenCode Go asks clients to identify themselves and to send a stable
+ * per-conversation session id; a missing `x-opencode-session` is rejected with
+ * HTTP 400 before the model is reached.
+ */
+export const LIVE_BENCHMARK_USER_AGENT = 'dsh-plugin-weiqi-benchmark/0.0.0-foundation.1'
+export const LIVE_BENCHMARK_DEFAULT_SESSION = 'dsh-plugin-weiqi-benchmark-session'
+
 /** Every variable a live run must define; none has a fallback. */
 export const LIVE_BENCHMARK_ENV_VARS = [
   'BENCHMARK_PROVIDER',
@@ -210,6 +218,8 @@ type Completion = Readonly<{
   readonly usage: TokenUsage | undefined
   readonly finishReason: string | null
   readonly model: string | null
+  /** The provider's `usage` object exactly as returned; never normalised. */
+  readonly rawUsage: unknown
 }>
 
 function textOf(blocks: readonly ContentBlock[]): string {
@@ -323,8 +333,11 @@ function asTokenCount(value: unknown): number | undefined {
  * Map provider usage onto DSH's disjoint token fields.
  *
  * `prompt_tokens` folds cache hits in; DSH wants uncached input separate from
- * `cacheReadTokens`. A missing or malformed count returns `undefined` so the
- * request path fails closed instead of recording a fabricated zero.
+ * `cacheReadTokens`. OpenCode Go reports the hits under
+ * `prompt_tokens_details.cached_tokens`; `prompt_cache_hit_tokens` is accepted
+ * first for other OpenAI-compatible entries. A missing or malformed count
+ * returns `undefined` so the request path fails closed instead of recording a
+ * fabricated zero.
  */
 export function usageFromProvider(reported: unknown): TokenUsage | undefined {
   if (typeof reported !== 'object' || reported === null || Array.isArray(reported)) return undefined
@@ -334,6 +347,10 @@ export function usageFromProvider(reported: unknown): TokenUsage | undefined {
   if (prompt === undefined || completion === undefined) return undefined
 
   const cacheRead = asTokenCount(record.prompt_cache_hit_tokens)
+    // The official OpenCode Go entry reports cache hits inside
+    // `prompt_tokens_details.cached_tokens` instead; without this fallback the
+    // cached prompt would be charged as uncached input and inflate every turn.
+    ?? asTokenCount(asRecord(record.prompt_tokens_details)?.cached_tokens)
   const inputTokens = Math.max(0, prompt - (cacheRead ?? 0))
   return cacheRead === undefined
     ? { inputTokens, outputTokens: completion }
@@ -361,6 +378,13 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null
+}
+
+function transportCause(error: unknown): string {
+  if (!(error instanceof Error) || !(error.cause instanceof Error)) return ''
+  const cause = error.cause as Error & { code?: unknown }
+  const code = typeof cause.code === 'string' ? cause.code : cause.name
+  return ` (${code}: ${cause.message})`
 }
 
 function toolCallsFrom(value: unknown): readonly WireToolCall[] {
@@ -402,6 +426,7 @@ function completionFromJson(payload: unknown): Completion {
     usage: usageFromProvider(record.usage),
     finishReason: asString(first?.finish_reason),
     model: asString(record.model),
+    rawUsage: record.usage ?? null,
   })
 }
 
@@ -486,6 +511,39 @@ async function* ssePayloads(response: Response): AsyncGenerator<string> {
   }
 }
 
+/**
+ * One completed HTTP request, observed at the transport seam.
+ *
+ * `rawUsage` is the provider's own `usage` object (for example
+ * `{ prompt_tokens, completion_tokens, prompt_cache_hit_tokens }`), recorded
+ * verbatim so a calibration report can trace every derived number back to the
+ * wire. It carries no credential: the adapter never puts one in a response.
+ */
+export type LiveRequestObservation = Readonly<{
+  readonly endpoint: string
+  readonly configuredModel: string
+  readonly wireFormat: 'sse' | 'json'
+  readonly httpStatus: number
+  /** `max_tokens` the request carried after the C-S01 cap; null when omitted. */
+  readonly requestedMaxTokens: number | null
+  readonly startedAtMs: number
+  readonly finishedAtMs: number
+  readonly durationMs: number
+  readonly reportedModel: string | null
+  readonly finishReason: string | null
+  readonly rawUsage: unknown
+  readonly usage: TokenUsage | undefined
+}>
+
+export type LiveRequestObserver = (observation: LiveRequestObservation) => void
+
+type SseObservation = {
+  rawUsage: unknown
+  usage: TokenUsage | undefined
+  model: string | null
+  finishReason: string | null
+}
+
 type OpenToolBlock = {
   readonly index: number
   rawName: string
@@ -499,7 +557,10 @@ type OpenToolBlock = {
  * Indexes are allocated in first-seen order, so interleaved text, reasoning and
  * tool-call deltas assemble in the same order the provider streamed them.
  */
-async function* chunksFromSse(response: Response): AsyncGenerator<StreamChunk> {
+async function* chunksFromSse(
+  response: Response,
+  observation: SseObservation,
+): AsyncGenerator<StreamChunk> {
   let nextIndex = 0
   let textIndex: number | null = null
   let text = ''
@@ -521,8 +582,17 @@ async function* chunksFromSse(response: Response): AsyncGenerator<StreamChunk> {
     const event = asRecord(parsed)
     if (event === undefined) continue
     model = asString(event.model) ?? model
-    const reportedUsage = usageFromProvider(event.usage)
-    if (reportedUsage !== undefined) usage = reportedUsage
+    if (event.usage !== undefined) {
+      // Last usage event wins, matching the assembler's own semantics. Keep
+      // the raw object even when it cannot be mapped, so a malformed response
+      // is still traceable.
+      observation.rawUsage = event.usage
+      const reportedUsage = usageFromProvider(event.usage)
+      if (reportedUsage !== undefined) {
+        usage = reportedUsage
+        observation.usage = reportedUsage
+      }
+    }
 
     const choices = Array.isArray(event.choices) ? event.choices : []
     const choice = asRecord(choices[0])
@@ -617,6 +687,8 @@ async function* chunksFromSse(response: Response): AsyncGenerator<StreamChunk> {
       },
     }
   }
+  observation.model = model
+  observation.finishReason = finishReason
   if (usage !== undefined) yield { type: 'usage', usage }
   yield {
     type: 'finish',
@@ -640,14 +712,19 @@ function statusCodeOf(status: number): string {
 export class LiveBenchmarkProvider extends LlmAdapter {
   readonly config: LiveBenchmarkConfig
   private readonly fetchImpl: LiveBenchmarkFetch
+  private readonly observer: LiveRequestObserver | undefined
   private streamCount = 0
   private loopMarkedCount = 0
   private transportAttemptCount = 0
 
-  constructor(config: LiveBenchmarkConfig, options: Readonly<{ fetch?: LiveBenchmarkFetch }> = {}) {
+  constructor(
+    config: LiveBenchmarkConfig,
+    options: Readonly<{ fetch?: LiveBenchmarkFetch; observe?: LiveRequestObserver }> = {},
+  ) {
     super()
     this.config = config
     this.fetchImpl = options.fetch ?? ((input, init) => fetch(input, init))
+    this.observer = options.observe
   }
 
   get endpoint(): string {
@@ -675,6 +752,7 @@ export class LiveBenchmarkProvider extends LlmAdapter {
   }
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    const startedAtMs = performance.now()
     this.streamCount += 1
     if (isAgentLoopRequest(options)) this.loopMarkedCount += 1
 
@@ -698,13 +776,17 @@ export class LiveBenchmarkProvider extends LlmAdapter {
           'content-type': 'application/json',
           accept: 'text/event-stream',
           authorization: `Bearer ${this.config.apiKey}`,
+          'user-agent': LIVE_BENCHMARK_USER_AGENT,
+          'x-opencode-session': options.sessionId === undefined
+            ? LIVE_BENCHMARK_DEFAULT_SESSION
+            : String(options.sessionId),
         },
         body: JSON.stringify(body),
         ...(options.signal === undefined ? {} : { signal: options.signal }),
       })
     } catch (error) {
       throw new LlmError(
-        'live benchmark provider transport failed',
+        `live benchmark provider transport failed${transportCause(error)}`,
         'NETWORK',
         { cause: error },
       )
@@ -722,7 +804,26 @@ export class LiveBenchmarkProvider extends LlmAdapter {
 
     const contentType = response.headers.get('content-type') ?? ''
     if (contentType.includes('text/event-stream')) {
-      yield* chunksFromSse(response)
+      const observation: SseObservation = {
+        rawUsage: null,
+        usage: undefined,
+        model: null,
+        finishReason: null,
+      }
+      yield* chunksFromSse(response, observation)
+      this.observe({
+        endpoint: this.endpoint,
+        configuredModel: this.config.model,
+        wireFormat: 'sse',
+        httpStatus: response.status,
+        requestedMaxTokens: options.maxTokens ?? null,
+        startedAtMs,
+        ...this.finishedAt(startedAtMs),
+        reportedModel: observation.model,
+        finishReason: observation.finishReason,
+        rawUsage: observation.rawUsage,
+        usage: observation.usage,
+      })
       return
     }
 
@@ -736,6 +837,29 @@ export class LiveBenchmarkProvider extends LlmAdapter {
         { cause: error },
       )
     }
-    yield* chunksFromCompletion(completionFromJson(payload))
+    const completion = completionFromJson(payload)
+    yield* chunksFromCompletion(completion)
+    this.observe({
+      endpoint: this.endpoint,
+      configuredModel: this.config.model,
+      wireFormat: 'json',
+      httpStatus: response.status,
+      requestedMaxTokens: options.maxTokens ?? null,
+      startedAtMs,
+      ...this.finishedAt(startedAtMs),
+      reportedModel: completion.model,
+      finishReason: completion.finishReason,
+      rawUsage: completion.rawUsage,
+      usage: completion.usage,
+    })
+  }
+
+  private finishedAt(startedAtMs: number): { readonly finishedAtMs: number; readonly durationMs: number } {
+    const finishedAtMs = performance.now()
+    return { finishedAtMs, durationMs: finishedAtMs - startedAtMs }
+  }
+
+  private observe(observation: LiveRequestObservation): void {
+    this.observer?.(observation)
   }
 }
