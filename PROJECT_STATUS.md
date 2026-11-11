@@ -1,6 +1,6 @@
 # Project Status
 
-- Architecture: **FROZEN — R2.4.3 VERIFIED**
+- Architecture: **FROZEN — R2.4.4 VERIFIED** (desktop UI target per R2.4.4; not yet verified on the desktop App)
 - Cooperative Yield: **VERIFIED**
 - Repository Bootstrap: **COMPLETE**
 - Planning Baseline: **ESTABLISHED**
