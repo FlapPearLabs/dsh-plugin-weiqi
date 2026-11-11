@@ -14,7 +14,7 @@ When sources conflict, use this strict order:
 6. roadmap;
 7. Ticket.
 
-The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4.3_VERIFIED.md`. The executable
+The verified Spec is `docs/spec/SPEC_LEAN_V0.1_R2.4.4_VERIFIED.md`. The executable
 evidence record is `docs/validation/DSH_COOPERATIVE_YIELD_SPIKE_VERIFIED.md`.
 
 ## Frozen architecture
